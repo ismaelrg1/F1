@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabs Example</title>
+    <style>
+        /* Basic styling for the tab container */
+        .tab-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, sans-serif;
+        }
+        .tabs {
+            display: flex;
+            cursor: pointer;
+            background-color: #f1f1f1;
+        }
+        .tab {
+            padding: 10px;
+            flex: 1;
+            text-align: center;
+            background-color: #ddd;
+            border: 1px solid #ccc;
+            border-bottom: none;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+        }
+        .tab-content {
+            display: none;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-top: none;
+            background-color: #fff;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="tab-container">
+        <!-- Tab headers -->
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('tab1')">Tab 1</div>
+            <div class="tab" onclick="showTab('tab2')">Tab 2</div>
+            <div class="tab" onclick="showTab('tab3')">Tab 3</div>
+        </div>
+
+        <!-- Tab content -->
+        <div id="tab1" class="tab-content active">
+            <h2>Content for Tab 1</h2>
+            <p>This is the content for the first tab.</p>
+        </div>
+        <div id="tab2" class="tab-content">
+            <h2>Content for Tab 2</h2>
+            <p>This is the content for the second tab.</p>
+        </div>
+        <div id="tab3" class="tab-content">
+            <h2>Content for Tab 3</h2>
+            <p>This is the content for the third tab.</p>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            // Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+
+            // Show the selected tab content
+            document.getElementById(tabId).classList.add('active');
+
+            // Add active class to the selected tab
+            const selectedTab = Array.from(tabs).find(tab => tab.textContent.trim() === document.getElementById(tabId).querySelector('h2').textContent.trim());
+            selectedTab.classList.add('active');
+        }
+    </script>
+</body>
+</html>

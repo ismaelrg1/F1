@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protected Page</title>
+    <script>
+        async function checkAuthentication() {
+            const token = localStorage.getItem('access_token');
+            console.log('Token:', token);
+
+            {#if (!token) {#}
+            {#    window.location.href = 'login.html';  // Redirige a la página de inicio de sesión si no hay token#}
+            {#    return;#}
+            {#}#}
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/auth/protected', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('user-info').textContent = `Logged in as: ${data.logged_in_as.username}`;
+                } else {
+                    localStorage.removeItem('access_token');
+                    window.location.href = 'login.html';  // Redirige si el token es inválido
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                localStorage.removeItem('access_token');
+                window.location.href = 'login.html';  // Redirige en caso de error
+            }
+        }
+
+        window.onload = checkAuthentication;
+    </script>
+</head>
+<body>
+    <h1>Protected Page</h1>
+    <p id="user-info">Loading...</p>
+</body>
+</html>

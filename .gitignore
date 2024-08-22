@@ -12,6 +12,7 @@ __pycache__/
 # IDEs y editores
 .vscode/
 .idea/
+backend/instance
 
 # Archivos de Docker
 *.dockerfile
