@@ -1,0 +1,21 @@
+# Entorno virtual
+ven/
+
+# Archivos y carpetas de configuración local
+*.env
+
+# Archivos generados por el sistema
+__pycache__/
+*.pyc
+*.pyo
+
+# IDEs y editores
+.vscode/
+.idea/
+
+# Archivos de Docker
+*.dockerfile
+
+# Otros archivos temporales
+*.log
+*.tmp
