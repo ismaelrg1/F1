@@ -10,13 +10,12 @@ async function login(event) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password }),
+            credentials: 'include'  // Asegura que las cookies se envíen con la solicitud
         });
 
         if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem('access_token', data.access_token);
-            window.location.href = '/static/protected.html';  // Redirige a la página protegida
+            window.location.href = '/calendario';  // Redirige a la página protegida
         } else {
             const error = await response.json();
             alert(error.msg);
