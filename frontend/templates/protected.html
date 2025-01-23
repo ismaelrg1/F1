@@ -1,0 +1,289 @@
+{#<!DOCTYPE html>#}
+{#<html lang="es">#}
+{#<head>#}
+{#    <meta charset="UTF-8">#}
+{#    <meta name="viewport" content="width=device-width, initial-scale=1.0">#}
+{#    <title>F1 Predicciones</title>#}
+{#    <style>#}
+{#        body {#}
+{#            font-family: Arial, sans-serif;#}
+{#            margin: 0;#}
+{#            padding: 0;#}
+{#        }#}
+{##}
+{#        header {#}
+{#            background-color: #333;#}
+{#            color: white;#}
+{#            padding: 15px 0;#}
+{#            text-align: center;#}
+{#        }#}
+{##}
+{#        nav {#}
+{#            display: flex;#}
+{#            justify-content: center;#}
+{#            gap: 15px;#}
+{#        }#}
+{##}
+{#        nav a {#}
+{#            color: white;#}
+{#            text-decoration: none;#}
+{#            padding: 10px 20px;#}
+{#            background-color: #555;#}
+{#            border-radius: 5px;#}
+{#        }#}
+{##}
+{#        nav a:hover {#}
+{#            background-color: #777;#}
+{#        }#}
+{##}
+{#        .content {#}
+{#            padding: 20px;#}
+{#        }#}
+{##}
+{#        .oculto {#}
+{#            display: none;#}
+{#        }#}
+{##}
+{#        .calendar-container {#}
+{#            display: flex;#}
+{#            flex-direction: column;#}
+{#            align-items: center;#}
+{#        }#}
+{##}
+{#        .calendar-event {#}
+{#            margin: 10px;#}
+{#            padding: 10px;#}
+{#            border: 1px solid #ddd;#}
+{#            border-radius: 5px;#}
+{#            width: 250px;#}
+{#            text-align: center;#}
+{#            cursor: pointer;#}
+{#        }#}
+{##}
+{#        .calendar-event:hover {#}
+{#            background-color: #f0f0f0;#}
+{#        }#}
+{##}
+{#        form {#}
+{#            margin-top: 20px;#}
+{#        }#}
+{##}
+{#        form label {#}
+{#            display: block;#}
+{#            margin-bottom: 5px;#}
+{#            font-weight: bold;#}
+{#        }#}
+{##}
+{#        form input,#}
+{#        form select {#}
+{#            width: 100%;#}
+{#            padding: 8px;#}
+{#            margin-bottom: 15px;#}
+{#            border: 1px solid #ccc;#}
+{#            border-radius: 4px;#}
+{#        }#}
+{##}
+{#        form input[type="submit"] {#}
+{#            background-color: #4CAF50;#}
+{#            color: white;#}
+{#            border: none;#}
+{#            cursor: pointer;#}
+{#        }#}
+{##}
+{#        form input[type="submit"]:hover {#}
+{#            background-color: #45a049;#}
+{#        }#}
+{##}
+{#        table {#}
+{#            width: 100%;#}
+{#            border-collapse: collapse;#}
+{#            margin-top: 20px;#}
+{#        }#}
+{##}
+{#        th, td {#}
+{#            padding: 10px;#}
+{#            border: 1px solid #ddd;#}
+{#            text-align: center;#}
+{#        }#}
+{##}
+{#        th {#}
+{#            background-color: #f4f4f4;#}
+{#        }#}
+{#    </style>#}
+{#    <script>#}
+{#        function mostrarSeccion(seccion) {#}
+{#            // Ocultar todas las secciones#}
+{#            document.getElementById('home').classList.add('oculto');#}
+{#            document.getElementById('apuestas').classList.add('oculto');#}
+{#            document.getElementById('ranking').classList.add('oculto');#}
+{#            document.getElementById('formularioQualy').classList.add('oculto');#}
+{#            document.getElementById('formularioCarrera').classList.add('oculto');#}
+{##}
+{#            // Mostrar la sección seleccionada#}
+{#            document.getElementById(seccion).classList.remove('oculto');#}
+{#        }#}
+{##}
+{#        function mostrarFormularioPrediccion(tipo) {#}
+{#            // Ocultar la vista de calendario#}
+{#            document.getElementById('home').classList.add('oculto');#}
+{##}
+{#            // Mostrar el formulario de predicción correspondiente#}
+{#            if (tipo === 'qualy') {#}
+{#                document.getElementById('formularioQualy').classList.remove('oculto');#}
+{#            } else if (tipo === 'carrera') {#}
+{#                document.getElementById('formularioCarrera').classList.remove('oculto');#}
+{#            }#}
+{#        }#}
+{#    </script>#}
+{#</head>#}
+{#<body>#}
+{##}
+{#<header>#}
+{#    <h1>F1 Predicciones</h1>#}
+{#    <nav>#}
+{#        <a href="#" onclick="mostrarSeccion('home')">Home</a>#}
+{#        <a href="#" onclick="mostrarSeccion('apuestas')">Apuestas</a>#}
+{#        <a href="#" onclick="mostrarSeccion('ranking')">Ranking</a>#}
+{#    </nav>#}
+{#</header>#}
+{##}
+{#<div class="content">#}
+{#    <!-- Sección Home (Calendario de carreras) -->#}
+{#    <div id="home" class="calendar-container">#}
+{#        <h2>Calendario de Carreras</h2>#}
+{#        <div class="calendar-event" onclick="mostrarFormularioPrediccion('qualy')">#}
+{#            Gran Premio de Australia - 17 Marzo 2024 (Qualy)#}
+{#        </div>#}
+{#        <div class="calendar-event" onclick="mostrarFormularioPrediccion('carrera')">#}
+{#            Gran Premio de Australia - 18 Marzo 2024 (Carrera)#}
+{#        </div>#}
+{#        <!-- Agrega más eventos aquí -->#}
+{#    </div>#}
+{##}
+{#    <!-- Formulario para Predicciones de Qualy -->#}
+{#    <div id="formularioQualy" class="oculto">#}
+{#        <h2>Predicciones para la Qualy</h2>#}
+{#        <form>#}
+{#            <label for="pole">Pole Position:</label>#}
+{#            <input type="text" id="pole" name="pole" required>#}
+{##}
+{#            <label for="posicion11">Posición 11:</label>#}
+{#            <input type="text" id="posicion11" name="posicion11" required>#}
+{##}
+{#            <label for="posicionAlonsoQualy">Posición de Fernando Alonso:</label>#}
+{#            <input type="number" id="posicionAlonsoQualy" name="posicionAlonsoQualy" min="1" max="20" required>#}
+{##}
+{#            <input type="submit" value="Enviar Predicciones">#}
+{#        </form>#}
+{#    </div>#}
+{##}
+{#    <!-- Formulario para Predicciones de Carrera -->#}
+{#    <div id="formularioCarrera" class="oculto">#}
+{#        <h2>Predicciones para la Carrera</h2>#}
+{#        <form>#}
+{#            <label for="primero">1º Lugar:</label>#}
+{#            <input type="text" id="primero" name="primero" required>#}
+{##}
+{#            <label for="segundo">2º Lugar:</label>#}
+{#            <input type="text" id="segundo" name="segundo" required>#}
+{##}
+{#            <label for="tercero">3º Lugar:</label>#}
+{#            <input type="text" id="tercero" name="tercero" required>#}
+{##}
+{#            <label for="vueltaRapida">Vuelta Rápida:</label>#}
+{#            <input type="text" id="vueltaRapida" name="vueltaRapida" required>#}
+{##}
+{#            <label for="posicionAlonsoCarrera">Posición final de Fernando Alonso:</label>#}
+{#            <input type="number" id="posicionAlonsoCarrera" name="posicionAlonsoCarrera" min="1" max="20" required>#}
+{##}
+{#            <label for="posicionSainz">Posición final de Carlos Sainz:</label>#}
+{#            <input type="number" id="posicionSainz" name="posicionSainz" min="1" max="20" required>#}
+{##}
+{#            <label for="posicionPiastri">Posición final de Oscar Piastri:</label>#}
+{#            <input type="number" id="posicionPiastri" name="posicionPiastri" min="1" max="20" required>#}
+{##}
+{#            <label for="posicionOcon">Posición final de Esteban Ocon:</label>#}
+{#            <input type="number" id="posicionOcon" name="posicionOcon" min="1" max="20" required>#}
+{##}
+{#            <label for="safetyCars">Número de Safety Cars:</label>#}
+{#            <input type="number" id="safetyCars" name="safetyCars" min="0" required>#}
+{##}
+{#            <label for="masAdelante">Piloto que mejora más posiciones:</label>#}
+{#            <input type="text" id="masAdelante" name="masAdelante" required>#}
+{##}
+{#            <input type="submit" value="Enviar Predicciones">#}
+{#        </form>#}
+{#    </div>#}
+{##}
+{#    <!-- Sección Apuestas -->#}
+{#    <div id="apuestas" class="oculto">#}
+{#        <h2>Apuestas de los Participantes</h2>#}
+{#        <table>#}
+{#            <tr>#}
+{#                <th>Usuario</th>#}
+{#                <th>Carrera</th>#}
+{#                <th>Predicción</th>#}
+{#            </tr>#}
+{#            <tr>#}
+{#                <td>Juan Pérez</td>#}
+{#                <td>Gran Premio de Australia</td>#}
+{#                <td>1. Verstappen, 2. Hamilton, 3. Leclerc, VR: Alonso, SC: 1</td>#}
+{#            </tr>#}
+{#            <!-- Agrega más filas con las apuestas de los usuarios aquí -->#}
+{#        </table>#}
+{#    </div>#}
+{##}
+{#    <!-- Sección Ranking -->#}
+{#    <div id="ranking" class="oculto">#}
+{#        <h2>Ranking de Participantes</h2>#}
+{#        <table>#}
+{#            <tr>#}
+{#                <th>Usuario</th>#}
+{#                <th>Puntos</th>#}º
+{#            </tr>#}
+{#            <tr>#}
+{#                <td>Juan Pérez</td>#}
+{#                <td>10</td>#}
+{#            </tr>#}
+{#            <!-- Agrega más filas con los rankings de los usuarios aquí -->#}
+{#        </table>#}
+{#    </div>#}
+{#</div>#}
+{##}
+{#</body>#}
+{#</html>#}
+
+<!-- templates/protected.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}F1 Predicciones{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='scripts/socket.js') }}"></script>
+</head>
+<body>
+
+<header>
+    <h1>F1 Predicciones</h1>
+    <nav>
+        <a href="/protected" >Home</a>
+        <a href="#" onclick="mostrarSeccion('apuestas')">Apuestas</a>
+        <a href="#" onclick="mostrarSeccion('ranking')">Ranking</a>
+        <a href="/calendario">Calendario</a>
+    </nav>
+</header>
+
+<div class="content">
+    {% block content %}{% endblock %}
+</div>
+
+<footer>
+    <p>&copy; 2024 F1 Predicciones</p>
+</footer>
+
+</body>
+</html>
+

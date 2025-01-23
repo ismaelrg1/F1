@@ -5,7 +5,7 @@ async function login(event) {
     const password = document.getElementById('password').value;
 
     try {
-        const response = await fetch('http://127.0.0.1:5000/auth/login', {
+        const response = await fetch('http://127.0.0.1:5000/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -15,7 +15,7 @@ async function login(event) {
         });
 
         if (response.ok) {
-            window.location.href = '/calendario';  // Redirige a la página protegida
+            window.location.href = '/protected';  // Redirige a la página protegida
         } else {
             const error = await response.json();
             alert(error.msg);

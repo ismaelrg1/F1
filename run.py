@@ -1,8 +1,8 @@
-from application import create_app
+from backend.app.utils.socket import socketio
+from backend.application import create_app
 
-# Crea la instancia de la aplicación
 app = create_app()
 
-# Si se ejecuta directamente, arranca el servidor
+# Si se ejecuta directamente, arranca el servidor con soporte para WebSockets
 if __name__ == "__main__":
-    app.run(debug=True)
+    socketio.run(app, debug=True)

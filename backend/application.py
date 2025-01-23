@@ -15,10 +15,14 @@
 
 from flask import Flask
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate  # Importa Flask-Migrate
+
+from backend.app.utils.socket_manager import socketio
 from config.config import Config
 from config.db_config import db
-from app.routes.auth import auth_bp
-from app.routes.usuarios import usuarios_bp
+
+from backend.app.utils.logging_utils import setup_logger
+logger = setup_logger(__name__)
 
 
 def create_app():
@@ -27,16 +31,30 @@ def create_app():
 
     # Inicializa la base de datos
     db.init_app(app)
+    migrate = Migrate(app, db)
 
     # Crear tablas si no existen
-    with app.app_context():
-        db.create_all()  # No es necesario pasar `app` aquí, ya que estamos en el contexto de `app`
+    # with app.app_context():
+    #     db.create_all()  # No es necesario pasar `app` aquí, ya que estamos en el contexto de `app`
+
+    logger.debug(f"Table DB: {db.Model.metadata.tables.items()}")
 
     # Inicializa JWT
     jwt = JWTManager(app)
 
+    # Inicializa socketio con la app
+    socketio.init_app(app)
+
+    migrate.init_app(app, db)
+
     # Registra Blueprints
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(usuarios_bp)
+    from backend.app.routes.auth import auth_bp
+    # from backend.app.routes.usuarios import usuarios_bp
+    from backend.app.routes.schedule import schedule_bp
+    from backend.app.routes.race import race_bp
+    app.register_blueprint(auth_bp)
+    # app.register_blueprint(usuarios_bp)
+    app.register_blueprint(schedule_bp)
+    app.register_blueprint(race_bp)
 
     return app

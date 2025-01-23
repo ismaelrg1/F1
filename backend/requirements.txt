@@ -3,3 +3,5 @@ Flask-SQLAlchemy
 Flask-JWT-Extended
 python-dotenv
 fastf1
+flask_socketio
+flask-migrate

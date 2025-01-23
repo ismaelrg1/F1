@@ -1,13 +1,45 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendario de Carreras F1 2024</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
+{#<!DOCTYPE html>#}
+{#<html lang="es">#}
+{#<head>#}
+{#    <meta charset="UTF-8">#}
+{#    <meta http-equiv="X-UA-Compatible" content="IE=edge">#}
+{#    <meta name="viewport" content="width=device-width, initial-scale=1.0">#}
+{#    <title>Calendario de Carreras F1 2024</title>#}
+{#    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">#}
+{#    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>#}
+{#    <script src="{{ url_for('static', filename='scripts/socket.js') }}"></script> <!-- Aquí incluimos el archivo de Socket.IO -->#}
+{#</head>#}
+{#<body>#}
+{#    <div class="container">#}
+{#        {% for race in races %}#}
+{#        <a href="{{ url_for('race.race_detail', race_id=race.round) }}">#}
+{#            <div class="race-card">#}
+{#                <div class="race-header">#}
+{#                    <span class="round">ROUND {{ race.round }}</span>#}
+{#                    <div class="date">#}
+{#                        <span>{{ race.formatted_date }}</span> <!-- Muestra la fecha completa -->#}
+{#                    </div>#}
+{#                    <img src="{{ race.flag_url }}" alt="Bandera de {{ race.country }}" class="flag">#}
+{#                </div>#}
+{#                <div class="race-body">#}
+{#                    <h2>{{ race.country }}</h2>#}
+{#                    <p>{{ race.race_name }}</p>#}
+{#                    <img src="{{ race.circuit_image_url }}" alt="Circuito de {{ race.country }}" class="circuit" loading="lazy">#}
+{#                </div>#}
+{#            </div>#}
+{#        </a>#}
+{#        {% endfor %}#}
+{#    </div>#}
+{#</body>#}
+{#</html>#}
+
+{% extends "protected.html" %}
+
+{% block title %}Calendario de Carreras{% endblock %}
+
+{% block content %}
+<div id="home" class="calendar-container">
+    <h2>Calendario de Carreras</h2>
     <div class="container">
         {% for race in races %}
         <a href="{{ url_for('race.race_detail', race_id=race.round) }}">
@@ -15,19 +47,18 @@
                 <div class="race-header">
                     <span class="round">ROUND {{ race.round }}</span>
                     <div class="date">
-                        <span>{{ race.date.split(' ')[0] }}</span>
-                        <span>{{ race.date.split(' ')[1] }}</span>
+                        <span>{{ race.formatted_date }}</span> <!-- Muestra la fecha completa -->
                     </div>
                     <img src="{{ race.flag_url }}" alt="Bandera de {{ race.country }}" class="flag">
                 </div>
                 <div class="race-body">
                     <h2>{{ race.country }}</h2>
                     <p>{{ race.race_name }}</p>
-                    <img src="{{ race.circuit_image_url }}" alt="Circuito de {{ race.country }}" class="circuit">
+                    <img src="{{ race.circuit_image_url }}" alt="Circuito de {{ race.country }}" class="circuit" loading="lazy">
                 </div>
             </div>
         </a>
         {% endfor %}
     </div>
-</body>
-</html>
+</div>
+{% endblock %}

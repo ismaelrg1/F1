@@ -1,5 +1,4 @@
-
-// Función para alternar entre el formulario y la tabla
+// FunciÃ³n para alternar entre el formulario y la tabla
 function toggleContent(sectionId, showForm) {
     var form = document.querySelector(`#${sectionId}-form`);
     var results = document.querySelector(`#${sectionId}-results`);
@@ -13,8 +12,8 @@ function toggleContent(sectionId, showForm) {
     }
 }
 
-// Ejemplo de cómo llamar a la función
-// Puedes usar lógica condicional según el estado real
+// Ejemplo de cÃ³mo llamar a la funciÃ³n
+// Puedes usar lÃ³gica condicional segÃºn el estado real
 document.addEventListener('DOMContentLoaded', function() {
     toggleContent('qualy', false); // Muestra el formulario de qualy
     toggleContent('race', true); // Muestra la tabla de carrera
