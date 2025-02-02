@@ -14,7 +14,7 @@ class Participante(db.Model):
 @app.route('/ranking')
 def mostrar_ranking():
     participantes = Participante.query.order_by(Participante.puntos.desc()).all()
-    return render_template('test.html', participantes=participantes)
+    return render_template('race_detail.html', participantes=participantes)
 
 
 def agregar_participantes_ejemplo():

@@ -1,0 +1,101 @@
+{% extends "protected.html" %}
+
+{% block title %}Detalles de la Carrera{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ race_event.event_name }}</h1>
+    <h2>Formato: {{ race_event.event_format }}</h2>
+    <p>Sesiones del evento:</p>
+    <ul>
+        {% for session_key, session_name in race_event.sessions.items() %}
+        <li>{{ session_name }}</li>
+        {% endfor %}
+    </ul>
+
+    <!-- Apuestas dinámicas -->
+    <div id="bets-container">
+        {% for bet_type, bets in bets.items() %}
+        {% if bets|length > 0 %}
+        <section class="{{ bet_type|lower }}">
+            <h2>{{ bet_type }}</h2>
+
+            <form id="{{ bet_type|lower }}-form" onsubmit="handleBetFormSubmit(event, '{{ bet_type|lower }}')">
+                {% for bet in bets %}
+                <div class="bet-item">
+                    <label for="{{ bet_type|lower }}-{{ loop.index0 }}">{{ bet.bet }}</label>
+
+                    {% if bet.options %}
+                    <!-- Si hay opciones, muestra un selector -->
+                    <select id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}">
+                        {% for category, options in bet.options.items() %}
+                            <option value="" disabled selected>{{ category|capitalize }}</option> <!-- Placeholder dinámico -->
+                            {% for option in bet.options.get(category,[]) %}
+                            <option value="{{ option }}"
+                                    {% if bet.bet in user_bets and user_bets[bet.bet]['bet_user'] == option %}
+                                    selected
+                                    {% endif %}
+                            >
+                                {{ option }}
+                            </option>
+                            {% endfor %}
+                        {% endfor %}
+                    </select>
+                    {% else %}
+                    <!-- Si no hay opciones, muestra un campo de texto -->
+                    <input type="text" id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}"
+                           value="{{ user_bets.get(bet.bet, {}).get('bet_user', '') }}">
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                {% if user_bets[bet_type]|length > 0 %}
+                <!-- Cambia el botón a "Modificar" si ya hay apuestas -->
+                <button type="submit">Modificar</button>
+                {% else %}
+                <!-- Botón para enviar una nueva apuesta -->
+                <button type="submit">Enviar</button>
+                {% endif %}
+            </form>
+        </section>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    async function handleBetFormSubmit(event, betType) {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch(`/api/place-bet`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include', // Incluye cookies de autenticación
+                body: JSON.stringify({
+                    ...data,
+                    type: betType,
+                    race: "{{ race_event.event_name }}",
+                    season_id: {{ race_event.id }}
+                })
+            });
+
+            if (response.ok) {
+                alert("Apuesta enviada correctamente");
+            } else {
+                const error = await response.json();
+                alert("Error: " + error.message);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Hubo un problema al enviar la apuesta");
+        }
+    }
+</script>
+{% endblock %}

@@ -20,6 +20,7 @@ def schedule(year=int) -> list:
         # Si hay datos en la base de datos, devuélvelos inmediatamente
         races = [{
             'round': event.round_number,
+            'year': event.year,
             'formatted_date': event.event_date.strftime('%d-%b'),
             'country': event.country,
             'race_name': event.event_name,
@@ -56,6 +57,9 @@ def fetch_and_store_schedule(year):
     # Convertir el DataFrame a una lista de diccionarios para devolverlo
     # Aquí formateamos las fechas a strings antes de pasarlas a la vista
     df_transformed['formatted_date'] = df_transformed['date'].dt.strftime('%d-%b')
+
+    # Reemplazar "-" por espacios en la columna 'race_name'
+    df_transformed['race_name'] = df_transformed['race_name'].str.replace("-", " ")
 
     races = df_transformed[
         ['round', 'formatted_date', 'country', 'race_name', 'flag_url', 'circuit_image_url', 'time_session1', 'time_session2', 'time_session3', 'time_session4', 'time_session5', 'event_format']].to_dict(

@@ -7,7 +7,7 @@ from config.db_config import db  # Importa la instancia de SQLAlchemy
 from backend.app.models.user import User
 from backend.app.models.parameters_bets import BetScore
 from backend.app.models.bet_race import BetRace
-from backend.app.models.bet_qualy import BetQualy
+from backend.app.models.bet import BetQualy
 from backend.app.models.season import Season
 
 # Crea la aplicación
