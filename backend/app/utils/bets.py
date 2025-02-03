@@ -1,6 +1,7 @@
 from backend.app.models import BetScore, RaceEvent, BetException, Season
 from backend.app.models.parameters_bets import BetTemplate
 import json
+import re
 
 SESSION_MEANINGS = {
     'conventional': ['Practice 1', 'Practice 2', 'Practice 3', 'Qualifying', 'Race'],
@@ -9,6 +10,22 @@ SESSION_MEANINGS = {
     'sprint_qualifying': ['Practice 1', 'Sprint Qualifying', 'Sprint', 'Qualifying', 'Race'],
     'testing': ['Session 1', 'Session 2', 'Session 3', 'N/A', 'N/A']
 }
+
+# Define qué tipos de apuestas se permiten por cada formato
+ALLOWED_BET_TYPES = {
+    'conventional': ['Qualifying', 'Race'],
+    'sprint': ['Qualifying', 'Race', 'Sprint'],
+    'sprint_shootout': ['Qualifying', 'Race', 'Sprint'],
+    'sprint_qualifying': ['Qualifying', 'Race', 'Sprint', 'Sprint Qualifying'],
+    'testing': ['Test']
+}
+
+def format_bet_name(bet_name):
+    """Convierte nombres como 'PolePosition' en 'Pole Position'."""
+    formatted = re.sub(r'(?<!^)(?=[A-Z])', ' ', bet_name)  # Agrega espacios antes de mayúsculas
+    return formatted.strip().title()  # Capitaliza cada palabra
+
+
 def get_bets_for_race(event_name, year):
     # Obtener detalles del evento
     race_event = RaceEvent.query.filter_by(event_name=event_name.strip(), year=year).first()
@@ -32,7 +49,8 @@ def get_bets_for_race(event_name, year):
         "Test": [],
     }
 
-    # Función auxiliar para mapear tipos de apuestas
+    allowed_bets = ALLOWED_BET_TYPES.get(race_event.event_format, [])
+
     def get_bet_type(event):
         event = event.lower()
         if "qualy-sprint" in event:
@@ -47,36 +65,32 @@ def get_bets_for_race(event_name, year):
             return "Test"
         return None
 
-    # Mapear las apuestas genéricas de la temporada a los tipos correspondientes
     for template in bet_templates:
-        bet = template.bet_score  # Relación con BetScore
+        bet = template.bet_score
 
-        # Si no hay una relación bien configurada, usar consulta manual
         if not bet:
             bet = BetScore.query.get(template.bet_score_id)
 
         bet_type = get_bet_type(bet.event)
-        print(f"bet_type {bet_type}")
-        if bet_type:
+        if bet_type and bet_type in allowed_bets:
             options = template.options
             if isinstance(options, str):
                 try:
-                    options = json.loads(options)  # Convertir JSON string a dict si es necesario
+                    options = json.loads(options)
                 except json.JSONDecodeError:
                     options = {}
 
             bets_by_type[bet_type].append({
-                "bet": bet.bet,
+                "bet": format_bet_name(bet.bet),  # Formateamos el nombre antes de enviarlo
                 "options": options,
                 "is_custom": False
             })
 
-    # Obtener excepciones específicas para el evento
     exceptions = BetException.query.filter_by(race_event_id=race_event.id).all()
     for exception in exceptions:
         bet_type = get_bet_type(exception.bet)
 
-        if bet_type:
+        if bet_type and bet_type in allowed_bets:
             options = exception.options
             if isinstance(options, str):
                 try:
@@ -85,21 +99,18 @@ def get_bets_for_race(event_name, year):
                     options = {}
 
             if exception.is_custom:
-                # Si es una apuesta personalizada, agregarla como nueva
                 bets_by_type[bet_type].append({
-                    "bet": exception.bet,
+                    "bet": format_bet_name(exception.bet),  # También formateamos excepciones
                     "options": options,
                     "is_custom": True
                 })
             else:
-                # Si es una modificación de una apuesta existente, buscar y sobreescribir
                 for bet in bets_by_type[bet_type]:
-                    if bet["bet"] == exception.bet:
+                    if bet["bet"] == format_bet_name(exception.bet):
                         bet["score"] = exception.score
                         bet["options"] = options
                         break
 
-    # Mapear sesiones a nombres según el formato del evento
     session_mapping = {
         "time_session1": SESSION_MEANINGS[race_event.event_format][0],
         "time_session2": SESSION_MEANINGS[race_event.event_format][1],
@@ -108,8 +119,7 @@ def get_bets_for_race(event_name, year):
         "time_session5": SESSION_MEANINGS[race_event.event_format][4],
     }
 
-    print(
-        f"Race Event:\nID: {race_event.id}\nName: {race_event.event_name}\nFormat: {race_event.event_format}\nSessions: {session_mapping}\nBets: {bets_by_type}")
+    filtered_bets = {key: value for key, value in bets_by_type.items() if key in allowed_bets}
 
     return {
         "race_event": {
@@ -118,5 +128,5 @@ def get_bets_for_race(event_name, year):
             "event_format": race_event.event_format,
             "sessions": session_mapping
         },
-        "bets": bets_by_type
+        "bets": filtered_bets
     }

@@ -15,13 +15,15 @@
 
     <!-- Apuestas dinámicas -->
     <div id="bets-container">
-        {% for bet_type, bets in bets.items() %}
-        {% if bets|length > 0 %}
+        {% set bet_order = ["Sprint Qualifying", "Sprint", "Qualifying", "Race"] %}
+
+        {% for bet_type in bet_order %}
+        {% if bet_type in bets and bets[bet_type]|length > 0 %}
         <section class="{{ bet_type|lower }}">
             <h2>{{ bet_type }}</h2>
 
             <form id="{{ bet_type|lower }}-form" onsubmit="handleBetFormSubmit(event, '{{ bet_type|lower }}')">
-                {% for bet in bets %}
+                {% for bet in bets[bet_type] %}
                 <div class="bet-item">
                     <label for="{{ bet_type|lower }}-{{ loop.index0 }}">{{ bet.bet }}</label>
 

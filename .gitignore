@@ -1,5 +1,6 @@
 # Entorno virtual
 ven/
+f1_env/
 
 # Archivos y carpetas de configuración local
 *.env
