@@ -1,8 +1,6 @@
 import requests
 import os
 
-from flask import url_for
-
 session = requests.Session()
 
 from backend.app.utils.logging_utils import setup_logger
@@ -15,7 +13,7 @@ def get_flag_url(country_name):
         # flag_url = data[0]['flags']['png']
         # return flag_url
         file_name = country_name.replace(" ", "_") + ".png"
-        print(f"flag path -> /static/images/flag/{file_name}")
+        # print(f"flag path -> /static/images/flag/{file_name}")
         return f"/static/images/flags/{file_name}"
     except Exception as e:
         print(f'Error fetching flag URL: {e}')
@@ -31,7 +29,7 @@ def get_circuit_url(circuit_name):
 
     # Verifica si el archivo existe
     if os.path.exists(file_path):
-        print(f"circuito path -> /static/images/circuits/{file_name}")
+        # print(f"circuito path -> /static/images/circuits/{file_name}")
         # logger.debug(f"url circuit-> {url_for('static', filename=f'images/circuits/{file_name}')}")
         return f"/static/images/circuits/{file_name}"
     else:

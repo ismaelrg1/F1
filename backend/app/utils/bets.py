@@ -21,9 +21,9 @@ ALLOWED_BET_TYPES = {
 }
 
 def format_bet_name(bet_name):
-    """Convierte nombres como 'PolePosition' en 'Pole Position'."""
-    formatted = re.sub(r'(?<!^)(?=[A-Z])', ' ', bet_name)  # Agrega espacios antes de mayúsculas
-    return formatted.strip().title()  # Capitaliza cada palabra
+    """Convierte nombres como 'PolePosition' en 'Pole Position', pero mantiene siglas como 'SC' sin separar."""
+    formatted = re.sub(r'([a-z])([A-Z][a-z])', r'\1 \2', bet_name)  # Agrega espacio solo si la mayúscula va seguida de una minúscula
+    return formatted.strip()  # Capitaliza cada palabra
 
 
 def get_bets_for_race(event_name, year):
@@ -42,11 +42,11 @@ def get_bets_for_race(event_name, year):
 
     # Crear un diccionario inicial con las apuestas genéricas organizadas por tipo
     bets_by_type = {
-        "Qualifying": [],
-        "Race": [],
-        "Sprint": [],
-        "Sprint Qualifying": [],
-        "Test": [],
+        "Qualifying": {"bets": [], "max_edit_time": None},
+        "Race": {"bets": [], "max_edit_time": None},
+        "Sprint": {"bets": [], "max_edit_time": None},
+        "Sprint Qualifying": {"bets": [], "max_edit_time": None},
+        "Test": {"bets": [], "max_edit_time": None},
     }
 
     allowed_bets = ALLOWED_BET_TYPES.get(race_event.event_format, [])
@@ -80,15 +80,17 @@ def get_bets_for_race(event_name, year):
                 except json.JSONDecodeError:
                     options = {}
 
-            bets_by_type[bet_type].append({
+            bets_by_type[bet_type]["bets"].append({
                 "bet": format_bet_name(bet.bet),  # Formateamos el nombre antes de enviarlo
                 "options": options,
                 "is_custom": False
             })
 
     exceptions = BetException.query.filter_by(race_event_id=race_event.id).all()
+    print(f'exceptions: {exceptions}')
     for exception in exceptions:
-        bet_type = get_bet_type(exception.bet)
+        print(f'exception: {exception}')
+        bet_type = get_bet_type(exception.event)
 
         if bet_type and bet_type in allowed_bets:
             options = exception.options
@@ -98,18 +100,30 @@ def get_bets_for_race(event_name, year):
                 except json.JSONDecodeError:
                     options = {}
 
-            if exception.is_custom:
-                bets_by_type[bet_type].append({
-                    "bet": format_bet_name(exception.bet),  # También formateamos excepciones
-                    "options": options,
-                    "is_custom": True
-                })
+            formatted_bet_name = format_bet_name(exception.bet)  # Formatear el nombre
+
+            existing_bet = next(
+                (bet for bet in bets_by_type[bet_type]["bets"]
+                 if bet["bet"] == formatted_bet_name and bet["options"] == options),
+                None
+            )
+
+            if existing_bet:
+                # Si la apuesta ya existe con las mismas opciones, eliminarla
+                bets_by_type[bet_type]["bets"].remove(existing_bet)
             else:
-                for bet in bets_by_type[bet_type]:
-                    if bet["bet"] == format_bet_name(exception.bet):
-                        bet["score"] = exception.score
-                        bet["options"] = options
-                        break
+                if exception.is_custom:
+                    bets_by_type[bet_type]["bets"].append({
+                        "bet": formatted_bet_name,  # También formateamos excepciones
+                        "options": options,
+                        "is_custom": True
+                    })
+                else:
+                    for bet in bets_by_type[bet_type]["bets"]:
+                        if bet["bet"] == formatted_bet_name:
+                            bet["score"] = exception.score
+                            bet["options"] = options
+                            break
 
     session_mapping = {
         "time_session1": SESSION_MEANINGS[race_event.event_format][0],
@@ -118,6 +132,24 @@ def get_bets_for_race(event_name, year):
         "time_session4": SESSION_MEANINGS[race_event.event_format][3],
         "time_session5": SESSION_MEANINGS[race_event.event_format][4],
     }
+
+    # Asignar tiempos máximos de edición
+    session_time_map = {
+        SESSION_MEANINGS[race_event.event_format][0]: race_event.time_session1,
+        SESSION_MEANINGS[race_event.event_format][1]: race_event.time_session2,
+        SESSION_MEANINGS[race_event.event_format][2]: race_event.time_session3,
+        SESSION_MEANINGS[race_event.event_format][3]: race_event.time_session4,
+        SESSION_MEANINGS[race_event.event_format][4]: race_event.time_session5,
+    }
+
+    for bet_type, bet_data in bets_by_type.items():
+        session_name = bet_type  # El tipo de apuesta coincide con el nombre de sesión en SESSION_MEANINGS
+        session_time = session_time_map.get(session_name)
+
+        if session_time:
+            bet_data["max_edit_time"] = session_time  # Resta una hora al tiempo límite
+        else:
+            bet_data["max_edit_time"] = None  # Si no hay un tiempo definido, se deja como None
 
     filtered_bets = {key: value for key, value in bets_by_type.items() if key in allowed_bets}
 

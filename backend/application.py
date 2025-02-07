@@ -49,11 +49,11 @@ def create_app():
 
     # Registra Blueprints
     from backend.app.routes.auth import auth_bp
-    # from backend.app.routes.usuarios import usuarios_bp
+    from backend.app.routes.api_bd import api
     from backend.app.routes.schedule import schedule_bp
     from backend.app.routes.race import race_bp
     app.register_blueprint(auth_bp)
-    # app.register_blueprint(usuarios_bp)
+    app.register_blueprint(api)
     app.register_blueprint(schedule_bp)
     app.register_blueprint(race_bp)
 

@@ -15,5 +15,5 @@ class Config:
     JWT_COOKIE_SECURE = False  # Cambia a True si estás usando HTTPS
     JWT_ACCESS_COOKIE_PATH = '/'  # Ruta donde la cookie JWT de acceso es válida
     JWT_REFRESH_COOKIE_PATH = '/token/refresh'  # Ruta específica para la cookie de refresh, si estás usando
-    JWT_COOKIE_CSRF_PROTECT = True  # Cambia a True si deseas proteger contra CSRF
+    JWT_COOKIE_CSRF_PROTECT = False  # Cambia a True si deseas proteger contra CSRF
     JWT_COOKIE_SAMESITE = 'Lax'  # Opciones: 'Strict', 'Lax', o None para control de SameSite

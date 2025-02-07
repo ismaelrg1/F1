@@ -3,6 +3,9 @@ from backend.application import create_app
 
 app = create_app()
 
+def main():
+    socketio.run(app)
+
 # Si se ejecuta directamente, arranca el servidor con soporte para WebSockets
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    main()

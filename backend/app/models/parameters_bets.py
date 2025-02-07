@@ -24,6 +24,8 @@ class BetException(db.Model):
     bet = db.Column(db.String(100), nullable=False)  # Nombre de la apuesta
     score = db.Column(db.Integer, nullable=False, default=0)  # Puntuación personalizada
     options = db.Column(db.JSON, nullable=True)  # Opciones específicas (pilotos o valores)
+    is_custom = db.Column(db.Boolean, nullable=False, default=False)
+    event = db.Column(db.String(50), nullable=False, server_default="race")
 
     race_event = db.relationship('RaceEvent', backref='exceptions', lazy=True)
 
@@ -37,3 +39,4 @@ class BetTemplate(db.Model):
 
     # Relación con BetScore
     bet_score = db.relationship('BetScore', backref='bet_templates', lazy=True)
+    season = db.relationship('Season', backref='bet_templates', lazy=True)

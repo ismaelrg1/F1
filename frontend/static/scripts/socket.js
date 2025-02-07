@@ -1,28 +1,59 @@
-// Conectar a Socket.IO
-var socket = io();
+var socket;
 
-// Escuchar el evento 'update_schedule'
-socket.on('update_schedule', function(data) {
-    console.log("Nuevo calendario recibido:", data.races);
+// Espera a que el DOM se cargue
+document.addEventListener("DOMContentLoaded",function(){
+    // Conectar a Socket.IO
+    socket = io('/calendario', {
+        transports: ['websocket'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 3000
+    });
 
-    // Actualiza la lista de carreras en la página
-    updateRaceList(data.races);
+    socket.on('connect', function() {
+        console.log('Conectado al servidor');
+
+        socket.emit('list_clients');
+        socket.on('client_list', function(data) {
+            console.log("📡 Clientes en la sala:", data.clients);
+        });
+
+        // Escuchar el evento 'update_schedule'
+        socket.on('update_schedule', function(data) {
+            console.log("📡 Recibidos nuevos datos de la carrera:", data);
+            actualizarCalendario(data.races);
+        });
+    });
+
+    socket.on('disconnect', function() {
+        console.log("⚠️ Desconectado. Intentando reconectar...");
+    });
+
+
 });
 
 // Función para actualizar el DOM con las nuevas carreras
-function updateRaceList(races) {
+function actualizarCalendario(races) {
+    // Selecciona el contenedor que contiene las carreras.
+    // En tu plantilla, este contenedor es el div con clase "container".
     var container = document.querySelector('.container');
-    container.innerHTML = '';  // Limpiar el contenido existente
+    if (!container) return; // Si no se encuentra el contenedor, salir
 
+    // Limpiar el contenido existente
+    container.innerHTML = '';
+
+    // Recorrer cada carrera y crear el HTML correspondiente
     races.forEach(function(race) {
+        // Suponiendo que race.date es una cadena con espacio separando fecha y hora.
+        var fechaPartes = race.date.split(' ');
         var raceElement = `
             <a href="/race/${race.round}">
                 <div class="race-card">
                     <div class="race-header">
                         <span class="round">ROUND ${race.round}</span>
                         <div class="date">
-                            <span>${race.date.split(' ')[0]}</span>
-                            <span>${race.date.split(' ')[1]}</span>
+                            <span>${fechaPartes[0]}</span>
+                            <span>${fechaPartes[1] ? fechaPartes[1] : ''}</span>
                         </div>
                         <img src="${race.flag_url}" alt="Bandera de ${race.country}" class="flag">
                     </div>

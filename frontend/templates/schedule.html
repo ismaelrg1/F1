@@ -26,4 +26,10 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- Cargar Socket.IO -->
+<<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
+<!-- Importar nuestro código en socket.js -->
+<script src="{{ url_for('static', filename='scripts/socket.js') }}"></script>
 {% endblock %}
