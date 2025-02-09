@@ -2,6 +2,17 @@ from config.db_config import db  # Importa db de config
 
 
 class Bet(db.Model):
+    """
+        Model de la apuesta realizada por el usuario:
+
+        id -> identificador de la apuesta
+        user_id -> identificador del usuario
+        season_id -> identificador del season de la apuesta
+        race -> nombre de la carrera
+        parameter_bet_id -> identificador de la apuesta
+        bet_user -> resultado de la apuesta del usuario
+        type -> tipo de la apuesta (qulay, race, sprint, qualy-sprint)
+    """
     __tablename__ = 'bet'
 
     id = db.Column(db.Integer, primary_key=True)

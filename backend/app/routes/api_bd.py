@@ -1,7 +1,7 @@
-from datetime import timedelta, datetime
+from datetime import datetime
 
-from flask import Blueprint, request, jsonify, make_response, render_template
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, set_access_cookies
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from backend.app.models import RaceEvent, User, BetScore, Bet, Season
 from backend.app.utils.bets import get_bets_for_race
@@ -9,6 +9,7 @@ from config.db_config import db
 
 api = Blueprint('api', __name__)
 
+# Significado de los time_sessionX
 SESSION_MEANINGS = {
     'conventional': ['Practice 1', 'Practice 2', 'Practice 3', 'Qualifying', 'Race'],
     'sprint': ['Practice 1', 'Qualifying', 'Practice 2', 'Sprint', 'Race'],
@@ -19,7 +20,16 @@ SESSION_MEANINGS = {
 
 @api.route('/api/bet-status', methods=['GET'])
 @jwt_required(locations=["cookies"])
-def bet_status(race_name, year):
+def get_user_bets_for_race(race_name, year):
+    """
+        Obtiene todas las apuestas realizadas por el usuario en una carrera y año específico.
+    :param race_name: nombre de la carrera
+    :param year: año de la carrera
+    :return: {
+        "race": race_name : nombre de la carrera,
+        "bets": bets : apuestas realizadas por el usuario o lista vacia
+    }
+    """
     username = get_jwt_identity()  # Obtiene el username desde el JWT
 
     # Obtener el user_id basado en el username
@@ -29,10 +39,10 @@ def bet_status(race_name, year):
 
     user_id = user.id  # Ahora tenemos el user_id
 
-    # Query all bets for the user in the given race
+    # Query para obtener todas las apuestas del usuario en esa carrera
     user_bets = Bet.query.filter_by(user_id=user_id, race=race_name).all()
 
-    # Fetch race event details to determine session times and max edit times
+    # Obtenemos toda la informacion de la carrera
     race_event = RaceEvent.query.filter_by(event_name=race_name, year=year).first()
     if not race_event:
         return {
@@ -48,7 +58,7 @@ def bet_status(race_name, year):
             "bets": [],
         }, 404
 
-    # Get session meanings for the event format
+    # Obtenemos los nombres de los eventos(libre 1, qualy, carrera...) y su tiempo
     session_meanings = SESSION_MEANINGS.get(race_event.event_format, [])
     session_times = [
         race_event.time_session1, race_event.time_session2,
@@ -77,17 +87,29 @@ def bet_status(race_name, year):
         "bets": bets
     }, 200
 
+
 def get_season_id_from_race_event(race_event_id):
+    """
+      Funcion para obtener el id de la season segun el id de la carrera #TODO posible eliminacion si se modifica el modelo del race_event
+
+    :param race_event_id: identificador de la carrera
+    :return: identificador de la season
+    """
+
     race_event = RaceEvent.query.get(race_event_id)  # Obtiene el evento de carrera
     if not race_event:
-        return None  # Si no existe, retorna None o lanza un error
+        return None
 
     season = Season.query.filter_by(year=race_event.year).first()  # Busca la temporada correspondiente
     return season.id if season else None  # Devuelve el ID de la temporada si existe
 
 
 def get_user_id():
-    user_identity = get_jwt_identity()  # Puede ser email, username, etc.
+    """
+        Funcion para obtener el id del usuario
+    :return: id del usuario
+    """
+    user_identity = get_jwt_identity()
 
     print(f'user-> {user_identity['username']}')
 
@@ -101,6 +123,12 @@ def get_user_id():
 @api.route('/api/set-bet', methods=['POST'])
 @jwt_required(locations=["cookies"])
 def set_bet():
+    """
+        API para añadir las apuestas realizadas por el usuario #TODO posible modificacion para simplificar el codigo haciendo una funcion que se llame guardar apuestas y utilizar lambda con la lista que nos llega
+        :parameter data : apuestas realizadas por el usuario
+    :return: Mensaje de verificacion de las apuestas guardadas correctamente
+    """
+
     try:
         user_id = get_user_id()
 
@@ -138,16 +166,18 @@ def set_bet():
             return jsonify({"error": "Invalid bet type"}), 400
 
         max_edit_time = session_time_map[bet_type]
-        print(max_edit_time)
+        # print(max_edit_time)
 
+       # Verificacion si es posible el añadir/modificar la apuesta
         if datetime.utcnow() > max_edit_time:
             return jsonify({"error": "Bet modification time has expired"}), 403
 
-        # 🛑 Imprimimos lo que llega en `data` para depuración
-        print("📩 Datos recibidos en el backend:", data)
+        # # 🛑 Imprimimos lo que llega en `data` para depuración
+        # print("📩 Datos recibidos en el backend:", data)
 
         season_id = get_season_id_from_race_event(race_event.id)
 
+        # Iteramos por todas las apuestas
         for bet_name, bet_value in data.items():
             if bet_name in ["season_id", "race", "type", "id"]:
                 continue
@@ -157,13 +187,15 @@ def set_bet():
             if not bet_score:
                 return jsonify({"error": f"Invalid bet name: {bet_name.replace(' ','')}"}), 400
 
-            print(f'bet_score :{bet_score}')
-            print(f'user_id :{user_id}')
-            print(f'season_id :{season_id}')
-            print(f'race :{race}')
-            print(f'parameter_bet_id :{bet_score.id}')
-            print(f'bet_value :{bet_value}')
-            print(f'type :{bet_type}')
+            # print(f'bet_score :{bet_score}')
+            # print(f'user_id :{user_id}')
+            # print(f'season_id :{season_id}')
+            # print(f'race :{race}')
+            # print(f'parameter_bet_id :{bet_score.id}')
+            # print(f'bet_value :{bet_value}')
+            # print(f'type :{bet_type}')
+
+            # Buscamos si el usuario ya habia realizado esa apuesta
             existing_bet = Bet.query.filter_by(
                 user_id=user_id,
                 season_id=season_id,
@@ -172,9 +204,9 @@ def set_bet():
                 type=bet_type
             ).first()
 
-            if existing_bet:
+            if existing_bet:  # Modificamos la apuesta del usuario
                 existing_bet.bet_user = bet_value
-            else:
+            else: # Añadimos la nueva apuesta a la base de datos
                 new_bet = Bet(
                     user_id=user_id,
                     season_id=season_id,
@@ -194,11 +226,18 @@ def set_bet():
         print("❌ Error en el backend:", str(e))
         return jsonify({"error": "Internal server error", "details": str(e)}), 500
 
-
+#TODO Modificar esto
 @api.route('/api/bets/<int:race_event_id>', methods=['GET'])
 @jwt_required(locations=["cookies"])
-def get_bets(race_event_id):
-    response = get_bets_for_race(race_event_id)
+def get_bets(race_event_id, year):
+    """
+        Api para obtener las apuestas de una carrera(template + excepciones)
+
+    :param race_event_id: identificador de la carrera
+    :return: todas las apuestas de la carrera
+    """
+
+    response = get_bets_for_race(race_event_id, year)
     if "error" in response:
         return jsonify(response), 404
 

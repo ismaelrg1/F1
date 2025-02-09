@@ -2,13 +2,19 @@ from flask import render_template, Blueprint, jsonify
 from flask_jwt_extended import jwt_required
 
 from backend.app.models import BetScore, Season
-from backend.app.routes.api_bd import bet_status
+from backend.app.routes.api_bd import get_user_bets_for_race
 from backend.app.utils.bets import get_bets_for_race, format_bet_name
 
 from collections import defaultdict
 from datetime import datetime
 
-def get_user_bets(bet_status_response):
+def organize_bets_by_type(bet_status_response):
+    """
+        Organiza las apuestas del usuario en un diccionario, categorizadas por tipo de apuesta.
+
+    :param bet_status_response: Respuesta JSON de `get_user_bets_for_race()`
+    :return: Diccionario con apuestas organizadas por tipo
+    """
     user_bets = defaultdict(list)
 
     for bet in bet_status_response.get("bets", []):
@@ -35,18 +41,35 @@ race_bp = Blueprint('race', __name__)
 @race_bp.route('/race/<string:race_name>-<int:race_year>', endpoint='race_detail')
 @jwt_required(locations=["cookies"])
 def race_detail(race_name, race_year):
+    """
+        API para obtener todas las apuestas de una carrera y las respuestas del usuario(si existe)
+    :param race_name: nombre de la carrera
+    :param race_year: año de la carrea
+    :return: 'race_detail.html',
+        race_event=bets_response["race_event"], -> nombre de la carrera
+        bets=bets_response["bets"], -> apuestas de la carrera
+        user_bets=user_bets, -> resultado del usuario en las apuestas de la carrera
+        current_time=datetime.utcnow() -> hora actual
+    """
+
     # Obtener datos del evento y las apuestas usando las funciones que ya tienes
-    race_name=race_name.replace("-", " ")
+    if race_name == 'Pre-Season-Testing':
+        race_name = "Pre-Season Testing"
+    else:
+        race_name=race_name.replace("-", " ")
+
     bets_response = get_bets_for_race(race_name, race_year)
+
     if "error" in bets_response:
         return jsonify(bets_response), 404
 
     # Consulta el estado de las apuestas del usuario
-    bet_status_response = bet_status(race_name, race_year)
+    bet_status_response = get_user_bets_for_race(race_name, race_year)
     if isinstance(bet_status_response, tuple):  # Si devuelve un código de error
         bet_status_response = bet_status_response[0]  # Solo el contenido
 
-    user_bets = get_user_bets(bet_status_response)
+    # Organizar apuestas por tipo
+    user_bets = organize_bets_by_type(bet_status_response)
 
     # Pasar los datos al template
     return render_template(

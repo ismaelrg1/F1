@@ -3,6 +3,15 @@ from sqlalchemy import CheckConstraint
 
 
 class Scores(db.Model):
+    """
+        Modelo de las puntuaciones totales de los usuarios de la temporada
+
+        id -> identificador de la puntuaciones
+        user_id -> identificador del usuario
+        season_id -> identificador del season
+        total_score -> puntuacion total de la temporada
+    """
+
     __tablename__ = 'scores'
 
     id = db.Column(db.Integer, primary_key=True)

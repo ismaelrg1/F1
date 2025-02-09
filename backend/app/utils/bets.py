@@ -3,6 +3,7 @@ from backend.app.models.parameters_bets import BetTemplate
 import json
 import re
 
+# Nombres de las sesiones segun el tipo de evento
 SESSION_MEANINGS = {
     'conventional': ['Practice 1', 'Practice 2', 'Practice 3', 'Qualifying', 'Race'],
     'sprint': ['Practice 1', 'Qualifying', 'Practice 2', 'Sprint', 'Race'],
@@ -21,12 +22,32 @@ ALLOWED_BET_TYPES = {
 }
 
 def format_bet_name(bet_name):
+
     """Convierte nombres como 'PolePosition' en 'Pole Position', pero mantiene siglas como 'SC' sin separar."""
-    formatted = re.sub(r'([a-z])([A-Z][a-z])', r'\1 \2', bet_name)  # Agrega espacio solo si la mayúscula va seguida de una minúscula
+
+    formatted = re.sub(r'([a-z])([A-Z0-9])', r'\1 \2', bet_name)  # Agrega espacio solo si la mayúscula va seguida de una minúscula
+    formatted = re.sub(r'(\d)([A-Z])', r'\1 \2', formatted)
+    formatted = re.sub(r'([,.])([A-Z])', r'\1 \2', formatted)
+    formatted = re.sub(r'([A-Za-z0-9])([\(\{\[])', r'\1 \2', formatted)
+
     return formatted.strip()  # Capitaliza cada palabra
 
-
+#TODO Posible refactorizacion para simplificarlo
 def get_bets_for_race(event_name, year):
+    """
+        Funcion para obtener todas las apuesta de una carrera de un año especifico.
+        Lee el template y despues modifica segun las excepciones
+
+    :param event_name: nombre de la carrera
+    :param year: año de la carrera
+    :return: "race_event": {
+            "id": race_event.id, -> identificador de la carrera
+            "event_name": race_event.event_name, -> nombre de la carrera
+            "event_format": race_event.event_format, -> formato de la carrera
+            "sessions": session_mapping -> tiempo de cada session de la carrera
+        },
+        "bets": filtered_bets -> apuestas de la carrera key=tipo(carrera, qualy...) valor=apuestas
+    """
     # Obtener detalles del evento
     race_event = RaceEvent.query.filter_by(event_name=event_name.strip(), year=year).first()
     if not race_event:

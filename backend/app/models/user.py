@@ -2,6 +2,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from config.db_config import db  # Importa db de config
 
 class User(db.Model):
+    """
+        Modelo de usuario
+
+        id -> identificador de usuario
+        username -> nombre del usuario(nombre unico por usuario)
+        password -> contraseña del usuario hasheada
+    """
+
     __tablename__ = 'user'
 
     id = db.Column(db.Integer, primary_key=True)

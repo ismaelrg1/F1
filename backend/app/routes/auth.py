@@ -11,6 +11,10 @@ def home():
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
+    """
+        Registro del usuario en la base de datos
+    :return:
+    """
     username = request.json.get('username')
     password = request.json.get('password')
 
@@ -27,6 +31,10 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
+    """
+        Login del usuario
+    :return:
+    """
     username = request.json.get('username')
     password = request.json.get('password')
 
@@ -38,7 +46,7 @@ def login():
         # Crea una respuesta de Flask
         response = make_response(jsonify({"msg": "Login successful"}))
 
-        # Establece la cookie de acceso usando el método proporcionado por Flask-JWT-Extended
+        # Establece la cookie de acceso usando el metodo proporcionado por Flask-JWT-Extended
         set_access_cookies(response, access_token)
 
         return response
@@ -53,5 +61,4 @@ def login():
 @auth_bp.route('/protected', methods=['GET'])
 @jwt_required(locations=["cookies"])
 def protected():
-    current_user = get_jwt_identity()
     return render_template('protected.html')

@@ -1,4 +1,3 @@
-import time
 from threading import Thread
 
 import fastf1
@@ -11,7 +10,15 @@ from config.db_config import db
 
 from backend.app.utils.logging_utils import setup_logger
 logger = setup_logger(__name__)
-def schedule(year=int) -> list:
+def get_schedule(year=int) -> list:
+    """
+        Funcion para obtener todas las carreras de una season de la BD y en segundo plano comprobar si no ha habido
+        modificaciones en fastF1
+
+    :param year: año
+    :return: Toda la informacion de las carreras de una season de la BD
+    """
+
     # Verifica si los datos de la temporada ya están en la base de datos
     events_in_db = RaceEvent.query.filter_by(year=year).all()
     # print(f"Current DB: {events_in_db}")
@@ -47,6 +54,12 @@ def schedule(year=int) -> list:
 
 
 def fetch_and_store_schedule(year):
+    """
+        Buscar datos de las carreras en fastF1 y guardar datos en la BD
+
+    :param year: año
+    :return: Toda la informacion de las carreras de una season de la BD
+    """
     # Obtener la información de FastF1
     # print(f"Consultando la API de FastF1")
     df_transformed = fetch_api(year)
@@ -68,6 +81,11 @@ def fetch_and_store_schedule(year):
     return races
 
 def store_schedule(races):
+    """
+        Guardar datos de las carreras en la BD
+    :param races: datos de las carreras
+    """
+
     # Guardar los datos válidos en la base de datos
     for row in races.itertuples():
         event = RaceEvent(
@@ -90,6 +108,12 @@ def store_schedule(races):
 
 
 def fetch_api(year):
+    """
+        Buscar datos de las carreras en fastF1
+
+    :param year: año
+    :return: datos de la carrea
+    """
     temporada = fastf1.get_event_schedule(year)
 
     # Convertir el DataFrame y renombrar columnas
@@ -136,6 +160,13 @@ def fetch_api(year):
     return df_transformed
 
 def fetch_and_compare_schedule(year, app):
+    """
+        Funcion que busca los datos de fastF1 y los compara con la BD, si fastF1 != BD -> Actualiza BD, sino -> nada
+
+    :param year: año
+    :param app: contexto de la aplicacion
+    """
+
     print(f'inicializando fecth_and_compare_schedule')
     with app.app_context():
         # Obtener los datos desde FastF1

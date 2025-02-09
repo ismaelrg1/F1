@@ -6,6 +6,11 @@ session = requests.Session()
 from backend.app.utils.logging_utils import setup_logger
 logger = setup_logger(__name__)
 def get_flag_url(country_name):
+    """
+        Obtener el path del fichero de la bandera del pais
+    :param country_name: nombre del pais
+    :return: path del fichero
+    """
     try:
         # response = requests.get(f'https://restcountries.com/v3.1/name/{country_name}')
         # response.raise_for_status()
@@ -20,6 +25,12 @@ def get_flag_url(country_name):
         return None
 
 def get_circuit_url(circuit_name):
+    """
+        Obtener el path del fichero de la silueta de la carrera
+    :param circuit_name: nombre del circuito
+    :return: path del fichero
+    """
+
     # Construye el nombre de archivo basado en el nombre del circuito
     # Asegúrate de que los nombres de los archivos de imagen coincidan con los nombres de los circuitos.
     file_name = circuit_name.replace(" ", "_") + ".png"  # Reemplaza espacios por guiones bajos

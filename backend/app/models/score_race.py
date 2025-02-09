@@ -3,6 +3,15 @@ from sqlalchemy import CheckConstraint
 
 
 class ScoreRace(db.Model):
+    """
+        Modelo de la puntuacion total del usuario en cada carrera
+
+        id -> identificador de la puntuacion del usuario
+        user_id -> identificador del usuario
+        season_id -> identificador de la temporada
+        race -> nombre de la carrera #TODO cambiar a llave foranea del race_event
+        score -> puntuacion obtenida en esa carrera
+    """
     __tablename__ = 'score_race'
 
     id = db.Column(db.Integer, primary_key=True)

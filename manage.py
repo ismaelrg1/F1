@@ -6,8 +6,7 @@ from backend.application import create_app  # Importa tu función para crear la 
 from config.db_config import db  # Importa la instancia de SQLAlchemy
 from backend.app.models.user import User
 from backend.app.models.parameters_bets import BetScore
-from backend.app.models.bet_race import BetRace
-from backend.app.models.bet import BetQualy
+from backend.app.models.bet import Bet
 from backend.app.models.season import Season
 
 # Crea la aplicación
@@ -52,9 +51,10 @@ def add_parametro_apuesta():
     """Añadir un nuevo parámetro de apuesta."""
     nombre = input("Nombre del parámetro de apuesta: ")
     puntuacion = int(input("Puntuación: "))
+    event = input("Tipo de apuesta(race, qualy, sprint o qualy-sprint: ")
 
     try:
-        nuevo_parametro = BetScore(bet=nombre, score=puntuacion)
+        nuevo_parametro = BetScore(bet=nombre, score=puntuacion, event=event)
         db.session.add(nuevo_parametro)
         db.session.commit()
         print(f"Parámetro de apuesta '{nombre}' añadido con éxito.")
@@ -92,7 +92,7 @@ def add_temporada():
         print(f"Error al añadir temporada: {e}")
 
 
-@cli.command('add_apuesta_race')
+@cli.command('add_apuesta')
 def add_apuesta_race():
     """Añadir una nueva apuesta de carrera."""
     usuario_id = int(input("ID del usuario: "))
@@ -100,14 +100,16 @@ def add_apuesta_race():
     carrera = input("Nombre de la carrera: ")
     parametro_id = int(input("ID del parámetro de apuesta: "))
     valor = input("Valor de la apuesta: ")
+    event = input("Tipo de apuesta(race, qualy, sprint o qualy-sprint: ")
 
     try:
-        nueva_apuesta = BetRace(
+        nueva_apuesta = Bet(
             user_id=usuario_id,
             season_id=temporada_id,
             race=carrera,
             parameter_bet_id=parametro_id,
-            bet_user=valor
+            bet_user=valor,
+            type=event,
         )
         db.session.add(nueva_apuesta)
         db.session.commit()
@@ -115,30 +117,6 @@ def add_apuesta_race():
     except Exception as e:
         db.session.rollback()
         print(f"Error al añadir apuesta de carrera: {e}")
-
-@cli.command('add_apuesta_quali')
-def add_apuesta_quali():
-    """Añadir una nueva apuesta de clasificación."""
-    usuario_id = int(input("ID del usuario: "))
-    temporada_id = int(input("ID de la temporada: "))
-    carrera = input("Nombre de la carrera: ")
-    parametro_id = int(input("ID del parámetro de apuesta: "))
-    valor = input("Valor de la apuesta: ")
-
-    try:
-        nueva_apuesta_quali = BetQualy(
-            user_id=usuario_id,
-            season_id=temporada_id,
-            race=carrera,
-            parameter_bet_id=parametro_id,
-            bet_user=valor
-        )
-        db.session.add(nueva_apuesta_quali)
-        db.session.commit()
-        print(f"Apuesta de clasificación para la carrera '{carrera}' añadida con éxito.")
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error al añadir apuesta de clasificación: {e}")
 
 # Registra el grupo de comandos en la aplicación
 app.cli.add_command(cli)  # 'cli' es el nombre de tu grupo de comandos
