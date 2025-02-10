@@ -3,11 +3,11 @@
 {% block title %}Detalles de la Carrera{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="race-container">
     <h1>{{ race_event.event_name }}</h1>
     <h2>Formato: {{ race_event.event_format }}</h2>
     <p>Sesiones del evento:</p>
-    <ul>
+    <ul class="sessions-list">
         {% for session_key, session_name in race_event.sessions.items() %}
         <li>{{ session_name }}</li>
         {% endfor %}
@@ -19,7 +19,7 @@
 
         {% for bet_type in bet_order %}
         {% if bet_type in bets and bets[bet_type].bets|length > 0 %}
-        <section class="{{ bet_type|lower }}">
+        <section class="bet-section">
             <h2>{{ bet_type }}</h2>
 
             <!-- Mostrar el tiempo máximo de edición -->
@@ -28,7 +28,7 @@
             {% endif %}
 
             {% if not bets[bet_type].max_edit_time or bets[bet_type].max_edit_time > current_time %}
-            <form id="{{ bet_type|lower }}-form" onsubmit="handleBetFormSubmit(event, '{{ bet_type }}')">
+            <form class="bet-form" id="{{ bet_type|lower }}-form" onsubmit="handleBetFormSubmit(event, '{{ bet_type }}')">
                 {% for bet in bets[bet_type].bets %}
                 <div class="bet-item">
                     <label for="{{ bet_type|lower }}-{{ loop.index0 }}">{{ bet.bet }}</label>
@@ -62,12 +62,13 @@
                 </div>
                 {% endfor %}
 
-                <!-- Solo mostrar botón si aún no ha pasado `max_edit_time` -->
-                {% if user_bets.get(bet_type, [])|length > 0 %}
-                <button type="submit">Modificar</button>
-                {% else %}
-                <button type="submit">Enviar</button>
-                {% endif %}
+                <button type="submit">
+                    {% if user_bets.get(bet_type, [])|length > 0 %}
+                        Modificar
+                    {% else %}
+                        Enviar
+                    {% endif %}
+                </button>
             </form>
             {% else %}
             <p class="expired-warning"><strong>⏳ El tiempo para modificar apuestas ha expirado.</strong></p>
@@ -78,69 +79,4 @@
         {% endfor %}
     </div>
 </div>
-
-<script>
-    function getCSRFToken() {
-        return document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrf_access_token='))
-            ?.split('=')[1];
-    }
-
-    async function handleBetFormSubmit(event, betType) {
-        event.preventDefault();
-
-        const form = event.target;
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData.entries());
-
-        try {
-            const response = await fetch(`/api/set-bet`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-
-                },
-                credentials: 'include', // Incluye cookies de autenticación
-                body: JSON.stringify({
-                    ...data,
-                    type: betType,
-                    race: "{{ race_event.event_name }}",
-                    id: {{ race_event.id }}
-                })
-            });
-
-            // 🛑 Agregamos depuración antes de parsear JSON
-            const textResponse = await response.text();
-            console.log("🔍 Respuesta del servidor (sin parsear):", textResponse);
-
-            const jsonResponse = JSON.parse(textResponse); // Ahora convertimos a JSON
-            if (response.ok) {
-                alert("Apuesta enviada correctamente");
-                // 🔹 Cambiar el texto del botón a "Modificar"
-                const submitButton = form.querySelector("button[type='submit']");
-                if (submitButton) {
-                    submitButton.textContent = "Modificar";
-                }
-            } else {
-                alert("Error: " + jsonResponse.error);
-            }
-        } catch (error) {
-            console.error("❌ Error al enviar la apuesta:", error);
-            alert("Hubo un problema al enviar la apuesta");
-        }
-    }
-</script>
-
-<script>
-    // Convertimos las variables de Python a JSON para poder usarlas en JavaScript
-    let raceEvent = JSON.parse('{{ race_event | tojson | safe }}');
-    let bets = JSON.parse('{{ bets | tojson | safe }}');
-    let userBets = JSON.parse('{{ user_bets | tojson | safe }}');
-
-    // Imprimimos las variables en la consola del navegador
-    console.log("🏁 Race Event:", raceEvent);
-    console.log("🎲 Bets:", bets);
-    console.log("👤 User Bets:", userBets);
-</script>
 {% endblock %}

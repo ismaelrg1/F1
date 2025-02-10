@@ -1,0 +1,143 @@
+/* Estilos Generales */
+:root {
+    --background-color: #FFFFFF;
+    --text-color: #555;
+    --header-bg: #E10600;
+    --footer-bg: #E10600;
+    --nav-link-color: #FFFFFF;
+    --nav-link-hover: #FFCCCC;
+    --card-bg: #FFFFFF;
+    --input-bg-color: #e0e0e0;
+    --button-bg-color: #E10600FF;
+}
+
+/* Modo Oscuro: Se aplica solo cuando data-theme="dark" */
+[data-theme="dark"] {
+    --background-color: #1D1D1D;
+    --text-color: #FFFFFF;
+    --header-bg: #BF0404;
+    --footer-bg: #BF0404;
+    --nav-link-color: #FFFFFF;
+    --nav-link-hover: #FF9999;
+    --card-bg: #444444;
+    --input-bg-color: #2a2a2a;
+    --button-bg-color: #E10600FF;
+}
+
+/* Aplicar Variables */
+body {
+    font-family: Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    transition: background 0.3s ease, color 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden; /* Evita desplazamiento horizontal */
+}
+
+/* Cabecera más pequeña */
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--header-bg);
+    padding: 5px 0;
+    text-align: center;
+    color: white;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Reducir tamaño del título */
+header h1 {
+    font-size: 1.5rem;
+    margin: 5px 0; /* Espaciado mínimo */
+}
+
+nav {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+nav a {
+    color: var(--nav-link-color);
+    text-decoration: none;
+    font-weight: bold;
+    padding: 6px;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+nav a:hover {
+    color: var(--nav-link-hover);
+}
+
+/* Contenido */
+.content {
+    margin-top: 50px;
+    padding: 20px;
+    text-align: center;
+    flex: 1;
+}
+
+/* Footer más pequeño */
+footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--footer-bg);
+    padding: 1px;
+    text-align: center;
+    color: white;
+    font-size: 0.8rem;
+}
+
+/* 🌙 Botón de Cambio de Tema 🌞 */
+#theme-toggle {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+#theme-toggle:hover {
+    transform: scale(1.1);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    header {
+        font-size: 1rem;
+    }
+
+    nav {
+        gap: 10px;
+    }
+
+    nav a {
+        font-size: 0.8rem;
+        padding: 5px;
+    }
+
+    #theme-toggle {
+        font-size: 18px;
+        width: 30px;
+        height: 30px;
+    }
+}

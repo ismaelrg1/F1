@@ -5,11 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}F1 Predicciones{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/style_race.css') }}">
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='scripts/socket.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/theme.js') }}" defer></script>
 </head>
 <body>
+
+<!-- Botón de cambio de tema 🌙/🌞 -->
+<button id="theme-toggle">🌙</button>
 
 <header>
     <h1>F1 Predicciones</h1>
