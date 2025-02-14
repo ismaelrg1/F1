@@ -5,7 +5,7 @@
 /* Contenedor principal de la carrera */
 .race-container {
     max-width: 800px;
-    margin: 80px auto 60px; /* Ajustado para que no se solape con el header */
+    margin: 20px auto 60px; /* Ajustado para que no se solape con el header */
     padding: 20px;
     background-color: var(--form-bg-color);
     border-radius: 8px;
@@ -95,6 +95,13 @@
 /* ============================= */
 /* Cartas del calendario */
 /* ============================= */
+
+.calendar-container {
+    max-width: 1250px;
+    margin: 20px auto 60px;
+    padding: 20px;
+
+}
 
 .container {
     display: flex;

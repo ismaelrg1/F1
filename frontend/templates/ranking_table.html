@@ -1,0 +1,29 @@
+<div class="ranking-table-container">
+    <table class="ranking-table">
+        <thead>
+            <tr>
+                <th>Posición</th>
+                <th>Jugador</th>
+                <th>Puntos Totales</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for jugador in ranking %}
+        <tr>
+            <td>
+                {{ loop.index }}
+                {% if loop.index == 1 %}
+                    <div class="star gold"></div>
+                {% elif loop.index == 2 %}
+                    <div class="star silver"></div>
+                {% elif loop.index == 3 %}
+                    <div class="star bronze"></div>
+                {% endif %}
+            </td>
+            <td>{{ jugador.nombre }}</td>
+            <td>{{ jugador.puntos_totales }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    </table>
+</div>

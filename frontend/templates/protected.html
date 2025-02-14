@@ -7,9 +7,12 @@
     <title>{% block title %}F1 Predicciones{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/style_race.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles_ranking.css') }}">
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='scripts/socket.js') }}"></script>
     <script src="{{ url_for('static', filename='scripts/theme.js') }}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 <body>
 
@@ -21,7 +24,7 @@
     <nav>
         <a href="/protected" >Home</a>
         <a href="#" onclick="mostrarSeccion('apuestas')">Apuestas</a>
-        <a href="#" onclick="mostrarSeccion('ranking')">Ranking</a>
+        <a href="/ranking">Ranking</a>
         <a href="/calendario">Calendario</a>
     </nav>
 </header>

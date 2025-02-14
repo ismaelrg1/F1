@@ -1,0 +1,23 @@
+{% extends "protected.html" %}
+
+{% block title %}Ranking de Jugadores{% endblock %}
+
+{% block content %}
+<div class="ranking-container">
+    <h1>Ranking de Jugadores</h1>
+
+    <!-- Sección de la gráfica -->
+    {% include "ranking_chart.html" %}
+
+    <!-- Sección de la tabla de posiciones -->
+    {% include "ranking_table.html" %}
+</div>
+
+<script>
+    let datosPuntos = JSON.parse('{{ datos_puntos | tojson | safe }}');
+    let ranking = JSON.parse('{{ ranking | tojson | safe }}');
+    let carreras = JSON.parse('{{ carreras | tojson | safe }}');
+</script>
+<script src="{{ url_for('static', filename='scripts/ranking.js') }}" defer></script>
+{% endblock %}
+
