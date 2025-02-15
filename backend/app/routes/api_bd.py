@@ -183,7 +183,7 @@ def set_bet():
                 continue
 
             bet_score = BetScore.query.filter_by(bet=bet_name.replace(' ','')).first()
-            print(f'Bet: {bet_name.replace(' ','')}')
+            #print(f'Bet: {bet_name.replace(' ','')}')
             if not bet_score:
                 return jsonify({"error": f"Invalid bet name: {bet_name.replace(' ','')}"}), 400
 
