@@ -111,7 +111,7 @@ def get_user_id():
     """
     user_identity = get_jwt_identity()
 
-    print(f'user-> {user_identity['username']}')
+    # print(f'user-> {user_identity['username']}')
 
     user = User.query.filter_by(username=user_identity['username']).first()  # Buscar en la base de datos
 
