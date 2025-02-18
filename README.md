@@ -55,7 +55,6 @@ python start.py
 
 ## 📅 TODO - Funcionalidades Pendientes
 🔨 **Cosas por hacer:**
-- 📌 **Crear la página del ranking**.
 - 📊 **Calcular puntuación de los usuarios según los resultados de FastF1**.
 - ⏳ **Automatizar cálculos con un `crontab` o `Flask_APScheduler`**.
 - 👀 **Decidir cómo mostrar las apuestas de otros usuarios**.
@@ -77,5 +76,6 @@ python start.py
 - ⚡ **Implementación de SocketIO para futuros desarrollos**.
 - 🔐 **Sistema de login** y restricciones de acceso.
 - 🎨 **Decorar las páginas web**.
+- 📌 **Crear la página del ranking**.
 
 ---

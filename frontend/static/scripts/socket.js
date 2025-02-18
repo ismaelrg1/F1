@@ -2,10 +2,20 @@ var socket;
 
 // Espera a que el DOM se cargue
 document.addEventListener("DOMContentLoaded",function(){
+    // Obtener el protocolo (http o https)
+    var protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+    // Obtener el host dinámicamente (IP o dominio)
+    var host = window.location.hostname;
+
+    // Construir la URL del WebSocket de forma dinámica
+    var socketUrl = `${protocol}//${host}/calendario`;
+
     // Conectar a Socket.IO
-    socket = io('/calendario', {
+    socket = io(socketUrl , {
         transports: ['websocket'],
         reconnection: true,
+        rejectUnauthorized: false,
         reconnectionAttempts: 5,
         reconnectionDelay: 3000
     });

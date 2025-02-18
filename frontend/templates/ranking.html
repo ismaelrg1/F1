@@ -7,7 +7,9 @@
     <h1>Ranking de Jugadores</h1>
 
     <!-- Sección de la gráfica -->
-    {% include "ranking_chart.html" %}
+    <div class="chart-container">
+        <canvas id="rankingChart"></canvas>
+    </div>
 
     <!-- Sección de la tabla de posiciones -->
     {% include "ranking_table.html" %}
