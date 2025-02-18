@@ -6,6 +6,15 @@
 <div class="ranking-container">
     <h1>Ranking de Jugadores</h1>
 
+    <!-- Enlaces directos a cada temporada -->
+    <div class="season-links">
+        {% for season_year in seasons %}
+            <a href="{{ url_for('ranking.ranking', season_year=season_year) }}" class="season-link">
+                {{ season_year }}
+            </a>
+        {% endfor %}
+    </div>
+
     <!-- Sección de la gráfica -->
     <div class="chart-container">
         <canvas id="rankingChart"></canvas>

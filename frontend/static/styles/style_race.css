@@ -118,27 +118,39 @@
     text-decoration: none; /* Asegura que el enlace no tenga subrayado */
 }
 
+
 .race-card {
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
     background-color: var(--card-bg);
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    width: 250px;
-    min-height: 300px;
+    width: 280px;
+    height: 320px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+
 
 .race-card:hover {
     transform: translateY(-10px); /* Desplaza el cuadro hacia arriba */
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Aumenta la sombra para dar un efecto de profundidad */
 }
 
-.race-card img {
-    max-width: 100%; /* Asegura que las imágenes no se desborden del contenedor */
-    height: auto; /* Mantiene las proporciones de las imágenes */
-    object-fit: cover
+.race-card .circuit-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 160px; /* Altura fija para asegurar alineación */
+    padding: 10px; /* Evita que la imagen toque los bordes */
+}
+
+.race-card img.circuit {
+    width: 100%; /* Mantiene el ancho al 100% de la tarjeta */
+    max-height: 180px; /* Establece una altura máxima */
+    object-fit: contain; /* Evita que se deforme y la ajusta dentro del contenedor */
+    display: block;
 }
 
 .race-header {
@@ -150,8 +162,10 @@
 }
 
 .race-body {
-    flex: 1; /* Hace que el contenido del cuerpo se expanda para llenar el espacio disponible */
+    flex-grow: 1; /* Hace que el contenido del cuerpo se expanda para llenar el espacio disponible */
     padding: 15px;
+    flex-direction: column;
+    justify-content: space-between;
     text-align: center;
 }
 
@@ -225,4 +239,25 @@ a {
 a:focus {
     outline: none; /* Elimina el borde de enfoque predeterminado */
     text-decoration: none; /* Elimina el subrayado en el estado de enfoque */
+}
+
+.season-links {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.season-link {
+    text-decoration: none;
+    background-color: var(--button-bg-color);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background 0.3s ease-in-out;
+}
+
+.season-link:hover {
+    background-color: var(--button-hover-bg-color);
 }

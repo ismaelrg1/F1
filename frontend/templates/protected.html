@@ -24,8 +24,8 @@
     <nav>
         <a href="/protected" >Home</a>
         <a href="#" onclick="mostrarSeccion('apuestas')">Apuestas</a>
-        <a href="/ranking">Ranking</a>
-        <a href="/calendario">Calendario</a>
+        <a href="{{ url_for('ranking.ranking') }}">Ranking</a>
+        <a href="{{ url_for('schedule.calendario') }}">Calendario</a>
     </nav>
 </header>
 
