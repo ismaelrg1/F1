@@ -18,7 +18,7 @@ class ScoreRace(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     season_id = db.Column(db.Integer, db.ForeignKey('season.id'), nullable=False)
     race = db.Column(db.String(100), nullable=False)
-    score = db.Column(db.Integer, nullable=False, default=0)
+    score = db.Column(db.Float, nullable=False, default=0)
 
     # Relaciones
     user = db.relationship('User', backref='score_race', lazy=True)

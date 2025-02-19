@@ -17,7 +17,7 @@ class Scores(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     season_id = db.Column(db.Integer, db.ForeignKey('season.id'), nullable=False)
-    total_score = db.Column(db.Integer, nullable=False, default=0)
+    total_score = db.Column(db.Float, nullable=False, default=0)
 
     # Relaciones
     user = db.relationship('User', backref='scores', lazy=True)
