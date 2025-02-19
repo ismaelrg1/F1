@@ -1,0 +1,39 @@
+{% extends "protected.html" %}
+
+{% block title %}Apuestas - {{ race_name }} ({{ season_year }}){% endblock %}
+
+{% block content %}
+<div class="race-bets-container">
+    <h2>Apuestas para {{ race_name }} - {{ season_year }}</h2>
+
+    {% for event_type, bets in bets_data.items() if bets %}
+    <h3>
+        {% if event_type == "race" %}Carrera{% endif %}
+        {% if event_type == "qualifying" %}Clasificación{% endif %}
+        {% if event_type == "sprint" %}Sprint{% endif %}
+        {% if event_type == "sprint_qualifying" %}Clasificación Sprint{% endif %}
+    </h3>
+
+    <table class="bet-table">
+        <thead>
+            <tr>
+                <th>Apuesta</th>
+                {% for user in bets.keys() %}
+                    <th>{{ user }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for bet_type in (bets.values()|first).keys() %}
+            <tr>
+                <th>{{ bet_type }}</th> {# Poner en negrita la primera columna #}
+                {% for user, user_bets in bets.items() %}
+                    <td>{{ user_bets.get(bet_type, '—') }}</td>  {# Usa un guion si falta la apuesta #}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endfor %}
+</div>
+{% endblock %}

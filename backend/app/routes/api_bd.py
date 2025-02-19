@@ -27,7 +27,7 @@ def get_user_bets_for_race(race_name, year):
     :param year: año de la carrera
     :return: {
         "race": race_name : nombre de la carrera,
-        "bets": bets : apuestas realizadas por el usuario o lista vacia
+        "bets":  apuestas realizadas por el usuario o lista vacia
     }
     """
     username = get_jwt_identity()  # Obtiene el username desde el JWT
@@ -74,11 +74,11 @@ def get_user_bets_for_race(race_name, year):
         max_edit_time = session_time_map[bet.type]
         # Append bet details, including max_edit_time
         bets.append({
-            "id": bet.id,
+            "id": str(bet.id),
             "type": bet.type,
-            "parameter_bet_id": bet.parameter_bet_id,
+            "parameter_bet_id": str(bet.parameter_bet_id),
             "bet_user": bet.bet_user,
-            "season_id": bet.season_id,
+            "season_id": str(bet.season_id),
             "max_edit_time": max_edit_time.isoformat() if max_edit_time else None
         })
 

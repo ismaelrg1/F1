@@ -22,42 +22,41 @@
         <section class="bet-section">
             <h2>{{ bet_type }}</h2>
 
-            <!-- Mostrar el tiempo máximo de edición -->
             {% if bets[bet_type].max_edit_time %}
             <p class="max-edit-time"><strong>Tiempo máximo de edición:</strong> {{ bets[bet_type].max_edit_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
             {% endif %}
 
             {% if not bets[bet_type].max_edit_time or bets[bet_type].max_edit_time > current_time %}
-            <form class="bet-form" id="{{ bet_type|lower }}-form" onsubmit="handleBetFormSubmit(event, '{{ bet_type }}')">
+            <form class="bet-form" id="{{ bet_type|lower }}-form"
+                  onsubmit="handleBetFormSubmit(event, '{{ bet_type }}', '{{ race_event.event_name }}', {{ race_event.id }})">
                 {% for bet in bets[bet_type].bets %}
                 <div class="bet-item">
                     <label for="{{ bet_type|lower }}-{{ loop.index0 }}">{{ bet.bet }}</label>
 
                     {% if bet.options %}
-                    <!-- Si hay opciones, muestra un selector -->
                     <select id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}">
                         {% for category, options in bet.options.items() %}
                             <option value="" disabled
                                     {% if not user_bets.get(bet_type, []) | selectattr("parameter_bet", "equalto", bet.bet) | map(attribute="bet_user") | first %}
                                     selected
-                                    {% endif %}
-                            >{{ category|capitalize }}</option>
+                                    {% endif %}>
+                                {{ category|capitalize }}
+                            </option>
 
                             {% for option in options %}
                             <option value="{{ option }}"
                                     {% if user_bets.get(bet_type, []) | selectattr("parameter_bet", "equalto", bet.bet) | map(attribute="bet_user") | first == option %}
                                     selected
-                                    {% endif %}
-                            >
+                                    {% endif %}>
                                 {{ option }}
                             </option>
                             {% endfor %}
                         {% endfor %}
                     </select>
                     {% else %}
-                    <!-- Si no hay opciones, muestra un campo de texto -->
                     <input type="text" id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}"
-                           value="{{ user_bets.get(bet_type, []) | selectattr('parameter_bet', 'equalto', bet.bet) | map(attribute='bet_user') | first or '' }}">
+                           value="{{ user_bets.get(bet_type, []) | selectattr('parameter_bet', 'equalto', bet.bet) | map(attribute='bet_user') | first | default('', true) }}">
+
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -73,10 +72,27 @@
             {% else %}
             <p class="expired-warning"><strong>⏳ El tiempo para modificar apuestas ha expirado.</strong></p>
             {% endif %}
-
         </section>
         {% endif %}
         {% endfor %}
     </div>
 </div>
+
+<script>
+    // Convertimos las variables de Python a JSON para poder usarlas en JavaScript
+    let raceEvent = JSON.parse('{{ race_event | tojson | safe }}');
+    let bets = JSON.parse('{{ bets | tojson | safe }}');
+    let userBets = JSON.parse('{{ user_bets | tojson | safe }}');
+
+    // Imprimimos las variables en la consola del navegador
+    console.log("🏁 Race Event:", raceEvent);
+    console.log("🎲 Bets:", bets);
+    console.log("👤 User Bets:", userBets);
+</script>
+
+
+<!-- 🔹 Include JavaScript for handling form submission -->
+<script src="{{ url_for('static', filename='scripts/bet_form.js') }}"></script>
+
 {% endblock %}
+

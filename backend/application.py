@@ -38,10 +38,12 @@ def create_app():
     from backend.app.routes.schedule import schedule_bp
     from backend.app.routes.race import race_bp
     from backend.app.routes.ranking import ranking_bp
+    from backend.app.routes.bets import bets_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(api)
     app.register_blueprint(schedule_bp)
     app.register_blueprint(race_bp)
     app.register_blueprint(ranking_bp)
+    app.register_blueprint(bets_bp)
 
     return app

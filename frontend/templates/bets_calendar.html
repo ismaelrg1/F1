@@ -1,0 +1,42 @@
+{% extends "protected.html" %}
+
+{% block title %}Apuestas de Carreras{% endblock %}
+
+{% block content %}
+<div id="home" class="calendar-container">
+    <h2>Apuestas de Carreras - {{ year }}</h2>
+
+    <!-- Enlaces directos a cada temporada -->
+    <div class="season-links">
+        {% for season_year in seasons %}
+            <a href="{{ url_for('bets.apuestas', season_year=season_year) }}" class="season-link">
+                {{ season_year }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <div class="container">
+        {% for race in races %}
+        <a href="{{ url_for('bets.apuestas_carrera', season_year=race.year, race_name=race.race_name|replace(' ', '-')) }}">
+
+            <div class="race-card">
+                <div class="race-header">
+                    <span class="round">ROUND {{ race.round }}</span>
+                    <div class="date">
+                        <span>{{ race.formatted_date }}</span> <!-- Muestra la fecha completa -->
+                    </div>
+                    <img src="{{ race.flag_url }}" alt="Bandera de {{ race.country }}" class="flag">
+                </div>
+                <div class="race-body">
+                    <h2>{{ race.country }}</h2>
+                    <p>{{ race.race_name }}</p>
+                    <div class="circuit-container">
+                        <img src="{{ race.circuit_image_url }}" alt="Circuito de {{ race.country }}" class="circuit" loading="lazy">
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
