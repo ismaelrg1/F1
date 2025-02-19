@@ -143,3 +143,24 @@ footer {
         height: 30px;
     }
 }
+
+#back-button {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+#back-button:hover {
+    background-color: #cc0000;
+}

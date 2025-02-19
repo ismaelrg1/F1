@@ -20,7 +20,11 @@
 
 <!-- Botón de cambio de tema 🌙/🌞 -->
 <button id="theme-toggle">🌙</button>
-
+<button id="back-button" onclick="goBack()">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 19L8 12L15 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+</button>
 <header>
     <h1>F1 Predicciones</h1>
     <nav>
@@ -41,4 +45,14 @@
 
 </body>
 </html>
+
+<script>
+    function goBack() {
+        if (document.referrer) {
+            window.history.back();
+        } else {
+            window.location.href = "/home"; // Redirigir a Home si no hay historial
+        }
+    }
+</script>
 
