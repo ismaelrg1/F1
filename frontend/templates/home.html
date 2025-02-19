@@ -1,0 +1,33 @@
+{% extends "protected.html" %}
+
+{% block title %}Inicio - F1 Predicciones{% endblock %}
+
+{% block content %}
+<div class="home-container">
+    <!-- Logo del evento -->
+    <div class="logo-container">
+        <img src="{{ url_for('static', filename='images/logo/logo_porra.png') }}" alt="Logo La Porra 2025">
+    </div>
+
+    <!-- Introducción -->
+    <section class="intro">
+        <h2>Bienvenido a la Porra F1 2025 - 6ª Edición</h2>
+        <p>Compite con otros jugadores pronosticando los resultados de cada carrera de la temporada. ¡Suma puntos y conviértete en el campeón!</p>
+    </section>
+
+    <!-- Enlaces rápidos -->
+    <section class="quick-links">
+        <h2>Accesos Rápidos</h2>
+        <div class="links-container">
+            <a href="{{ url_for('ranking.ranking') }}" class="link-card">📊 Ver Ranking</a>
+            <a href="{{ url_for('schedule.calendario') }}" class="link-card">📅 Ver Calendario</a>
+        </div>
+    </section>
+
+    <!-- Historial de campeones -->
+    <section class="history">
+        <h2>Historial de Campeones</h2>
+        <img src="{{ url_for('static', filename='images/ranking/historial_porra.png') }}" alt="Historial de campeones">
+    </section>
+</div>
+{% endblock %}

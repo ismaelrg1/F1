@@ -58,7 +58,7 @@ def login():
 #     current_user = get_jwt_identity()
 #     return jsonify(logged_in_as=current_user), 200
 
-@auth_bp.route('/protected', methods=['GET'])
+@auth_bp.route('/home', methods=['GET'])
 @jwt_required(locations=["cookies"])
 def protected():
-    return render_template('protected.html')
+    return render_template('home.html')

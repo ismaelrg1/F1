@@ -17,7 +17,7 @@ async function login(event) {
         });
 
         if (response.ok) {
-            window.location.href = '/protected';  // Redirige a la página protegida
+            window.location.href = '/home';  // Redirige a la página protegida
         } else {
             const error = await response.json();
             alert(error.msg);

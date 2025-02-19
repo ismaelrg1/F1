@@ -59,7 +59,6 @@ python start.py
 - ⏳ **Automatizar cálculos con un `crontab` o `Flask_APScheduler`**.
 - 👀 **Decidir cómo mostrar las apuestas de otros usuarios**.
 - 🔄 **Posible cambio a ID de `Season` en el modelo `RaceEvent`**.
-- 🔑 **Convertir `race_event` en llave foránea en el modelo `ScoreRace`**.
 - 🗑️ **Eliminar `get_season_id_from_race_event()` si se modifica el modelo `RaceEvent`**.
 - 📝 **Refactorizar `set_bet()` para simplificar su código**.
 - 🔄 **Modificar completamente la API `get_bets()`**.
