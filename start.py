@@ -8,8 +8,8 @@ app = create_app()
 
 def main():
     # Configurar SSL manualmente
-    cert = "cert.pem"
-    key = "key.pem"
+    cert = "fullchain.pem"
+    key = "privkey.pem"
 
     # Cargar SSL en un socket seguro
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)

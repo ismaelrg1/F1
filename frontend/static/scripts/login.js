@@ -7,7 +7,7 @@ async function login(event) {
     console.log(window.location.hostname)
 
     try {
-        const response = await fetch(`https://${window.location.hostname}:5000/login`, {
+        const response = await fetch(`https://${window.location.hostname}/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
