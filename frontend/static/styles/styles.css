@@ -51,6 +51,7 @@ header {
     font-size: 1.2rem;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     z-index: 100;
+    transition: bottom 0.3s ease-in-out;
 }
 
 /* Reducir tamaño del título */
@@ -89,7 +90,7 @@ nav a:hover {
 /* Footer más pequeño */
 footer {
     position: fixed;
-    bottom: 0;
+    bottom: -70px;
     left: 0;
     width: 100%;
     background-color: var(--footer-bg);
@@ -98,6 +99,7 @@ footer {
     color: white;
     font-size: 0.8rem;
     z-index: 100;
+    transition: bottom 0.3s ease-in-out;
 }
 
 /* 🌙 Botón de Cambio de Tema 🌞 */

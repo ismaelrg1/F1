@@ -48,9 +48,15 @@
             document.head.appendChild(style);
         }
 
-        // Scroll suave
+        // 🚀 Antes de hacer scroll automático, avisamos para ignorar scroll
+        window.ignoreScroll = true;
         setTimeout(() => {
             nextRaceCard.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 300);
+
+        // 🕓 Después de un tiempo (por ejemplo 1000ms), dejamos de ignorar scrolls
+        setTimeout(() => {
+            window.ignoreScroll = false;
+        }, 1300); 
     }
 })();
