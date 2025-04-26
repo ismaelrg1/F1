@@ -30,6 +30,24 @@
 /* ============================= */
 /* Estilos de la Tabla */
 /* ============================= */
+.bet-table-wrapper .bet-table {
+    width: 100%;
+    display: block; /* Para forzar que se adapte */
+    overflow-x: auto; /* Permite desplazamiento horizontal si es necesario */
+    white-space: nowrap; /* Evita que el contenido de las celdas se rompa */
+}
+
+/* Fija la primera columna */
+.bet-table th:first-child, 
+.bet-table td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: var(--nav-link-hover); /* Asegura que el fondo sea visible */
+    z-index: 2; /* Para que quede sobre las demás columnas */
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Añade un pequeño sombreado */
+}
+
+
 .bet-table-container {
     width: 100%;
     max-width: 1200px;

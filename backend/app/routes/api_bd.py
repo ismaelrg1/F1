@@ -15,7 +15,7 @@ SESSION_MEANINGS = {
     'sprint': ['Practice 1', 'Qualifying', 'Practice 2', 'Sprint', 'Race'],
     'sprint_shootout': ['Practice 1', 'Qualifying', 'Sprint Shootout', 'Sprint', 'Race'],
     'sprint_qualifying': ['Practice 1', 'Sprint Qualifying', 'Sprint', 'Qualifying', 'Race'],
-    'testing': ['Session 1', 'Session 2', 'Session 3', 'N/A', 'N/A']
+    'testing': ['Test', 'Test1', 'Test2', 'N/A', 'N/A']
 }
 
 @api.route('/api/bet-status', methods=['GET'])
@@ -182,7 +182,7 @@ def set_bet():
             if bet_name in ["season_id", "race", "type", "id"]:
                 continue
 
-            bet_score = BetScore.query.filter_by(bet=bet_name.replace(' ','')).first()
+            bet_score = BetScore.query.filter_by(bet=bet_name.replace(' ',''), event=bet_type.replace(' ','_').lower()).first()
             #print(f'Bet: {bet_name.replace(' ','')}')
             if not bet_score:
                 return jsonify({"error": f"Invalid bet name: {bet_name.replace(' ','')}"}), 400

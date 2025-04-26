@@ -1,6 +1,7 @@
 # Entorno virtual
 ven/
 f1_env/
+venv_f1/
 
 # Archivos y carpetas de configuración local
 *.env
@@ -21,3 +22,6 @@ __pycache__/
 # Otros archivos temporales
 *.log
 *.tmp
+
+# archivos keys
+*.pem

@@ -74,13 +74,13 @@ def get_bets_for_race(event_name, year):
 
     def get_bet_type(event):
         event = event.lower()
-        if "qualy-sprint" in event:
+        if "sprint_qualifying" in event:
             return "Sprint Qualifying"
         elif "race" in event:
             return "Race"
         elif "sprint" in event:
             return "Sprint"
-        elif "qualy" in event:
+        elif "qualifying" in event:
             return "Qualifying"
         elif "test" in event:
             return "Test"

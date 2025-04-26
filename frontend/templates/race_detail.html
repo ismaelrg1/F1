@@ -26,7 +26,7 @@
             <p class="max-edit-time"><strong>Tiempo máximo de edición:</strong> {{ bets[bet_type].max_edit_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
             {% endif %}
 
-            {% if not bets[bet_type].max_edit_time or bets[bet_type].max_edit_time > current_time %}
+            
             <form class="bet-form" id="{{ bet_type|lower }}-form"
                   onsubmit="handleBetFormSubmit(event, '{{ bet_type }}', '{{ race_event.event_name }}', {{ race_event.id }})">
                 {% for bet in bets[bet_type].bets %}
@@ -60,7 +60,7 @@
                     {% endif %}
                 </div>
                 {% endfor %}
-
+		{% if not bets[bet_type].max_edit_time or bets[bet_type].max_edit_time > current_time %}
                 <button type="submit">
                     {% if user_bets.get(bet_type, [])|length > 0 %}
                         Modificar
@@ -68,10 +68,10 @@
                         Enviar
                     {% endif %}
                 </button>
+		{% else %}
+            	<p class="expired-warning"><strong>⏳ El tiempo para modificar apuestas ha expirado.</strong></p>
+            	{% endif %}
             </form>
-            {% else %}
-            <p class="expired-warning"><strong>⏳ El tiempo para modificar apuestas ha expirado.</strong></p>
-            {% endif %}
         </section>
         {% endif %}
         {% endfor %}
