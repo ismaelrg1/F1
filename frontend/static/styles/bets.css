@@ -43,7 +43,7 @@
     position: sticky;
     left: 0;
     background-color: var(--nav-link-hover); /* Asegura que el fondo sea visible */
-    z-index: 2; /* Para que quede sobre las demás columnas */
+    z-index: 4; /* Para que quede sobre las demás columnas */
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Añade un pequeño sombreado */
 }
 
@@ -100,6 +100,56 @@
     background-color: var(--input-bg-color);
 }
 
+.bet-cell {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    transition: background-color 0.3s ease;
+}
+
+/* Resultado correcto */
+.correct {
+    background-color: #d4edda; /* Verde claro */
+    color: #155724; /* Verde oscuro */
+    font-weight: bold;
+}
+
+/* Resultado incorrecto */
+.incorrect {
+    background-color: #f8d7da; /* Rojo claro */
+    color: #721c24; /* Rojo oscuro */
+    font-weight: bold;
+}
+
+/* Tooltip oculto por defecto */
+.result-tooltip {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #ffffff;
+    color: #333;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    z-index: 2;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Mostrar tooltip al hacer hover (solo en PC) */
+@media (hover: hover) and (pointer: fine) {
+    .bet-cell:hover .result-tooltip {
+        display: block;
+        opacity: 1;
+    }
+}
+
+
 /* ============================= */
 /* Responsivo */
 /* ============================= */
@@ -119,4 +169,37 @@
     .bet-table-container {
         padding: 10px;
     }
+}
+
+/* ============================= */
+/* Estilos para Total de Puntos */
+/* ============================= */
+
+/* Fila de Total Puntos */
+.total-points-row th,
+.total-points-row td {
+    background-color: var(--input-bg-color); /* Mismo color que las filas normales */
+    color: var(--text-color);
+    font-weight: bold;
+    font-size: 16px;
+    padding: 10px;
+}
+
+/* Oro, Plata y Bronce igual que en el ranking */
+.gold {
+    background-color: #FFE680 !important; /* 🥇 Dorado suave */
+    color: #000 !important;
+    font-weight: bold;
+}
+
+.silver {
+    background-color: #D9D9D9 !important; /* 🥈 Plateado suave */
+    color: #000 !important;
+    font-weight: bold;
+}
+
+.bronze {
+    background-color: #E5A07B !important; /* 🥉 Bronce suave */
+    color: #000 !important;
+    font-weight: bold;
 }

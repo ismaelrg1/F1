@@ -18,23 +18,104 @@
             <thead>
                 <tr>
                     <th>Apuesta</th>
-                    {% for user in bets.keys() %}
+                    {% for user in bets.keys()|sort %}
                         <th>{{ user }}</th>
                     {% endfor %}
                 </tr>
             </thead>
             <tbody>
                 {% for bet_type in (bets.values()|first).keys() %}
+                {% set resultado_real = resultados.get(event_type.replace('_', ' ').title(), {}).get(bet_type, None) %}
                 <tr>
                     <th>{{ bet_type }}</th> {# Poner en negrita la primera columna #}
-                    {% for user, user_bets in bets.items() %}
-                        <td>{{ user_bets.get(bet_type, '—') }}</td>  {# Usa un guion si falta la apuesta #}
+                    {% for user in bets.keys()|sort %}
+                        {% set user_bets = bets.get(user) %}
+                        {% set user_answer = user_bets.get(bet_type, '-') %}
+                        <td class="bet-cell
+                            {% if resultado_real %}
+                                {%if user_answer|string == resultado_real|string %}
+                                    correct
+                                {% else %}
+                                    incorrect
+                                {% endif %}
+                            {% endif %}
+                        " onclick="toggleResult(this)">
+			    {{ user_answer }}
+                            {% if resultado_real %}
+                                <div class="result-tooltip">
+                                    {{ resultado_real }}
+                                </div>
+                            {% endif %}		
+			</td>  {# Usa un guion si falta la apuesta #}
                     {% endfor %}
                 </tr>
                 {% endfor %}
+		
+		{% set points_for_event = user_points_data.get(event_type, {}) %}
+                {% set sorted_points = points_for_event|dictsort(false, 'value')|reverse %}
+                {% set user_rankings = sorted_points|map(attribute=0)|list %}
+                {% set hay_puntos = points_for_event.values() | select('gt', 0) | list | length > 0 %}            
+
+                {% if hay_puntos %}
+                <tr class="total-points-row">
+                    <th>Total puntos</th>
+
+                    {% for user in bets.keys()|sort %}
+                        {% set puntos = points_for_event.get(user, 0) %}
+                        {% set ranking = user_rankings.index(user) if user in user_rankings else None %}
+                        <td class="
+                            {% if ranking == 0 %}gold
+                            {% elif ranking == 1 %}silver
+                            {% elif ranking == 2 %}bronze
+                            {% endif %}
+                        ">
+                            {{ puntos }}
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endif %}
             </tbody>
         </table>
     </div>
     {% endfor %}
 </div>
+
+<script>
+function toggleResult(cell) {
+    if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
+        const tooltip = cell.querySelector('.result-tooltip');
+        if (tooltip) {
+            // Primero mostrarlo
+            if (tooltip.style.opacity === "1") {
+                tooltip.style.opacity = "0";
+                setTimeout(() => {
+                    tooltip.style.display = "none";
+                }, 300);
+            } else {
+                tooltip.style.display = "block";
+
+    		setTimeout(() => {
+        		tooltip.style.opacity = "1";
+    		}, 10);
+            }
+        }
+    }
+}
+</script>
+	
+
+<script>
+    const raceName = "{{ race_name }}";
+    const seasonYear = {{ season_year }};
+    const betsData = {{ bets_data | tojson }};
+    const resultados = {{ resultados | tojson }};
+    const puntos = {{ user_points_data | tojson }};
+
+    console.log("🏁 raceName:", raceName);
+    console.log("📅 seasonYear:", seasonYear);
+    console.log("🎯 betsData:", betsData);
+    console.log("🏆 resultados:", resultados);
+    console.log(" puntos:", puntos);
+</script>
+
 {% endblock %}
