@@ -82,23 +82,19 @@
 
 <script>
 function toggleResult(cell) {
-    if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
-        const tooltip = cell.querySelector('.result-tooltip');
-        if (tooltip) {
-            // Primero mostrarlo
-            if (tooltip.style.opacity === "1") {
-                tooltip.style.opacity = "0";
-                setTimeout(() => {
-                    tooltip.style.display = "none";
-                }, 300);
-            } else {
-                tooltip.style.display = "block";
+    const tooltip = cell.querySelector('.result-tooltip');
+    if (!tooltip) return;
 
-    		setTimeout(() => {
-        		tooltip.style.opacity = "1";
-    		}, 10);
-            }
-        }
+    if (tooltip.style.display === "block") {
+        tooltip.style.opacity = "0";
+        setTimeout(() => {
+            tooltip.style.display = "none";
+        }, 300);
+    } else {
+        tooltip.style.display = "block";
+        setTimeout(() => {
+            tooltip.style.opacity = "1";
+        }, 10);
     }
 }
 </script>

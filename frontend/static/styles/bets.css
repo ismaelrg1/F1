@@ -102,7 +102,7 @@
 
 .bet-cell {
     position: relative;
-    cursor: pointer;
+    cursor: default;
     overflow: hidden;
     transition: background-color 0.3s ease;
 }
