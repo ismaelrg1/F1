@@ -15,6 +15,31 @@
         <p>Compite con otros jugadores pronosticando los resultados de cada carrera de la temporada. ¡Suma puntos y conviértete en el campeón!</p>
     </section>
 
+    <!-- Próxima Carrera -->
+    {% if next_race %}
+    <section class="next-race">
+        <h2>Próxima Carrera</h2>
+        <div class="container">
+            <a href="{{ url_for('race.race_detail', race_name=next_race.event_name|replace(' ', '-'), race_year=next_race.year) }}">
+                <div class="race-card">
+                    <div class="race-header">
+                        <span class="round">ROUND {{ next_race.round_number }}</span>
+                        <span class="date">{{ next_race.event_date.strftime('%d-%b') }}</span>
+                        <img src="{{ next_race.flag_url }}" alt="Bandera de {{ next_race.country }}" class="flag">
+                    </div> 
+                    <div class="race-body">
+                        <h2>{{ next_race.country }}</h3>
+                        <p>{{ next_race.event_name }}</p>
+                        <div class="circuit-container">
+                            <img src="{{ next_race.circuit_image_url }}" alt="Circuito de {{ next_race.country }}" class="circuit" loading="lazy">
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </section>
+    {% endif %}
+
     <!-- Enlaces rápidos -->
     <section class="quick-links">
         <h2>Accesos Rápidos</h2>

@@ -2,6 +2,10 @@ from flask import Blueprint, request, jsonify, make_response, render_template
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, set_access_cookies
 from config.db_config import db  # Asegúrate de importar db de config
 from backend.app.models.user import User  # Asegúrate de que el path sea correcto
+from backend.app.models import RaceEvent
+
+import sys
+from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -61,4 +65,10 @@ def login():
 @auth_bp.route('/home', methods=['GET'])
 @jwt_required(locations=["cookies"])
 def protected():
-    return render_template('home.html')
+    today = datetime.today().date()
+
+    next_race = RaceEvent.query.filter(RaceEvent.event_date >= today).order_by(RaceEvent.event_date.asc()).first()
+
+    return render_template('home.html',
+                           next_race=next_race
+                          )
