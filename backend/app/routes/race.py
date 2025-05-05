@@ -1,7 +1,7 @@
 from flask import render_template, Blueprint, jsonify
 from flask_jwt_extended import jwt_required
 
-from backend.app.models import BetScore, Season
+from backend.app.models import BetScore, Season, RaceEvent
 from backend.app.routes.api_bd import get_user_bets_for_race
 from backend.app.utils.bets import get_bets_for_race, format_bet_name
 
@@ -71,11 +71,23 @@ def race_detail(race_name, race_year):
     # Organizar apuestas por tipo
     user_bets = organize_bets_by_type(bet_status_response)
 
+    # Obtener la fecha de esta carrera
+    current_event = RaceEvent.query.filter_by(event_name=race_name, year=race_year).first()
+
+    # Obtener todas las carreras de ese año ordenadas
+    race_list = RaceEvent.query.filter_by(year=race_year).order_by(RaceEvent.event_date).all()
+    current_index = race_list.index(current_event) if current_event in race_list else -1
+
+    prev_race = race_list[current_index - 1] if current_index > 0 else None
+    next_race = race_list[current_index + 1] if current_index < len(race_list) - 1 else None
+
     # Pasar los datos al template
     return render_template(
         'race_detail.html',
         race_event=bets_response["race_event"],
         bets=bets_response["bets"],
         user_bets=user_bets,
-        current_time=datetime.utcnow()
+        current_time=datetime.utcnow(),
+        prev_race=prev_race,
+        next_race=next_race
     )

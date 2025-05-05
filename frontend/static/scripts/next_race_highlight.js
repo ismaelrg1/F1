@@ -2,6 +2,7 @@
     const raceCards = document.querySelectorAll(".race-card");
 
     let now = new Date();
+    let today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Día actual sin hora
     let nextRaceCard = null;
     let minTimeDiff = Infinity;
 
@@ -14,10 +15,14 @@
                             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const month = months.indexOf(monthStr);
 
-            const raceDate = new Date(now.getFullYear(), month, parseInt(day));
-            const timeDiff = raceDate - now;
+            if (month === -1) return;
 
-            if (timeDiff > 0 && timeDiff < minTimeDiff) {
+            const raceDate = new Date(now.getFullYear(), month, parseInt(day));
+            const raceDay = new Date(raceDate.getFullYear(), raceDate.getMonth(), raceDate.getDate());
+
+            const timeDiff = raceDate - today;
+
+            if ( timeDiff === 0 || (timeDiff > 0 && timeDiff < minTimeDiff)) {
                 minTimeDiff = timeDiff;
                 nextRaceCard = card;
             }

@@ -96,6 +96,29 @@
 }
 
 /* ============================= */
+/* Navegacion prev/sig carrera*/
+/* ============================= */
+
+.navigation-arrows {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px 0;
+    font-size: 1.1rem;
+}
+
+.navigation-arrows .arrow {
+    background: #e60000;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.navigation-arrows .arrow:hover {
+    background: #b80000;
+}
+/* ============================= */
 /* Cartas del calendario */
 /* ============================= */
 

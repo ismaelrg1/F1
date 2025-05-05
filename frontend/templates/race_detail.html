@@ -4,6 +4,18 @@
 
 {% block content %}
 <div class="race-container">
+    {% if prev_race or next_race %}
+    <div class="navigation-arrows">
+        {% if prev_race %}
+            <a href="{{ url_for('race.race_detail', race_name=prev_race.event_name|replace(' ', '-'), race_year=prev_race.year) }}" class="arrow left">← Anterior</a>
+        {% endif %}
+        {% if next_race %}
+            <a href="{{ url_for('race.race_detail', race_name=next_race.event_name|replace(' ', '-'), race_year=next_race.year) }}" class="arrow right">Siguiente →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+
     <h1>{{ race_event.event_name }}</h1>
     <h2>Formato: {{ race_event.event_format }}</h2>
     <p>Sesiones del evento:</p>
@@ -34,7 +46,8 @@
                     <label for="{{ bet_type|lower }}-{{ loop.index0 }}">{{ bet.bet }}</label>
 
                     {% if bet.options %}
-                    <select id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}">
+                    <select id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}"
+                        {% if bets[bet_type].max_edit_time and bets[bet_type].max_edit_time <= current_time %}disabled{% endif %}>
                         {% for category, options in bet.options.items() %}
                             <option value="" disabled
                                     {% if not user_bets.get(bet_type, []) | selectattr("parameter_bet", "equalto", bet.bet) | map(attribute="bet_user") | first %}
