@@ -1,0 +1,125 @@
+{% extends "protected.html" %}
+
+{% block title %}Apuestas de Temporada{% endblock %}
+
+{% block content %}
+  {# Carga del CSS específico de esta página #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/season_bets.css') }}">
+  <div id="home" class="season-bets-container">
+    <h2>
+      Apuestas de temporada - {{ year }}
+      {% if locked %}<small class="sb-muted">(bloqueadas)</small>{% endif %}
+    </h2>
+
+    {# --- Agrupar apuestas: Generales vs Duelos --- #}
+    {% set groups = namespace(generales=[], duelos=[]) %}
+    {% for b in bets %}
+      {% if b.bet_key.startswith('duel_') %}
+        {% set _ = groups.duelos.append(b) %}
+      {% else %}
+        {% set _ = groups.generales.append(b) %}
+      {% endif %}
+    {% endfor %}
+
+    <form method="post">
+      <div class="sb-section">
+        <h4>Generales</h4>
+        <div class="sb-grid">
+          {% for bet in groups.generales %}
+            {% set name = 'bet_' ~ bet.id %}
+            {% set val = picks.get(bet.id) %}
+            <div class="sb-card">
+              <div class="d-flex justify-content-between align-items-start">
+                <h5>{{ bet.label }}</h5>
+                <div class="sb-meta">
+                  <span class="sb-badge">{{ bet.points }} pts</span>
+                </div>
+              </div>
+
+              {% if locked %}
+                <div class="sb-value">
+                  {% if bet.input_type == 'multienum' %}
+                    {% if val %}
+                      {% if val is string %}{{ val }}{% else %}{{ val|join(', ') }}{% endif %}
+                    {% else %}—{% endif %}
+                  {% else %}
+                    {{ val if val is not none else '—' }}
+                  {% endif %}
+                </div>
+              {% else %}
+                {% if bet.input_type == 'enum' %}
+                  <select name="{{ name }}" class="form-control mt-2">
+                    <option value="">—</option>
+                    {% for opt in bet.options %}
+                      <option value="{{ opt }}" {{ 'selected' if val==opt else '' }}>{{ opt }}</option>
+                    {% endfor %}
+                  </select>
+
+                {% elif bet.input_type == 'bool' %}
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" name="{{ name }}" id="{{ name }}" {{ 'checked' if val else '' }}>
+                    <label class="form-check-label" for="{{ name }}">Sí</label>
+                  </div>
+
+                {% elif bet.input_type == 'int' %}
+                  <input type="number" name="{{ name }}" class="form-control mt-2" value="{{ val if val is not none else '' }}">
+
+                {% elif bet.input_type == 'position' %}
+                  <select name="{{ name }}" class="form-control mt-2">
+                    <option value="">—</option>
+                    {% for p in range(1,21) %}
+                      <option value="{{ p }}" {{ 'selected' if val==p else '' }}>P{{ p }}</option>
+                    {% endfor %}
+                  </select>
+
+                {% elif bet.input_type == 'multienum' %}
+                  <textarea name="{{ name }}" rows="2" class="form-control mt-2"
+                            placeholder="Separadas por comas, en orden">{{ val|join(', ') if val else '' }}</textarea>
+                  {% if bet.options %}
+                    <small class="sb-muted">Opciones válidas: {{ bet.options|join(', ') }}</small>
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="sb-section">
+        <h4>Duelos por equipo</h4>
+        <div class="sb-grid">
+          {% for bet in groups.duelos %}
+            {% set name = 'bet_' ~ bet.id %}
+            {% set val = picks.get(bet.id) %}
+            <div class="sb-card">
+              <div class="d-flex justify-content-between align-items-start">
+                <h5>{{ bet.label }}</h5>
+                <div class="sb-meta">
+                  <span class="sb-badge">{{ bet.points }} pts</span>
+                </div>
+              </div>
+
+              {% if locked %}
+                <div class="sb-value">{{ val if val else '—' }}</div>
+              {% else %}
+                <select name="{{ name }}" class="form-control mt-2">
+                  <option value="">—</option>
+                  {% for opt in bet.options %}
+                    <option value="{{ opt }}" {{ 'selected' if val==opt else '' }}>{{ opt }}</option>
+                  {% endfor %}
+                </select>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if not locked %}
+        <div class="sb-actions">
+          <button class="btn btn-primary">Guardar</button>
+        </div>
+      {% endif %}
+    </form>
+  </div>
+{% endblock %}
+

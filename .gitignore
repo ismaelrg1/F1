@@ -3,6 +3,11 @@ ven/
 f1_env/
 venv_f1/
 
+instance/
+
+migrations/
+
+
 # Archivos y carpetas de configuración local
 *.env
 

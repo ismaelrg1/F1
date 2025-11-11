@@ -5,3 +5,4 @@ from .score_race import ScoreRace
 from .season import Season
 from .user import User
 from .bet import Bet
+from .season_bets import ScoreSeason, SeasonBetPick, SeasonBet

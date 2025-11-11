@@ -1,0 +1,230 @@
+/* === Modo oscuro — soporta varias marcas: class y data-attr === */
+html.dark-mode .season-bets-container,
+body.dark-mode .season-bets-container,
+html.dark .season-bets-container,
+body.dark .season-bets-container,
+html[data-theme="dark"] .season-bets-container,
+body[data-theme="dark"] .season-bets-container {
+  background-color: #121212;
+  color: #f1f1f1;
+}
+
+html.dark-mode .season-bets-container h2,
+body.dark-mode .season-bets-container h2,
+html.dark .season-bets-container h2,
+body.dark .season-bets-container h2,
+html[data-theme="dark"] .season-bets-container h2,
+body[data-theme="dark"] .season-bets-container h2,
+html.dark-mode .season-bets-container h4,
+body.dark-mode .season-bets-container h4,
+html.dark .season-bets-container h4,
+body.dark .season-bets-container h4,
+html[data-theme="dark"] .season-bets-container h4,
+body[data-theme="dark"] .season-bets-container h4,
+html.dark-mode .season-bets-container h5,
+body.dark-mode .season-bets-container h5,
+html.dark .season-bets-container h5,
+body.dark .season-bets-container h5,
+html[data-theme="dark"] .season-bets-container h5,
+body[data-theme="dark"] .season-bets-container h5 {
+  color: #f1f1f1 !important;
+}
+
+/* 👇 APLICA A .sb-card y también a .card (por si alguna quedó con esa clase) */
+html.dark-mode .season-bets-container .sb-card,
+body.dark-mode .season-bets-container .sb-card,
+html.dark .season-bets-container .sb-card,
+body.dark .season-bets-container .sb-card,
+html[data-theme="dark"] .season-bets-container .sb-card,
+body[data-theme="dark"] .season-bets-container .sb-card,
+html.dark-mode .season-bets-container .card,
+body.dark-mode .season-bets-container .card,
+html.dark .season-bets-container .card,
+body.dark .season-bets-container .card,
+html[data-theme="dark"] .season-bets-container .card,
+body[data-theme="dark"] .season-bets-container .card {
+  background-color: #1e1e1e !important;
+  border-color: #333 !important;
+  color: #f8f9fa !important;
+  box-shadow: none !important;
+}
+
+html.dark-mode .season-bets-container .sb-badge,
+body.dark-mode .season-bets-container .sb-badge,
+html.dark .season-bets-container .sb-badge,
+body.dark .season-bets-container .sb-badge,
+html[data-theme="dark"] .season-bets-container .sb-badge,
+body[data-theme="dark"] .season-bets-container .sb-badge {
+  background-color: #2b2b2b !important;
+  color: #ddd !important;
+}
+
+html.dark-mode .season-bets-container .sb-muted,
+body.dark-mode .season-bets-container .sb-muted,
+html.dark .season-bets-container .sb-muted,
+body.dark .season-bets-container .sb-muted,
+html[data-theme="dark"] .season-bets-container .sb-muted,
+body[data-theme="dark"] .season-bets-container .sb-muted {
+  color: #a8a8a8 !important;
+}
+
+html.dark-mode .season-bets-container select,
+html.dark-mode .season-bets-container textarea,
+html.dark-mode .season-bets-container input[type="number"],
+body.dark-mode .season-bets-container select,
+body.dark-mode .season-bets-container textarea,
+body-dark .season-bets-container input[type="number"],
+html.dark .season-bets-container select,
+html.dark .season-bets-container textarea,
+html.dark .season-bets-container input[type="number"],
+body.dark .season-bets-container select,
+body.dark .season-bets-container textarea,
+body.dark .season-bets-container input[type="number"],
+html[data-theme="dark"] .season-bets-container select,
+html[data-theme="dark"] .season-bets-container textarea,
+html[data-theme="dark"] .season-bets-container input[type="number"],
+body[data-theme="dark"] .season-bets-container select,
+body[data-theme="dark"] .season-bets-container textarea,
+body[data-theme="dark"] .season-bets-container input[type="number"] {
+  background-color: #222 !important;
+  color: #f1f1f1 !important;
+  border: 1px solid #444 !important;
+}
+
+html.dark-mode .season-bets-container select option,
+body.dark-mode .season-bets-container select option,
+html.dark .season-bets-container select option,
+body.dark .season-bets-container select option,
+html[data-theme="dark"] .season-bets-container select option,
+body[data-theme="dark"] .season-bets-container select option {
+  background-color: #1e1e1e !important;
+  color: #f1f1f1 !important;
+}
+
+html.dark-mode .season-bets-container .sb-actions,
+body.dark-mode .season-bets-container .sb-actions,
+html.dark .season-bets-container .sb-actions,
+body.dark .season-bets-container .sb-actions,
+html[data-theme="dark"] .season-bets-container .sb-actions,
+body[data-theme="dark"] .season-bets-container .sb-actions {
+  background-color: #121212 !important;
+  border-top: 1px solid #333 !important;
+}
+
+/* === Contenedor principal (mismo patrón que schedule) === */
+.season-bets-container {
+  padding-top: 90px;         /* despega del header fijo */
+  padding-bottom: 80px;      /* despega del footer fijo */
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.season-bets-container > h2 {
+  margin-top: 0;
+  text-align: center;
+}
+
+/* === Tipografía / utilidades === */
+.sb-muted { color:#6c757d; }
+
+.sb-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 768px) {
+  .sb-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.sb-section { margin-top: 1.75rem; }
+.sb-section h4 { text-align: center; font-size: 1.1rem; margin-bottom: .5rem; }
+
+/* === Card === */
+.sb-card {
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+  transition: background .3s, color .3s, border-color .3s;
+}
+.sb-card h5 { margin: 0; font-size: 1rem; }
+.sb-meta { display:flex; gap:6px; align-items:center; flex-wrap: wrap; }
+.sb-badge { font-size:.75rem; background:#f1f3f5; border-radius:999px; padding:2px 8px; }
+.sb-value { margin-top: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; }
+
+.sb-actions {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding: 10px 0;
+  border-top: 1px solid #eee;
+  margin-top: 10px;
+  text-align: center;
+}
+
+/* === Inputs === */
+.season-bets-container select,
+.season-bets-container textarea,
+.season-bets-container input[type="number"] {
+  width: 100%;
+}
+
+/* === Modo oscuro controlado por theme.js
+     Soporta clase en <html> o en <body> y sube especificidad
+=== */
+html.dark-mode .season-bets-container,
+body.dark-mode .season-bets-container {
+  background-color: #121212;
+  color: #f1f1f1;
+}
+
+html.dark-mode .season-bets-container h2,
+body.dark-mode .season-bets-container h2,
+html.dark-mode .season-bets-container h4,
+body.dark-mode .season-bets-container h4,
+html.dark-mode .season-bets-container h5,
+body.dark-mode .season-bets-container h5 {
+  color: #f1f1f1 !important;
+}
+
+html.dark-mode .season-bets-container .sb-card,
+body.dark-mode .season-bets-container .sb-card {
+  background-color: #1e1e1e !important;
+  border-color: #333 !important;
+  color: #f8f9fa !important;
+}
+
+html.dark-mode .season-bets-container .sb-badge,
+body.dark-mode .season-bets-container .sb-badge {
+  background-color: #2b2b2b !important;
+  color: #ddd !important;
+}
+
+html.dark-mode .season-bets-container .sb-muted,
+body.dark-mode .season-bets-container .sb-muted {
+  color: #a8a8a8 !important;
+}
+
+html.dark-mode .season-bets-container select,
+html.dark-mode .season-bets-container textarea,
+html.dark-mode .season-bets-container input[type="number"],
+body.dark-mode .season-bets-container select,
+body.dark-mode .season-bets-container textarea,
+body.dark-mode .season-bets-container input[type="number"] {
+  background-color: #222 !important;
+  color: #f1f1f1 !important;
+  border: 1px solid #444 !important;
+}
+
+html.dark-mode .season-bets-container select option,
+body.dark-mode .season-bets-container select option {
+  background-color: #1e1e1e !important;
+  color: #f1f1f1 !important;
+}
+
+html.dark-mode .season-bets-container .sb-actions,
+body.dark-mode .season-bets-container .sb-actions {
+  background-color: #121212 !important;
+  border-top: 1px solid #333 !important;
+}
+
