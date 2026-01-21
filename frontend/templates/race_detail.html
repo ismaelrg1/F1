@@ -35,7 +35,9 @@
             <h2>{{ bet_type }}</h2>
 
             {% if bets[bet_type].max_edit_time %}
-            <p class="max-edit-time"><strong>Tiempo máximo de edición:</strong> {{ bets[bet_type].max_edit_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+            <p class="max-edit-time" data-utc="{{ bets[bet_type].max_edit_time.isoformat() }}Z">
+                <strong>Tiempo máximo de edición:</strong> {{ bets[bet_type].max_edit_time.strftime('%Y-%m-%d %H:%M:%S') }} UTC
+            </p>
             {% endif %}
 
             
@@ -101,6 +103,19 @@
     console.log("🏁 Race Event:", raceEvent);
     console.log("🎲 Bets:", bets);
     console.log("👤 User Bets:", userBets);
+
+    // Convert UTC deadline to user's local time for display
+    document.querySelectorAll(".max-edit-time[data-utc]").forEach((el) => {
+        const utcValue = el.getAttribute("data-utc");
+        const date = new Date(utcValue);
+        if (!Number.isNaN(date.getTime())) {
+            const localText = date.toLocaleString(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+            });
+            el.innerHTML = "<strong>Tiempo máximo de edición:</strong> " + localText;
+        }
+    });
 </script>
 
 

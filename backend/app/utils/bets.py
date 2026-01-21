@@ -166,13 +166,13 @@ def get_bets_for_race(event_name, year):
     for bet_type, bet_data in bets_by_type.items():
 
         if bet_type == 'Test':
-            session_time = race_event.event_date
+            session_time = race_event.time_session1
         else:
             session_name = bet_type  # El tipo de apuesta coincide con el nombre de sesión en SESSION_MEANINGS
             session_time = session_time_map.get(session_name)
 
         if session_time:
-            bet_data["max_edit_time"] = session_time  # Resta una hora al tiempo límite
+            bet_data["max_edit_time"] = session_time 
         else:
             bet_data["max_edit_time"] = None  # Si no hay un tiempo definido, se deja como None
 
