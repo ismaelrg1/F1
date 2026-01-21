@@ -4,10 +4,21 @@ import os, sys, json
 from flask import Blueprint, render_template, jsonify
 from flask_jwt_extended import jwt_required
 
-from backend.app.models import Season, Bet, BetScore
+from backend.app.models import Season, Bet, BetScore, SeasonBet, SeasonBetPick
 from backend.app.utils.apiF1 import get_schedule
 
 bets_bp = Blueprint('bets', __name__)
+
+# Helpers para comparar valores (reusados de la lógica de temporada)
+def norm_str(x):
+    return (str(x) if x is not None else "").strip().lower()
+
+def to_bool(v):
+    if isinstance(v, bool):
+        return v
+    s = str(v).strip().lower()
+    return s in ("true", "1", "si", "sí", "yes", "y")
+
 
 @bets_bp.route('/apuestas')
 @bets_bp.route('/apuestas-<int:season_year>')
@@ -23,6 +34,124 @@ def apuestas(season_year=None):
     races = get_schedule(year)
 
     return render_template('bets_calendar.html', races=races, year=year, seasons=seasons)
+
+
+@bets_bp.route('/apuestas-temporada-<int:season_year>')
+@jwt_required(locations=["cookies"])
+def apuestas_temporada(season_year):
+    """
+    Muestra todas las apuestas de temporada de todos los usuarios
+    + (si existe) los resultados oficiales desde resultados/season_<year>.json
+    """
+
+    # 1) Temporada
+    season = Season.query.filter_by(year=season_year).first_or_404()
+
+    # 2) Cargar todas las apuestas + picks de esa temporada
+    #    Usamos relaciones ORM: pick.user, pick.season_bet
+    picks = (
+        SeasonBetPick.query
+        .join(SeasonBet, SeasonBet.id == SeasonBetPick.season_bet_id)
+        .filter(SeasonBet.season_id == season.id, SeasonBet.is_active == True)
+        .all()
+    )
+
+    # Estructura:
+    # {
+    #   "generales": { "usuario": { bet_key: {label, value, points} } },
+    #   "duelos":    { "usuario": { bet_key: {label, value, points} } }
+    # }
+    season_bets_data = {
+        "generales": {},
+        "duelos": {}
+    }
+
+    for pick in picks:
+        bet = pick.season_bet
+        username = pick.user.username
+
+        group = "duelos" if bet.bet_key.startswith("duel_") else "generales"
+
+        if username not in season_bets_data[group]:
+            season_bets_data[group][username] = {}
+
+        season_bets_data[group][username][bet.bet_key] = {
+            "label": bet.label,
+            "value": pick.value,
+            "points": bet.points
+        }
+
+    # 3) Intentar cargar resultados oficiales de temporada
+    resultados = {}
+    resultados_path = os.path.join("resultados", f"season_{season_year}.json")
+    print(f"⚡ season resultados path: {resultados_path}", file=sys.stderr)
+    if os.path.exists(resultados_path):
+        try:
+            with open(resultados_path, "r", encoding="utf-8") as f:
+                resultados = json.load(f)
+        except Exception as e:
+            print(f"❌ Error leyendo {resultados_path}: {e}", file=sys.stderr)
+    else:
+        print(f"⚠ No existe archivo de resultados de temporada: {resultados_path}", file=sys.stderr)
+
+    # 4) Calcular puntos por usuario (solo si hay resultados)
+    user_points_data = {
+        "generales": {},
+        "duelos": {},
+    }
+
+    if resultados:
+        for group_name, users_bets in season_bets_data.items():
+            for username, bets_dict in users_bets.items():
+                puntos = 0
+                for bet_key, info in bets_dict.items():
+                    real = resultados.get(bet_key)
+                    
+                    if real is None:
+                        continue
+
+                    user_val = info["value"]
+                    correcto = False
+    
+                    # 🔸 Caso especial: most_dnfs_* (varios posibles ganadores)
+                    if bet_key.startswith("most_dnfs_") and isinstance(real, list):
+                        if not real:
+                            # Aún no hay resultado real -> no puntuamos
+                            continue
+
+                        # Normalizar pick del usuario a lista de strings
+                        if isinstance(user_val, list):
+                            picks_norm = [norm_str(p) for p in user_val]
+                        else:
+                            picks_norm = [norm_str(str(user_val))]
+
+                        truths_norm = [norm_str(t) for t in real]
+
+                        # Correcto si al menos uno de los picks está en la lista real
+                        correcto = any(p in truths_norm for p in picks_norm)
+
+                    else:
+                        # 🔹 Resto de apuestas (comparación normal)
+                        if isinstance(user_val, list) and isinstance(real, list):
+                            correcto = [norm_str(x) for x in user_val] == [
+                                norm_str(x) for x in real
+                            ]
+                        else:
+                            correcto = norm_str(user_val) == norm_str(real)
+
+                    if correcto:
+                        puntos += info["points"]
+
+                user_points_data[group_name][username] = puntos
+
+    return render_template(
+        "season_bets_results.html",
+        season_year=season_year,
+        season_bets_data=season_bets_data,
+        resultados=resultados,
+        user_points_data=user_points_data
+    )
+
 
 @bets_bp.route('/apuestas/<race_name>-<int:season_year>')
 @jwt_required(locations=["cookies"])

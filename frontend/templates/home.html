@@ -3,6 +3,25 @@
 {% block title %}Inicio - F1 Predicciones{% endblock %}
 
 {% block content %}
+
+{% if season_finished and winner_name %}
+<div id="winner-overlay" class="winner-overlay" onclick="hideWinnerOverlay()">
+    <div class="winner-card" onclick="event.stopPropagation()">
+        <img src="{{ url_for('static', filename='images/winners/winner_' ~ year ~ '.png') }}"
+             alt="Campeón {{year}}" class="winner-img">
+
+        <h2>¡Enhorabuena {{ winner_name }}!</h2>
+        <p>Campeón de la Porra {{ year }}</p>
+
+        {# ❌ Elimina esto
+        <button class="close-btn" onclick="hideWinnerOverlay(); event.stopPropagation();">
+            Cerrar
+        </button>
+        #}
+    </div>
+</div>
+{% endif %}
+
 <div class="home-container">
     <!-- Logo del evento -->
     <div class="logo-container">
@@ -14,8 +33,8 @@
         <h2>Bienvenido a la Porra F1 2025 - 6ª Edición</h2>
         <p>Compite con otros jugadores pronosticando los resultados de cada carrera de la temporada. ¡Suma puntos y conviértete en el campeón!</p>
     </section>
-
-    <!-- Próxima Carrera -->
+ 
+    <!-- Próxima Carrera o Campeón -->
     {% if next_race %}
     <section class="next-race">
         <h2>Próxima Carrera</h2>
@@ -26,9 +45,9 @@
                         <span class="round">ROUND {{ next_race.round_number }}</span>
                         <span class="date">{{ next_race.event_date.strftime('%d-%b') }}</span>
                         <img src="{{ next_race.flag_url }}" alt="Bandera de {{ next_race.country }}" class="flag">
-                    </div> 
+                    </div>
                     <div class="race-body">
-                        <h2>{{ next_race.country }}</h3>
+                        <h2>{{ next_race.country }}</h2>
                         <p>{{ next_race.event_name }}</p>
                         <div class="circuit-container">
                             <img src="{{ next_race.circuit_image_url }}" alt="Circuito de {{ next_race.country }}" class="circuit" loading="lazy">
@@ -38,7 +57,39 @@
             </a>
         </div>
     </section>
-    {% endif %}
+    
+    {% elif season_finished and winner_name %}
+<section class="champion-section">
+    <h2>Temporada {{ year }} finalizada</h2>
+
+    <div class="champion-wrapper">
+        <div class="champion-card">
+            <div class="champion-banner">
+                <span class="champion-badge">🏆 CAMPEÓN</span>
+                <span class="champion-year">{{ year }}</span>
+            </div>
+
+            <div class="champion-main">
+                <h2 class="champion-name">{{ winner_name }}</h2>
+                <p class="champion-subtitle">Ganador de la Porra {{ year }}</p>
+
+                <div class="champion-image-wrapper">
+                    <img src="{{ url_for('static', filename='images/winners/winner_' ~ year ~ '.png') }}"
+                         alt="Campeón {{ year }}" class="champion-img" loading="lazy">
+                </div>
+
+                <div class="champion-footer">
+                    <a href="{{ url_for('ranking.ranking', season_year=year) }}"
+                       class="champion-link">
+                        Ver ranking final →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}	
+
 
     <!-- Enlaces rápidos -->
     <section class="quick-links">
@@ -55,4 +106,31 @@
         <img src="{{ url_for('static', filename='images/ranking/historial_porra.png') }}" alt="Historial de campeones">
     </section>
 </div>
+
+<script>
+function hideWinnerOverlay() {
+    const overlay = document.getElementById('winner-overlay');
+    if (!overlay) return;
+
+    // Añadimos la clase que activa la transición CSS
+    overlay.classList.add('hidden');
+
+    // Lo eliminamos del DOM cuando acabe la animación
+    setTimeout(() => {
+        if (overlay && overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+        }
+    }, 700); // un pelín más que los 0.6s del CSS
+}
+
+// Autocerrar a los 5 segundos
+document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('winner-overlay');
+    if (overlay) {
+        setTimeout(hideWinnerOverlay, 5000);
+    }
+});
+</script>
+
+
 {% endblock %}

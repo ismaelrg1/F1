@@ -32,6 +32,11 @@ class SeasonBetPick(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     __table_args__ = (db.UniqueConstraint('season_bet_id','user_id', name='uq_season_bet_pick_unique'),)
+    
+    # 🔹 Relaciones al estilo Bet.user / Bet.parametre
+    user = db.relationship("User", backref=db.backref("season_bet_picks", lazy=True))
+    season_bet = db.relationship("SeasonBet", backref=db.backref("picks", lazy=True))
+
 
 # NOTA: la corrección y sumatorio para ranking se harán con ScoreSeason (cuando lo necesites).
 class ScoreSeason(db.Model):

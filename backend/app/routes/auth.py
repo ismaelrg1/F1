@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify, make_response, render_template
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, set_access_cookies
 from config.db_config import db  # Asegúrate de importar db de config
 from backend.app.models.user import User  # Asegúrate de que el path sea correcto
-from backend.app.models import RaceEvent
+from backend.app.models import RaceEvent, Season, ScoreRace, ScoreSeason
+import os
 
 import sys
 from datetime import datetime
@@ -67,8 +68,71 @@ def login():
 def protected():
     today = datetime.today().date()
 
-    next_race = RaceEvent.query.filter(RaceEvent.event_date >= today).order_by(RaceEvent.event_date.asc()).first()
+    # Próxima carrera (si la hay)
+    next_race = (
+        RaceEvent.query
+        .filter(RaceEvent.event_date >= today)
+        .order_by(RaceEvent.event_date.asc())
+        .first()
+    )
 
-    return render_template('home.html',
-                           next_race=next_race
-                          )
+    # Año actual
+    year = datetime.today().year
+
+    # Por defecto no hay campeón mostrado
+    season_finished = False
+    winner_name = None
+
+    # Solo buscamos campeón si ya no hay más carreras
+    if not next_race:
+        # 1) Comprobar que existe el fichero de resultados de temporada
+        resultados_path = os.path.join("resultados", f"season_{year}.json")
+        if os.path.exists(resultados_path):
+            season_finished = True
+
+            # 2) Buscar temporada en BD
+            season = Season.query.filter_by(year=year).first()
+            if season:
+                # Puntos por carreras
+                race_scores = (
+                    db.session.query(
+                        User.username,
+                        db.func.coalesce(db.func.sum(ScoreRace.score), 0).label("puntos_carreras")
+                    )
+                    .join(ScoreRace, ScoreRace.user_id == User.id)
+                    .filter(ScoreRace.season_id == season.id)
+                    .group_by(User.username)
+                    .all()
+                )
+                race_points = {u: p for u, p in race_scores}
+
+                # Puntos por porra de temporada
+                season_scores = (
+                    db.session.query(
+                        User.username,
+                        db.func.coalesce(db.func.sum(ScoreSeason.score), 0).label("puntos_temporada")
+                    )
+                    .join(ScoreSeason, ScoreSeason.user_id == User.id)
+                    .filter(ScoreSeason.season_id == season.id)
+                    .group_by(User.username)
+                    .all()
+                )
+                season_points = {u: p for u, p in season_scores}
+
+                # Suma total
+                totals = {}
+                for u, p in race_points.items():
+                    totals[u] = totals.get(u, 0) + p
+                for u, p in season_points.items():
+                    totals[u] = totals.get(u, 0) + p
+
+                if totals:
+                    winner_name = max(totals.items(), key=lambda x: x[1])[0]
+
+    return render_template(
+        'home.html',
+        next_race=next_race,
+        season_finished=season_finished,
+        winner_name=winner_name,
+        year=year,
+    )

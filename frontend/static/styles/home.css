@@ -74,3 +74,111 @@ body.dark-mode .special-card {
     border-radius: 8px;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
 }
+
+
+
+/* === BLOQUE CAMPEÓN DE LA TEMPORADA === */
+
+.champion-section {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.champion-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.champion-card {
+    position: relative;
+    max-width: 430px;
+    width: 100%;
+    padding: 24px 24px 28px;
+    border-radius: 24px;
+    background: radial-gradient(circle at top, rgba(255, 215, 0, 0.12), transparent 60%),
+                var(--card-bg-color, #ffffff);
+    border: 1px solid rgba(255, 215, 0, 0.6);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+}
+
+/* brillo alrededor */
+.champion-card::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #ffd700, #ff7b00, #ff00ff);
+    opacity: 0.35;
+    z-index: -1;
+}
+
+/* franja superior */
+.champion-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-size: 0.9rem;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.champion-badge {
+    color: #c02626;
+    text-transform: uppercase;
+}
+
+.champion-year {
+    color: #777;
+}
+
+/* texto principal */
+.champion-main {
+    text-align: center;
+}
+
+.champion-name {
+    font-size: 1.8rem;
+    margin: 4px 0;
+}
+
+.champion-subtitle {
+    margin: 0 0 12px;
+    color: #777;
+}
+
+/* imagen del ganador */
+.champion-image-wrapper {
+    margin: 10px auto 18px;
+    max-width: 260px;
+}
+
+.champion-img {
+    width: 100%;
+    display: block;
+}
+
+/* parte inferior con etiqueta y enlace */
+.champion-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+}
+
+.champion-link {
+    margin-left: auto;
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--button-bg-color, #e10600);
+}
+
+.champion-link:hover {
+    text-decoration: underline;
+}
+

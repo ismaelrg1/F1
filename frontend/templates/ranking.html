@@ -3,6 +3,27 @@
 {% block title %}Ranking de Jugadores{% endblock %}
 
 {% block content %}
+
+{# ✅ Overlay de campeón si la temporada ha terminado #}
+{% if season_finished and winner_name %}
+<div id="winner-overlay" class="winner-overlay" onclick="hideWinnerOverlay()">
+    <div class="winner-card" onclick="event.stopPropagation()">
+        <img src="{{ url_for('static', filename='images/winners/winner_' ~ year ~ '.png') }}"
+             alt="Campeón {{year}}" class="winner-img">
+
+        <h2>¡Enhorabuena {{ winner_name }}!</h2>
+        <p>Campeón de la Porra {{ year }}</p>
+
+        {# ❌ Elimina esto
+        <button class="close-btn" onclick="hideWinnerOverlay(); event.stopPropagation();">
+            Cerrar
+        </button>
+        #}
+    </div>
+</div>
+{% endif %}
+
+
 <div class="ranking-container">
     <h1>Ranking de Jugadores</h1>
 
@@ -30,5 +51,21 @@
     let carreras = JSON.parse('{{ carreras | tojson | safe }}');
 </script>
 <script src="{{ url_for('static', filename='scripts/ranking.js') }}" defer></script>
-{% endblock %}
 
+{% if season_finished and winner_name %}
+<script>
+    function hideWinnerOverlay() {
+        const ov = document.getElementById('winner-overlay');
+        if (!ov) return;
+        ov.style.opacity = '0';
+        setTimeout(() => {
+            ov.style.display = 'none';
+        }, 300);
+    }
+
+    // Ocultar automáticamente a los 5 segundos
+    setTimeout(hideWinnerOverlay, 5000);
+</script>
+{% endif %}
+
+{% endblock %}

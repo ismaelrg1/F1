@@ -16,6 +16,28 @@
     </div>
 
     <div class="container">
+
+	<!-- ✅ Card especial: resultados de apuestas de temporada -->
+        <a href="{{ url_for('bets.apuestas_temporada', season_year=year) }}">
+            <div class="race-card special-card no-flag">
+                <div class="race-header">
+                    <span class="round">🏆 RESULTADOS SEASON BETS</span>
+                    <div class="date">
+                        <span>{{ year }}</span>
+                    </div>
+                </div>
+                <div class="race-body">
+                    <h2>Resultados Porra de Temporada</h2>
+                    <p>Ver qué ha acertado cada participante</p>
+                    <div class="circuit-container">
+                        <img src="{{ url_for('static', filename='images/f1_2025_logo.png') }}"
+                             alt="Season Bets" class="circuit" loading="lazy">
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <!-- 🏁 Resto de carreras -->
         {% for race in races %}
         <a href="{{ url_for('bets.apuestas_carrera', season_year=race.year, race_name=race.race_name|replace(' ', '-')) }}">
 
