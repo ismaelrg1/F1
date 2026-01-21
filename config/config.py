@@ -4,6 +4,7 @@ import os
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', 'backend','.env'))
 
 class Config:
+    APP_ENV = os.getenv('APP_ENV', 'development').lower()
     SECRET_KEY = os.getenv('SECRET_KEY')
     JWT_ACCESS_TOKEN_EXPIRES = False
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
@@ -13,7 +14,8 @@ class Config:
     # Configuraciones de Flask-JWT-Extended para manejar JWT en cookies
     JWT_TOKEN_LOCATION = ['cookies']  # Especifica que el JWT se debe buscar en las cookies
     JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'  # Nombre predeterminado que espera Flask-JWT-Extended
-    JWT_COOKIE_SECURE = True  # Cambia a True si estás usando HTTPS
+    # En desarrollo permitimos HTTP; en produccion exigimos HTTPS
+    JWT_COOKIE_SECURE = APP_ENV == 'production'
     JWT_ACCESS_COOKIE_PATH = '/'  # Ruta donde la cookie JWT de acceso es válida
     JWT_REFRESH_COOKIE_PATH = '/token/refresh'  # Ruta específica para la cookie de refresh, si estás usando
     JWT_COOKIE_CSRF_PROTECT = True  # Cambia a True si deseas proteger contra CSRF

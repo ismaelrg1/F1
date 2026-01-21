@@ -43,6 +43,7 @@ Es necesario crear un archivo `.env` en el directorio `backend/app/.env` con las
 SECRET_KEY=your_secret_key_here
 JWT_SECRET_KEY=your_jwt_secret_key_here
 DATABASE_URL=sqlite:///database_f1.db
+APP_ENV=development
 ```
 
 ### **4️⃣ Ejecutar la aplicación**

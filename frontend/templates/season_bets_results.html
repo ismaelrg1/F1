@@ -1,0 +1,269 @@
+{% extends "protected.html" %}
+
+{% block title %}Apuestas de Temporada - {{ season_year }}{% endblock %}
+
+{% block content %}
+<div class="race-bets-container">
+    <h2>Apuestas de temporada {{ season_year }}</h2>
+
+    {% if not season_bets_data.generales and not season_bets_data.duelos %}
+        <p>No hay apuestas de temporada registradas aún.</p>
+    {% endif %}
+
+    {# ==== BLOQUE GENERALES ==== #}
+    {% if season_bets_data.generales %}
+    <h3>Generales</h3>
+
+    <div class="bet-table-wrapper">
+        <table class="bet-table">
+            <thead>
+                <tr>
+                    <th>Apuesta</th>
+                    {% set users = season_bets_data.generales.keys()|list|sort %}
+                    {% for user in users %}
+                        <th>{{ user }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {# Obtener todas las bet_keys de Generales #}
+                {% set all_bet_keys = [] %}
+                {% for user, bets in season_bets_data.generales.items() %}
+                    {% for bet_key, info in bets.items() %}
+                        {% if bet_key not in all_bet_keys %}
+                            {% set _ = all_bet_keys.append(bet_key) %}
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+
+                {% for bet_key in all_bet_keys %}
+                    {# Determinar label usando el primer usuario que tenga esa apuesta #}
+                    {% set sample_label = bet_key %}
+                    {% for u, bets in season_bets_data.generales.items() %}
+                        {% if bet_key in bets and sample_label == bet_key %}
+                            {% set sample_label = bets[bet_key].label %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% set resultado_real = resultados.get(bet_key) %}
+                    <tr>
+                        <th>{{ sample_label }}</th>
+                        {% for user in users %}
+                            {% set info = season_bets_data.generales[user].get(bet_key) %}
+                            {% set val = info.value if info else None %}
+
+                            {# Mostrar valor del usuario #}
+                            {% if val is iterable and val is not string %}
+                                {% set display_val = val|join(', ') %}
+                            {% else %}
+                                {% set display_val = val if val is not none else '—' %}
+                            {% endif %}
+
+                            {% set cell_class = "" %}
+                            {% if resultado_real is not none and val is not none %}
+                                {# 🔸 Caso especial: most_dnfs_* -> acierto si el pick está en la lista real #}
+                                {% if bet_key.startswith('most_dnfs_') and resultado_real is iterable and resultado_real is not string %}
+                                    {% set user_norm = (val|string)|lower|trim %}
+                                    {% set truths_norm = resultado_real | map('lower') | list %}
+                                    {% if user_norm in truths_norm %}
+                                        {% set cell_class = "correct" %}
+                                    {% else %}
+                                        {% set cell_class = "incorrect" %}
+                                    {% endif %}
+                                {% else %}
+                                    {# 🔹 Resto de apuestas: igualdad normal (lista vs lista o string vs string) #}
+                                    {% if val is iterable and val is not string and resultado_real is iterable and resultado_real is not string %}
+                                        {% set user_norm = (val|join(', '))|string|lower|trim %}
+                                        {% set real_norm = (resultado_real|join(', '))|string|lower|trim %}
+                                    {% else %}
+                                        {% set user_norm = (val|string)|lower|trim %}
+                                        {% set real_norm = (resultado_real|string)|lower|trim %}
+                                    {% endif %}
+                                    {% if user_norm == real_norm %}
+                                        {% set cell_class = "correct" %}
+                                    {% else %}
+                                        {% set cell_class = "incorrect" %}
+                                    {% endif %}
+                                {% endif %}
+                            {% endif %}
+
+                            <td class="bet-cell {{ cell_class }}" onclick="toggleResult(this)">
+                                {{ display_val }}
+                                {% if resultado_real is not none %}
+                                    <div class="result-tooltip">
+                                        {{ resultado_real if resultado_real is not iterable or resultado_real is string
+                                           else resultado_real|join(', ') }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+
+                {# Fila de puntos del grupo Generales (si hay resultados) #}
+                {% set points_for_group = user_points_data.get("generales", {}) %}
+                {% set hay_puntos = points_for_group.values() | select('gt', 0) | list | length > 0 %}
+                {% if hay_puntos %}
+                    {% set sorted_points = points_for_group|dictsort(false, 'value')|reverse %}
+                    {% set user_rankings = sorted_points|map(attribute=0)|list %}
+                    <tr class="total-points-row">
+                        <th>Total puntos</th>
+                        {% for user in users %}
+                            {% set puntos = points_for_group.get(user, 0) %}
+                            {% set ranking = user_rankings.index(user) if user in user_rankings else None %}
+                            <td class="
+                                {% if ranking == 0 %}gold
+                                {% elif ranking == 1 %}silver
+                                {% elif ranking == 2 %}bronze
+                                {% endif %}
+                            ">
+                                {{ puntos }}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {# ==== BLOQUE DUELOS ==== #}
+    {% if season_bets_data.duelos %}
+    <h3>Duelos por equipo</h3>
+
+    <div class="bet-table-wrapper">
+        <table class="bet-table">
+            <thead>
+                <tr>
+                    <th>Duelo</th>
+                    {% set users_duel = season_bets_data.duelos.keys()|list|sort %}
+                    {% for user in users_duel %}
+                        <th>{{ user }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% set duel_keys = [] %}
+                {% for user, bets in season_bets_data.duelos.items() %}
+                    {% for bet_key, info in bets.items() %}
+                        {% if bet_key not in duel_keys %}
+                            {% set _ = duel_keys.append(bet_key) %}
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+
+                {% for bet_key in duel_keys %}
+                    {% set sample_label = bet_key %}
+                    {% for u, bets in season_bets_data.duelos.items() %}
+                        {% if bet_key in bets and sample_label == bet_key %}
+                            {% set sample_label = bets[bet_key].label %}
+                        {% endif %}
+                    {% endfor %}
+                    {% set resultado_real = resultados.get(bet_key) %}
+                    <tr>
+                        <th>{{ sample_label }}</th>
+                        {% for user in users_duel %}
+                            {% set info = season_bets_data.duelos[user].get(bet_key) %}
+                            {% set val = info.value if info else None %}
+
+                            {% if val is iterable and val is not string %}
+                                {% set display_val = val|join(', ') %}
+                            {% else %}
+                                {% set display_val = val if val is not none else '—' %}
+                            {% endif %}
+
+                            {% set cell_class = "" %}
+                            {% if resultado_real is not none and val is not none %}
+                                {% if bet_key.startswith('most_dnfs_') and resultado_real is iterable and resultado_real is not string %}
+                                    {% set user_norm = (val|string)|lower|trim %}
+                                    {% set truths_norm = resultado_real | map('lower') | list %}
+                                    {% if user_norm in truths_norm %}
+                                        {% set cell_class = "correct" %}
+                                    {% else %}
+                                        {% set cell_class = "incorrect" %}
+                                    {% endif %}
+                                {% else %}
+                                    {% if val is iterable and val is not string and resultado_real is iterable and resultado_real is not string %}
+                                        {% set user_norm = (val|join(', '))|string|lower|trim %}
+                                        {% set real_norm = (resultado_real|join(', '))|string|lower|trim %}
+                                    {% else %}
+                                        {% set user_norm = (val|string)|lower|trim %}
+                                        {% set real_norm = (resultado_real|string)|lower|trim %}
+                                    {% endif %}
+                                    {% if user_norm == real_norm %}
+                                        {% set cell_class = "correct" %}
+                                    {% else %}
+                                        {% set cell_class = "incorrect" %}
+                                    {% endif %}
+                                {% endif %}
+                            {% endif %}
+
+                            <td class="bet-cell {{ cell_class }}" onclick="toggleResult(this)">
+                                {{ display_val }}
+                                {% if resultado_real is not none %}
+                                    <div class="result-tooltip">
+                                        {{ resultado_real if resultado_real is not iterable or resultado_real is string
+                                           else resultado_real|join(', ') }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+
+                {# Fila de puntos del grupo Duelos (si hay resultados) #}
+                {% set points_for_group = user_points_data.get("duelos", {}) %}
+                {% set hay_puntos = points_for_group.values() | select('gt', 0) | list | length > 0 %}
+                {% if hay_puntos %}
+                    {% set sorted_points = points_for_group|dictsort(false, 'value')|reverse %}
+                    {% set user_rankings = sorted_points|map(attribute=0)|list %}
+                    <tr class="total-points-row">
+                        <th>Total puntos</th>
+                        {% for user in users_duel %}
+                            {% set puntos = points_for_group.get(user, 0) %}
+                            {% set ranking = user_rankings.index(user) if user in user_rankings else None %}
+                            <td class="
+                                {% if ranking == 0 %}gold
+                                {% elif ranking == 1 %}silver
+                                {% elif ranking == 2 %}bronze
+                                {% endif %}
+                            ">
+                                {{ puntos }}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleResult(cell) {
+    const tooltip = cell.querySelector('.result-tooltip');
+    if (!tooltip) return;
+
+    if (tooltip.style.display === "block") {
+        tooltip.style.opacity = "0";
+        setTimeout(() => {
+            tooltip.style.display = "none";
+        }, 300);
+    } else {
+        tooltip.style.display = "block";
+        setTimeout(() => {
+            tooltip.style.opacity = "1";
+        }, 10);
+    }
+}
+
+// Debug opcional
+const seasonBetsData = {{ season_bets_data | tojson }};
+const seasonResultados = {{ resultados | tojson }};
+const seasonPoints = {{ user_points_data | tojson }};
+console.log("🎯 seasonBetsData:", seasonBetsData);
+console.log("📊 seasonResultados:", seasonResultados);
+console.log("🏆 seasonPoints:", seasonPoints);
+</script>
+{% endblock %}
+

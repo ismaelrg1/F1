@@ -4,10 +4,10 @@ async function login(event) {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
-    console.log(window.location.hostname)
+    const baseUrl = window.location.origin;
 
     try {
-        const response = await fetch(`https://${window.location.hostname}/login`, {
+        const response = await fetch(`${baseUrl}/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
