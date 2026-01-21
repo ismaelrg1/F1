@@ -10,10 +10,9 @@ def get_season_lock_dt(year: int):
           .filter_by(year=year, event_format='testing')
           .order_by(RaceEvent.event_date.asc())
           .first())
-    return ev.event_date if ev and ev.event_date else None
+    return ev.time_session1 if ev and ev.time_session1 else None
 
 def is_season_locked(year: int, now_utc=None):
     now_utc = now_utc or datetime.utcnow()
     lock_dt = get_season_lock_dt(year)
     return bool(lock_dt and now_utc >= lock_dt)
-

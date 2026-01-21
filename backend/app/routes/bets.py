@@ -174,7 +174,7 @@ def apuestas_carrera(race_name, season_year):
         "qualifying": {},
         "sprint": {},
         "sprint_qualifying": {},
-	"test": {}
+	    "test": {}
     }
 
     for bet in bets:
