@@ -24,16 +24,26 @@ def get_flag_url(country_name):
         print(f'Error fetching flag URL: {e}')
         return None
 
-def get_circuit_url(circuit_name):
+_CIRCUIT_ALIAS_BY_YEAR = {
+    2026: {
+        "Spanish Grand Prix": "Madrid Grand Prix",
+        "Barcelona Grand Prix": "Spanish Grand Prix",
+    }
+}
+
+
+def get_circuit_url(circuit_name, year=None):
     """
         Obtener el path del fichero de la silueta de la carrera
     :param circuit_name: nombre del circuito
+    :param year: año de la season (para alias por temporada)
     :return: path del fichero
     """
 
     # Construye el nombre de archivo basado en el nombre del circuito
     # Asegúrate de que los nombres de los archivos de imagen coincidan con los nombres de los circuitos.
-    file_name = circuit_name.replace(" ", "_") + ".png"  # Reemplaza espacios por guiones bajos
+    alias = _CIRCUIT_ALIAS_BY_YEAR.get(year, {}).get(circuit_name, circuit_name)
+    file_name = alias.replace(" ", "_") + ".png"  # Reemplaza espacios por guiones bajos
 
     # Construye la ruta completa a la imagen en la carpeta 'static/images/circuits/'
     file_path = os.path.join('frontend','static', 'images', 'circuits', file_name)

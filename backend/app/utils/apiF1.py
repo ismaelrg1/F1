@@ -135,7 +135,10 @@ def fetch_api(year):
 
     # Aplicar las funciones para obtener las URLs
     df_transformed['flag_url'] = df_transformed['country'].apply(get_flag_url)
-    df_transformed['circuit_image_url'] = df_transformed['race_name'].apply(get_circuit_url)
+    df_transformed['circuit_image_url'] = df_transformed.apply(
+        lambda row: get_circuit_url(row['race_name'], int(row['event_date'].year) if pd.notna(row['event_date']) else None),
+        axis=1
+    )
 
     # Convertir la columna de fechas a tipo DateTime para la base de datos
     df_transformed['event_date'] = pd.to_datetime(df_transformed['event_date'], errors='coerce', format='%Y-%m-%d')
