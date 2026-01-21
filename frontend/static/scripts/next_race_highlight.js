@@ -5,6 +5,11 @@
     let today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Día actual sin hora
     let nextRaceCard = null;
     let minTimeDiff = Infinity;
+    const seasonYearAttr = document.querySelector(".calendar-container")?.getAttribute("data-season-year");
+    const seasonYear = seasonYearAttr ? parseInt(seasonYearAttr, 10) : now.getFullYear();
+    if (Number.isNaN(seasonYear)) {
+        return;
+    }
 
     raceCards.forEach(card => {
         const dateElement = card.querySelector(".date span");
@@ -17,7 +22,7 @@
 
             if (month === -1) return;
 
-            const raceDate = new Date(now.getFullYear(), month, parseInt(day));
+            const raceDate = new Date(seasonYear, month, parseInt(day));
             const raceDay = new Date(raceDate.getFullYear(), raceDate.getMonth(), raceDate.getDate());
 
             const timeDiff = raceDate - today;
