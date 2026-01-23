@@ -89,5 +89,6 @@ def race_detail(race_name, race_year):
         user_bets=user_bets,
         current_time=datetime.utcnow(),
         prev_race=prev_race,
-        next_race=next_race
+        next_race=next_race,
+        race_year=race_year
     )

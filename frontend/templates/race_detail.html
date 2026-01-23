@@ -28,6 +28,8 @@
     <!-- Apuestas dinámicas -->
     <div id="bets-container">
         {% set bet_order = ["Sprint Qualifying", "Sprint", "Qualifying", "Race", "Test"] %}
+        {% set show_dnf_note = race_year == 2026 %}
+        {% set numeric_bets = ["SC, VSC, Red Flag", "Numero De Red Flags", "Numero De Red Flags Maximas En Un Dia"] %}
 
         {% for bet_type in bet_order %}
         {% if bet_type in bets and bets[bet_type].bets|length > 0 %}
@@ -45,7 +47,15 @@
                   onsubmit="handleBetFormSubmit(event, '{{ bet_type }}', '{{ race_event.event_name }}', {{ race_event.id }})">
                 {% for bet in bets[bet_type].bets %}
                 <div class="bet-item">
-                    <label for="{{ bet_type|lower }}-{{ loop.index0 }}">{{ bet.bet }}</label>
+                    <label for="{{ bet_type|lower }}-{{ loop.index0 }}">
+                        {{ bet.bet }}
+                        {% if bet.score is not none %}
+                        <span class="bet-points">{{ bet.score }} pts</span>
+                        {% endif %}
+                        {% if show_dnf_note and bet.options and bet.options.get('positions') %}
+                        <span class="bet-asterisk">*</span>
+                        {% endif %}
+                    </label>
 
                     {% if bet.options %}
                     <select id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}"
@@ -69,7 +79,8 @@
                         {% endfor %}
                     </select>
                     {% else %}
-                    <input type="text" id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}"
+                    <input {% if bet.bet in numeric_bets %}type="number" min="0"{% else %}type="text"{% endif %}
+                           id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}"
                            value="{{ user_bets.get(bet_type, []) | selectattr('parameter_bet', 'equalto', bet.bet) | map(attribute='bet_user') | first | default('', true) }}">
 
                     {% endif %}
@@ -91,6 +102,10 @@
         {% endif %}
         {% endfor %}
     </div>
+
+    {% if show_dnf_note %}
+    <p class="bet-note">* si se acierta que la posicion es DNF, la puntuacion es 2, en lugar de 3</p>
+    {% endif %}
 </div>
 
 <script>

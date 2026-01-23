@@ -104,6 +104,7 @@ def get_bets_for_race(event_name, year):
             bets_by_type[bet_type]["bets"].append({
                 "bet": format_bet_name(bet.bet),  # Formateamos el nombre antes de enviarlo
                 "options": options,
+                "score": bet.score,
                 "is_custom": False
             })
 
@@ -137,6 +138,7 @@ def get_bets_for_race(event_name, year):
                     bets_by_type[bet_type]["bets"].append({
                         "bet": formatted_bet_name,  # También formateamos excepciones
                         "options": options,
+                        "score": exception.score,
                         "is_custom": True
                     })
                 else:
