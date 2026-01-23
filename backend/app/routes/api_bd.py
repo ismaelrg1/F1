@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from backend.app.models import RaceEvent, User, BetScore, Bet, Season
+from backend.app.models.parameters_bets import BetTemplate
 from backend.app.utils.bets import get_bets_for_race
 from config.db_config import db
 
@@ -191,10 +192,21 @@ def set_bet():
             if bet_name in ["season_id", "race", "type", "id"]:
                 continue
 
-            bet_score = BetScore.query.filter_by(bet=bet_name.replace(' ',''), event=bet_type.replace(' ','_').lower()).first()
-            #print(f'Bet: {bet_name.replace(' ','')}')
-            if not bet_score:
-                return jsonify({"error": f"Invalid bet name: {bet_name.replace(' ','')}"}), 400
+            bet_key = bet_name.replace(' ', '')
+            event_key = bet_type.replace(' ', '_').lower()
+            bet_template = (
+                BetTemplate.query
+                .join(BetScore, BetScore.id == BetTemplate.bet_score_id)
+                .filter(
+                    BetTemplate.season_id == season_id,
+                    BetScore.bet == bet_key,
+                    BetScore.event == event_key
+                )
+                .first()
+            )
+            if not bet_template:
+                return jsonify({"error": f"Invalid bet name: {bet_key}"}), 400
+            bet_score = bet_template.bet_score
 
             # print(f'bet_score :{bet_score}')
             # print(f'user_id :{user_id}')
