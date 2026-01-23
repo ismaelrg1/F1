@@ -50,7 +50,13 @@
                     <label for="{{ bet_type|lower }}-{{ loop.index0 }}">
                         {{ bet.bet }}
                         {% if bet.score is not none %}
-                        <span class="bet-points">{{ bet.score }} pts</span>
+                        <span class="bet-points">
+                            {% if bet.score == (bet.score | int) %}
+                                {{ bet.score | int }} pts
+                            {% else %}
+                                {{ bet.score }} pts
+                            {% endif %}
+                        </span>
                         {% endif %}
                         {% if show_dnf_note and bet.options and bet.options.get('positions') %}
                         <span class="bet-asterisk">*</span>
