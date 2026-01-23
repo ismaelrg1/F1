@@ -48,7 +48,7 @@
                 </div>
               {% else %}
                 {% if bet.input_type == 'enum' %}
-                  <select name="{{ name }}" class="form-control mt-2">
+                  <select name="{{ name }}" class="form-control mt-2" required>
                     <option value="">—</option>
                     {% for opt in bet.options %}
                       <option value="{{ opt }}" {{ 'selected' if val==opt else '' }}>{{ opt }}</option>
@@ -56,16 +56,22 @@
                   </select>
 
                 {% elif bet.input_type == 'bool' %}
-                  <div class="form-check mt-2">
-                    <input class="form-check-input" type="checkbox" name="{{ name }}" id="{{ name }}" {{ 'checked' if val else '' }}>
-                    <label class="form-check-label" for="{{ name }}">Sí</label>
+                  <div class="sb-radio-group">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="{{ name }}" id="{{ name }}_yes" value="true" required {{ 'checked' if val is not none and val else '' }}>
+                      <label class="form-check-label" for="{{ name }}_yes">Sí</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="{{ name }}" id="{{ name }}_no" value="false" required {{ 'checked' if val is not none and not val else '' }}>
+                      <label class="form-check-label" for="{{ name }}_no">No</label>
+                    </div>
                   </div>
 
                 {% elif bet.input_type == 'int' %}
-                  <input type="number" name="{{ name }}" class="form-control mt-2" value="{{ val if val is not none else '' }}">
+                  <input type="number" name="{{ name }}" class="form-control mt-2" value="{{ val if val is not none else '' }}" required>
 
                 {% elif bet.input_type == 'position' %}
-                  <select name="{{ name }}" class="form-control mt-2">
+                  <select name="{{ name }}" class="form-control mt-2" required>
                     <option value="">—</option>
                     {% for p in range(1,21) %}
                       <option value="{{ p }}" {{ 'selected' if val==p else '' }}>P{{ p }}</option>
@@ -73,7 +79,7 @@
                   </select>
 
                 {% elif bet.input_type == 'multienum' %}
-                  <textarea name="{{ name }}" rows="2" class="form-control mt-2"
+                  <textarea name="{{ name }}" rows="2" class="form-control mt-2" required
                             placeholder="Separadas por comas, en orden">{{ val|join(', ') if val else '' }}</textarea>
                   {% if bet.options %}
                     <small class="sb-muted">Opciones válidas: {{ bet.options|join(', ') }}</small>
@@ -102,7 +108,7 @@
               {% if locked %}
                 <div class="sb-value">{{ val if val else '—' }}</div>
               {% else %}
-                <select name="{{ name }}" class="form-control mt-2">
+                <select name="{{ name }}" class="form-control mt-2" required>
                   <option value="">—</option>
                   {% for opt in bet.options %}
                     <option value="{{ opt }}" {{ 'selected' if val==opt else '' }}>{{ opt }}</option>
@@ -122,4 +128,3 @@
     </form>
   </div>
 {% endblock %}
-

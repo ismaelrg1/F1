@@ -169,6 +169,17 @@ body[data-theme="dark"] .season-bets-container .sb-actions {
   width: 100%;
 }
 
+.sb-radio-group {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 8px;
+  justify-content: center;
+}
+.sb-radio-group .form-check {
+  margin: 0;
+}
+
 /* === Modo oscuro controlado por theme.js
      Soporta clase en <html> o en <body> y sube especificidad
 === */
@@ -227,4 +238,3 @@ body.dark-mode .season-bets-container .sb-actions {
   background-color: #121212 !important;
   border-top: 1px solid #333 !important;
 }
-

@@ -9,6 +9,9 @@ from backend.app.routes.api_bd import get_user_id  # ← usamos tu helper
 
 season_bets_bp = Blueprint('season_bets', __name__)
 
+def parse_bool_value(value):
+    return str(value).strip().lower() in ("true", "1", "yes", "y", "si", "sí")
+
 @season_bets_bp.route('/season-bets-<int:year>', methods=['GET', 'POST'])
 @jwt_required(locations=["cookies"])
 def season_bets(year):
@@ -37,36 +40,61 @@ def season_bets(year):
             flash("Las apuestas de temporada están bloqueadas por inicio de pre-season.", "warning")
             return redirect(url_for('season_bets.season_bets', year=year))
 
+        pending = []
+        missing = []
+
         for bet in bets:
             field = f'bet_{bet.id}'
             try:
                 if bet.input_type == 'enum':
-                    val = request.form.get(field) or ""
-                    if val:
-                        upsert_pick(bet.id, user_id, val)
+                    val = request.form.get(field)
+                    if not val:
+                        missing.append(bet.label)
+                    else:
+                        pending.append((bet.id, val))
 
                 elif bet.input_type == 'bool':
-                    upsert_pick(bet.id, user_id, bool(request.form.get(field)))
+                    raw = request.form.get(field)
+                    if raw is None:
+                        missing.append(bet.label)
+                    else:
+                        pending.append((bet.id, parse_bool_value(raw)))
 
                 elif bet.input_type == 'int':
                     raw = request.form.get(field)
-                    if raw is not None and raw.strip() != '':
-                        upsert_pick(bet.id, user_id, int(raw))
+                    if raw is None or raw.strip() == '':
+                        missing.append(bet.label)
+                    else:
+                        pending.append((bet.id, int(raw)))
 
                 elif bet.input_type == 'position':
                     raw = request.form.get(field)
-                    if raw:
+                    if not raw:
+                        missing.append(bet.label)
+                    else:
                         p = int(raw)
                         if 1 <= p <= 20:
-                            upsert_pick(bet.id, user_id, p)
+                            pending.append((bet.id, p))
+                        else:
+                            missing.append(bet.label)
 
                 elif bet.input_type == 'multienum':
                     raw = request.form.get(field, '')
                     vals = [x.strip() for x in raw.split(',') if x.strip()]
-                    upsert_pick(bet.id, user_id, vals)
+                    if not vals:
+                        missing.append(bet.label)
+                    else:
+                        pending.append((bet.id, vals))
 
             except Exception as e:
                 flash(f"Valor inválido en '{bet.label}': {e}", "danger")
+
+        if missing:
+            flash("Faltan opciones en: " + ", ".join(missing), "warning")
+            return redirect(url_for('season_bets.season_bets', year=year))
+
+        for bet_id, value in pending:
+            upsert_pick(bet_id, user_id, value)
 
         db.session.commit()
         flash("Apuestas de temporada guardadas.", "success")
@@ -82,4 +110,3 @@ def upsert_pick(season_bet_id: int, user_id: int, value):
         pick.value = value
     else:
         db.session.add(SeasonBetPick(season_bet_id=season_bet_id, user_id=user_id, value=value))
-
