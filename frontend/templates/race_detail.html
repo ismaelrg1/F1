@@ -79,7 +79,11 @@
                                     {% if user_bets.get(bet_type, []) | selectattr("parameter_bet", "equalto", bet.bet) | map(attribute="bet_user") | first == option %}
                                     selected
                                     {% endif %}>
-                                {{ option }}
+                                {% if category|lower == 'positions' and option != 'DNF' %}
+                                    P{{ option }}
+                                {% else %}
+                                    {{ option }}
+                                {% endif %}
                             </option>
                             {% endfor %}
                         {% endfor %}

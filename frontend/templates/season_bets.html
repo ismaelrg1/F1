@@ -91,7 +91,7 @@
                 {% elif bet.input_type == 'position' %}
                   <select name="{{ name }}" class="form-control mt-2" required>
                     <option value="" disabled {{ 'selected' if not val else '' }}>Position</option>
-                    {% for p in range(1,21) %}
+                    {% for p in range(1,23) %}
                       <option value="{{ p }}" {{ 'selected' if val==p else '' }}>P{{ p }}</option>
                     {% endfor %}
                   </select>
