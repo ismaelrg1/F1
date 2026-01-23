@@ -184,6 +184,14 @@ body[data-theme="dark"] .season-bets-container .sb-actions {
 .season-bets-container textarea,
 .season-bets-container input[type="number"] {
   width: 100%;
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background-color: var(--input-bg-color);
+  color: var(--text-color);
+  display: block;
+  box-sizing: border-box;
 }
 
 .sb-radio-group {
