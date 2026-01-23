@@ -39,8 +39,17 @@ def get_user_bets_for_race(race_name, year):
 
     user_id = user.id  # Ahora tenemos el user_id
 
-    # Query para obtener todas las apuestas del usuario en esa carrera
-    user_bets = Bet.query.filter_by(user_id=user_id, race=race_name).all()
+    # Limitar por temporada para no mezclar apuestas de años distintos
+    season = Season.query.filter_by(year=year).first()
+    if not season:
+        return {
+            "message": "Season not found.",
+            "race": race_name,
+            "bets": []
+        }, 404
+
+    # Query para obtener todas las apuestas del usuario en esa carrera y temporada
+    user_bets = Bet.query.filter_by(user_id=user_id, race=race_name, season_id=season.id).all()
 
     # Obtenemos toda la informacion de la carrera
     race_event = RaceEvent.query.filter_by(event_name=race_name, year=year).first()
