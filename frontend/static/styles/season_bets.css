@@ -151,6 +151,15 @@ body[data-theme="dark"] .season-bets-container .sb-actions {
 .sb-card h5 { margin: 0; font-size: 1rem; }
 .sb-meta { display:flex; gap:6px; align-items:center; flex-wrap: wrap; }
 .sb-badge { font-size:.75rem; background:#f1f3f5; border-radius:999px; padding:2px 8px; }
+html.dark-mode .sb-badge,
+body.dark-mode .sb-badge,
+html.dark .sb-badge,
+body.dark .sb-badge,
+html[data-theme="dark"] .sb-badge,
+body[data-theme="dark"] .sb-badge {
+  background-color: #2b2b2b !important;
+  color: #ddd !important;
+}
 .sb-value { margin-top: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; }
 
 .sb-actions {

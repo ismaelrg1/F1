@@ -76,6 +76,15 @@
     border-radius: 999px;
     padding: 2px 8px;
 }
+html.dark-mode .bet-points,
+body.dark-mode .bet-points,
+html.dark .bet-points,
+body.dark .bet-points,
+html[data-theme="dark"] .bet-points,
+body[data-theme="dark"] .bet-points {
+    background-color: #2b2b2b;
+    color: #ddd;
+}
 .bet-asterisk {
     margin-left: 4px;
     color: #d7263d;
