@@ -10,6 +10,11 @@
       Apuestas de temporada - {{ year }}
       {% if locked %}<small class="sb-muted">(bloqueadas)</small>{% endif %}
     </h2>
+    {% if lock_dt %}
+      <p class="sb-lock-time" data-utc="{{ lock_dt.isoformat() }}Z">
+        <strong>Tiempo máximo de edición:</strong> {{ lock_dt.strftime('%Y-%m-%d %H:%M:%S') }} UTC
+      </p>
+    {% endif %}
 
     {# --- Agrupar apuestas: Generales vs Duelos --- #}
     {% set groups = namespace(generales=[], duelos=[]) %}
@@ -68,7 +73,7 @@
                   </div>
 
                 {% elif bet.input_type == 'int' %}
-                  <input type="number" name="{{ name }}" class="form-control mt-2" value="{{ val if val is not none else '' }}" required>
+                  <input type="number" name="{{ name }}" class="form-control mt-2" value="{{ val if val is not none else '' }}" min="0" required>
 
                 {% elif bet.input_type == 'position' %}
                   <select name="{{ name }}" class="form-control mt-2" required>
@@ -122,9 +127,23 @@
 
       {% if not locked %}
         <div class="sb-actions">
-          <button class="btn btn-primary">Guardar</button>
+          <button class="sb-submit">Enviar</button>
         </div>
       {% endif %}
-    </form>
-  </div>
+  </form>
+</div>
+
+<script>
+  document.querySelectorAll(".sb-lock-time[data-utc]").forEach((el) => {
+    const utcValue = el.getAttribute("data-utc");
+    const date = new Date(utcValue);
+    if (!Number.isNaN(date.getTime())) {
+      const localText = date.toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+      el.innerHTML = "<strong>Tiempo máximo de edición:</strong> " + localText;
+    }
+  });
+</script>
 {% endblock %}

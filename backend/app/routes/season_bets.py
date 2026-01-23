@@ -4,7 +4,7 @@ from config.db_config import db
 
 from backend.app.models import Season
 from backend.app.models.season_bets import SeasonBet, SeasonBetPick
-from backend.app.utils.season_lock import is_season_locked
+from backend.app.utils.season_lock import is_season_locked, get_season_lock_dt
 from backend.app.routes.api_bd import get_user_id  # ← usamos tu helper
 
 season_bets_bp = Blueprint('season_bets', __name__)
@@ -21,6 +21,7 @@ def season_bets(year):
     if not user_id:
         abort(401)  # sesión inválida o usuario no encontrado
 
+    lock_dt = get_season_lock_dt(year)
     locked = is_season_locked(year)
 
     bets = (
@@ -65,7 +66,11 @@ def season_bets(year):
                     if raw is None or raw.strip() == '':
                         missing.append(bet.label)
                     else:
-                        pending.append((bet.id, int(raw)))
+                        value = int(raw)
+                        if value < 0:
+                            missing.append(bet.label)
+                        else:
+                            pending.append((bet.id, value))
 
                 elif bet.input_type == 'position':
                     raw = request.form.get(field)
@@ -102,7 +107,7 @@ def season_bets(year):
 
     # GET
     picks = {bid: (p.value if p else None) for bid, p in existing.items()}
-    return render_template('season_bets.html', year=year, bets=bets, picks=picks, locked=locked)
+    return render_template('season_bets.html', year=year, bets=bets, picks=picks, locked=locked, lock_dt=lock_dt)
 
 def upsert_pick(season_bet_id: int, user_id: int, value):
     pick = SeasonBetPick.query.filter_by(season_bet_id=season_bet_id, user_id=user_id).first()
