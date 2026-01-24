@@ -25,6 +25,11 @@
     border-radius: 5px;
     text-align: center;
 }
+.bets-muted {
+    text-align: center;
+    color: #6c757d;
+    margin-top: 8px;
+}
 
 
 /* ============================= */

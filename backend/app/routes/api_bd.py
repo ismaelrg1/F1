@@ -1,7 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from zoneinfo import ZoneInfo
+from sqlalchemy import text
 
 from backend.app.models import RaceEvent, User, BetScore, Bet, Season
 from backend.app.models.parameters_bets import BetTemplate
@@ -163,6 +165,16 @@ def set_bet():
         if not race_event:
             return jsonify({"error": "Race event not found"}), 404
 
+        # Bloquear apuestas hasta el lunes de la semana del GP (hora Espana)
+        if race_event.event_format != "testing" and race_event.event_date:
+            event_date = race_event.event_date.date()
+            monday_date = event_date - timedelta(days=4)
+            madrid_tz = ZoneInfo("Europe/Madrid")
+            now_madrid = datetime.now(madrid_tz)
+            monday_start = datetime.combine(monday_date, datetime.min.time(), tzinfo=madrid_tz)
+            if now_madrid < monday_start:
+                return jsonify({"error": "Betting not open yet"}), 403
+
         session_meanings = SESSION_MEANINGS.get(race_event.event_format, [])
         session_times = [
             race_event.time_session1, race_event.time_session2,
@@ -239,6 +251,24 @@ def set_bet():
                 print(f'New bet {new_bet}')
                 db.session.add(new_bet)
 
+        db.session.commit()
+
+        # Registrar ultima modificacion por carrera/usuario/tipo (extra point)
+        db.session.execute(
+            text("""
+                INSERT INTO bet_activity (user_id, season_id, race, bet_type, updated_at)
+                VALUES (:user_id, :season_id, :race, :bet_type, :updated_at)
+                ON CONFLICT(user_id, season_id, race, bet_type)
+                DO UPDATE SET updated_at = excluded.updated_at
+            """),
+            {
+                "user_id": user_id,
+                "season_id": season_id,
+                "race": race,
+                "bet_type": bet_type,
+                "updated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            },
+        )
         db.session.commit()
 
         return jsonify({"message": "Bet(s) placed successfully!"}), 201

@@ -24,6 +24,11 @@
         <li>{{ session_name }}</li>
         {% endfor %}
     </ul>
+    {% if open_time and open_time > current_time %}
+    <p class="bet-note" id="open-countdown" data-open="{{ open_time.isoformat() }}Z">
+        ⏳ Las apuestas se abren en: <strong>calculando...</strong>
+    </p>
+    {% endif %}
 
     <!-- Apuestas dinámicas -->
     <div id="bets-container">
@@ -96,7 +101,7 @@
                     {% endif %}
                 </div>
                 {% endfor %}
-		{% if not bets[bet_type].max_edit_time or bets[bet_type].max_edit_time > current_time %}
+		{% if (not open_time or open_time <= current_time) and (not bets[bet_type].max_edit_time or bets[bet_type].max_edit_time > current_time) %}
                 <button type="submit">
                     {% if user_bets.get(bet_type, [])|length > 0 %}
                         Modificar
@@ -105,7 +110,11 @@
                     {% endif %}
                 </button>
 		{% else %}
-            	<p class="expired-warning"><strong>⏳ El tiempo para modificar apuestas ha expirado.</strong></p>
+                    {% if open_time and open_time > current_time %}
+            	    <p class="expired-warning"><strong>⏳ Las apuestas se abren el lunes de la semana del GP.</strong></p>
+                    {% else %}
+            	    <p class="expired-warning"><strong>⏳ El tiempo para modificar apuestas ha expirado.</strong></p>
+                    {% endif %}
             	{% endif %}
             </form>
         </section>
@@ -141,6 +150,32 @@
             el.innerHTML = "<strong>Tiempo máximo de edición:</strong> " + localText;
         }
     });
+
+    const countdownEl = document.getElementById("open-countdown");
+    if (countdownEl) {
+        const openUtc = countdownEl.getAttribute("data-open");
+        const openDate = new Date(openUtc);
+        const tick = () => {
+            const now = new Date();
+            let diff = openDate - now;
+            if (Number.isNaN(diff)) return;
+            if (diff <= 0) {
+                countdownEl.innerHTML = "✅ Las apuestas ya están abiertas.";
+                return;
+            }
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            diff -= days * 1000 * 60 * 60 * 24;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            diff -= hours * 1000 * 60 * 60;
+            const minutes = Math.floor(diff / (1000 * 60));
+            const seconds = Math.floor((diff - minutes * 1000 * 60) / 1000);
+            countdownEl.innerHTML =
+                "⏳ Las apuestas se abren en: <strong>" +
+                days + "d " + hours + "h " + minutes + "m " + seconds + "s</strong>";
+        };
+        tick();
+        setInterval(tick, 1000);
+    }
 </script>
 
 

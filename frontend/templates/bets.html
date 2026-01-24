@@ -5,6 +5,9 @@
 {% block content %}
 <div class="race-bets-container">
     <h2>Apuestas para {{ race_name }} - {{ season_year }}</h2>
+    {% if not can_view_others %}
+    <p class="bets-muted">Debes enviar tu apuesta para ver las apuestas de otros usuarios.</p>
+    {% endif %}
 
     {% for event_type, bets in bets_data.items() if bets %}
     <h3>

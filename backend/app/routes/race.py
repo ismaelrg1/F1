@@ -6,7 +6,8 @@ from backend.app.routes.api_bd import get_user_bets_for_race
 from backend.app.utils.bets import get_bets_for_race, format_bet_name
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 def organize_bets_by_type(bet_status_response):
     """
@@ -81,6 +82,14 @@ def race_detail(race_name, race_year):
     prev_race = race_list[current_index - 1] if current_index > 0 else None
     next_race = race_list[current_index + 1] if current_index < len(race_list) - 1 else None
 
+    # Bloquear envios hasta el lunes del GP (hora Espana)
+    open_time_utc = None
+    if current_event and current_event.event_format != "testing" and current_event.event_date:
+        event_date = current_event.event_date.date()
+        monday_date = event_date - timedelta(days=4)
+        monday_madrid = datetime.combine(monday_date, datetime.min.time(), tzinfo=ZoneInfo("Europe/Madrid"))
+        open_time_utc = monday_madrid.astimezone(timezone.utc).replace(tzinfo=None)
+
     # Pasar los datos al template
     return render_template(
         'race_detail.html',
@@ -90,5 +99,6 @@ def race_detail(race_name, race_year):
         current_time=datetime.utcnow(),
         prev_race=prev_race,
         next_race=next_race,
+        open_time=open_time_utc,
         race_year=race_year
     )

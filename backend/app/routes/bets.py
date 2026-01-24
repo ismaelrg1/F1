@@ -2,12 +2,22 @@ from datetime import datetime
 import os, sys, json
 
 from flask import Blueprint, render_template, jsonify
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from backend.app.models import Season, Bet, BetScore, SeasonBet, SeasonBetPick
+from backend.app.models import Season, Bet, BetScore, SeasonBet, SeasonBetPick, RaceEvent
 from backend.app.utils.apiF1 import get_schedule
+from backend.app.routes.api_bd import get_user_id
 
 bets_bp = Blueprint('bets', __name__)
+
+# Significado de las sesiones por formato (para cierres por tipo)
+SESSION_MEANINGS = {
+    'conventional': ['Practice 1', 'Practice 2', 'Practice 3', 'Qualifying', 'Race'],
+    'sprint': ['Practice 1', 'Qualifying', 'Practice 2', 'Sprint', 'Race'],
+    'sprint_shootout': ['Practice 1', 'Qualifying', 'Sprint Shootout', 'Sprint', 'Race'],
+    'sprint_qualifying': ['Practice 1', 'Sprint Qualifying', 'Sprint', 'Qualifying', 'Race'],
+    'testing': ['Test', 'Test1', 'Test2', 'N/A', 'N/A']
+}
 
 # Helpers para comparar valores (reusados de la lógica de temporada)
 def norm_str(x):
@@ -167,6 +177,24 @@ def apuestas_carrera(race_name, season_year):
         race_name = race_name.replace("-", " ")
     # Obtener todas las apuestas relacionadas con la carrera y la temporada
     bets = Bet.query.filter_by(race=race_name, season_id=season.id).all()
+    race_event = RaceEvent.query.filter_by(event_name=race_name, year=season_year).first()
+    user_id = get_user_id()
+    current_username = None
+    if user_id:
+        user = next((b.user for b in bets if b.user_id == user_id), None)
+        if user:
+            current_username = user.username
+        else:
+            identity = get_jwt_identity()
+            current_username = identity["username"] if identity else None
+
+    user_bet_types = set()
+    if user_id:
+        user_bet_types = {
+            b.type.lower().replace(" ", "_")
+            for b in Bet.query.filter_by(user_id=user_id, season_id=season.id, race=race_name).all()
+        }
+    has_user_bets = bool(user_bet_types)
 
     # Estructurar los datos en el formato deseado
     bets_data = {
@@ -191,7 +219,41 @@ def apuestas_carrera(race_name, season_year):
         # Guardar la apuesta del usuario
         bets_data[bet_type][username][bet_name] = bet_value
 
-    # print("\nApuestas finales ->",bets_data)
+    # Si el usuario no ha apostado, ocultar apuestas de otros usuarios
+    # Permitir ver apuestas ajenas cuando:
+    # - Es testing, o
+    # - El usuario ya envio ese tipo, o
+    # - El tipo ya esta cerrado (no se puede apostar mas)
+    can_view_others = has_user_bets or (race_event and race_event.event_format == "testing")
+    now_utc = datetime.utcnow()
+    session_meanings = SESSION_MEANINGS.get(race_event.event_format, []) if race_event else []
+    session_times = [
+        race_event.time_session1,
+        race_event.time_session2,
+        race_event.time_session3,
+        race_event.time_session4,
+        race_event.time_session5,
+    ] if race_event else []
+    session_time_map = {
+        session_name: session_time
+        for session_name, session_time in zip(session_meanings, session_times)
+        if session_name != 'N/A' and session_time
+    }
+    if current_username:
+        for event_type in list(bets_data.keys()):
+            event_key = event_type.replace(" ", "_")
+            session_key = event_type.replace("_", " ").title()
+            close_time = session_time_map.get(session_key)
+            is_closed = bool(close_time and now_utc >= close_time)
+            can_view_type = (
+                can_view_others
+                and (event_key in user_bet_types or (race_event and race_event.event_format == "testing") or is_closed)
+            )
+            if not can_view_type:
+                if current_username in bets_data[event_type]:
+                    bets_data[event_type] = {current_username: bets_data[event_type][current_username]}
+                else:
+                    bets_data[event_type] = {}
     # 🔥 Aquí cargamos resultados oficiales si existen
     resultados = {}
     print("⚡ Working directory:", os.getcwd(), file=sys.stderr)
@@ -245,5 +307,6 @@ def apuestas_carrera(race_name, season_year):
         season_year=season_year,
         bets_data=bets_data,
         resultados=resultados,
-        user_points_data=user_points_data
+        user_points_data=user_points_data,
+        can_view_others=can_view_others
     )
