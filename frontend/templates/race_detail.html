@@ -24,6 +24,25 @@
         <li>{{ session_name }}</li>
         {% endfor %}
     </ul>
+    {% if race_year >= 2026 and race_event.event_format != "testing" %}
+    <div class="powerups-panel" data-race="{{ race_event.event_name }}" data-year="{{ race_year }}">
+        <h3>Power-ups</h3>
+        <p class="powerups-status">Cargando...</p>
+        <div class="powerups-controls" hidden>
+            <label for="powerup-type">Elegir power-up</label>
+            <select id="powerup-type">
+                <option value="">—</option>
+                <option value="x2">x2</option>
+                <option value="/2">/2</option>
+            </select>
+            <div id="powerup-target-wrapper" hidden>
+                <label for="powerup-target">Objetivo /2</label>
+                <select id="powerup-target"></select>
+            </div>
+            <button id="powerup-apply" type="button">Aplicar</button>
+        </div>
+    </div>
+    {% endif %}
     {% if open_time and open_time > current_time %}
     <p class="bet-note" id="open-countdown" data-open="{{ open_time.isoformat() }}Z">
         ⏳ Las apuestas se abren en: <strong>calculando...</strong>
@@ -181,6 +200,7 @@
 
 <!-- 🔹 Include JavaScript for handling form submission -->
 <script src="{{ url_for('static', filename='scripts/bet_form.js') }}"></script>
+<script src="{{ url_for('static', filename='scripts/powerups.js') }}"></script>
 
 {% endblock %}
 

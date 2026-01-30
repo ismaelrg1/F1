@@ -5,6 +5,9 @@
 {% block content %}
 <div class="race-bets-container">
     <h2>Apuestas para {{ race_name }} - {{ season_year }}</h2>
+    {% if powerups_total is not none %}
+    <p class="bets-muted">Power-ups usados: {{ powerups_total }}</p>
+    {% endif %}
     {% if not can_view_others %}
     <p class="bets-muted">Debes enviar tu apuesta para ver las apuestas de otros usuarios.</p>
     {% endif %}

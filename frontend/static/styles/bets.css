@@ -112,6 +112,45 @@
     transition: background-color 0.3s ease;
 }
 
+.bet-answer {
+    display: inline-block;
+    margin-right: 6px;
+}
+
+.row-points {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: bold;
+    color: #0f5132;
+    background-color: #d1e7dd;
+    border-radius: 10px;
+    padding: 2px 6px;
+}
+
+.extra-points-row th,
+.extra-points-row td {
+    background-color: #fff3cd;
+    color: #664d03;
+    font-weight: bold;
+}
+
+.extra-hit {
+    color: #3b2f02;
+}
+
+.powerups-table th:first-child {
+    width: auto;
+}
+
+.powerups-table td,
+.powerups-table th {
+    font-size: 14px;
+}
+
+.summary-table th:first-child {
+    width: auto;
+}
+
 /* Resultado correcto */
 .correct {
     background-color: #d4edda; /* Verde claro */
@@ -195,16 +234,19 @@
     background-color: #FFE680 !important; /* 🥇 Dorado suave */
     color: #000 !important;
     font-weight: bold;
+    background-image: none !important;
 }
 
 .silver {
     background-color: #D9D9D9 !important; /* 🥈 Plateado suave */
     color: #000 !important;
     font-weight: bold;
+    background-image: none !important;
 }
 
 .bronze {
     background-color: #E5A07B !important; /* 🥉 Bronce suave */
     color: #000 !important;
     font-weight: bold;
+    background-image: none !important;
 }

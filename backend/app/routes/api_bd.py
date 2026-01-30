@@ -21,6 +21,7 @@ SESSION_MEANINGS = {
     'testing': ['Test', 'Test1', 'Test2', 'N/A', 'N/A']
 }
 
+
 @api.route('/api/bet-status', methods=['GET'])
 @jwt_required(locations=["cookies"])
 def get_user_bets_for_race(race_name, year):

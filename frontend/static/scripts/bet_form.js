@@ -41,6 +41,33 @@ async function handleBetFormSubmit(event, betType, raceName, raceId) {
     }
 
     try {
+        // Aplicar power-up pendiente antes del primer envio
+        const pendingKey = window.__powerupPendingKey;
+        if (pendingKey) {
+            const pending = JSON.parse(localStorage.getItem(pendingKey) || "null");
+            if (pending && pending.race === raceName) {
+                const confirmUse = confirm("¿Quieres aplicar el power-up seleccionado en este GP? Esta acción no se puede deshacer.");
+                if (confirmUse) {
+                    const resPower = await fetch("/api/powerups/use", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRF-TOKEN": getCSRFToken()
+                        },
+                        credentials: "include",
+                        body: JSON.stringify(pending)
+                    });
+                    const powerText = await resPower.text();
+                    const powerJson = JSON.parse(powerText || "{}");
+                    if (!resPower.ok) {
+                        alert(powerJson.error || powerJson.message || "Error al aplicar power-up.");
+                        return;
+                    }
+                    localStorage.removeItem(pendingKey);
+                }
+            }
+        }
+
         const response = await fetch(`/api/set-bet`, {
             method: 'POST',
             headers: {

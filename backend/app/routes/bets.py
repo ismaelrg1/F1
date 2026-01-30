@@ -4,9 +4,13 @@ import os, sys, json
 from flask import Blueprint, render_template, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from backend.app.models import Season, Bet, BetScore, SeasonBet, SeasonBetPick, RaceEvent
+from backend.app.models import Season, Bet, BetScore, SeasonBet, SeasonBetPick, RaceEvent, User
+from backend.app.models.parameters_bets import BetTemplate
+from backend.app.powerups.models import PowerupUsage
+from config.db_config import db
 from backend.app.utils.apiF1 import get_schedule
 from backend.app.routes.api_bd import get_user_id
+from sqlalchemy import text
 
 bets_bp = Blueprint('bets', __name__)
 
@@ -18,6 +22,7 @@ SESSION_MEANINGS = {
     'sprint_qualifying': ['Practice 1', 'Sprint Qualifying', 'Sprint', 'Qualifying', 'Race'],
     'testing': ['Test', 'Test1', 'Test2', 'N/A', 'N/A']
 }
+
 
 # Helpers para comparar valores (reusados de la lógica de temporada)
 def norm_str(x):
@@ -163,9 +168,7 @@ def apuestas_temporada(season_year):
     )
 
 
-@bets_bp.route('/apuestas/<race_name>-<int:season_year>')
-@jwt_required(locations=["cookies"])
-def apuestas_carrera(race_name, season_year):
+def _apuestas_carrera_impl(race_name, season_year, use_new_template):
     # Buscar la temporada en la base de datos
     season = Season.query.filter_by(year=season_year).first()
     if not season:
@@ -246,8 +249,9 @@ def apuestas_carrera(race_name, season_year):
             close_time = session_time_map.get(session_key)
             is_closed = bool(close_time and now_utc >= close_time)
             can_view_type = (
-                can_view_others
-                and (event_key in user_bet_types or (race_event and race_event.event_format == "testing") or is_closed)
+                (event_key in user_bet_types)
+                or (race_event and race_event.event_format == "testing")
+                or is_closed
             )
             if not can_view_type:
                 if current_username in bets_data[event_type]:
@@ -279,6 +283,24 @@ def apuestas_carrera(race_name, season_year):
     }
 
     bet_scores = {b.id: b.score for b in BetScore.query.all()}
+    template_scores = {
+        (bet, event): score
+        for bet, event, score in db.session.query(BetScore.bet, BetScore.event, BetScore.score)
+        .join(BetTemplate, BetScore.id == BetTemplate.bet_score_id)
+        .filter(BetTemplate.season_id == season.id)
+        .all()
+    }
+    bet_id_by_user = {
+        (bet.user.username, bet.type.lower().replace(" ", "_"), bet.parametre.bet): bet.parameter_bet_id
+        for bet in bets
+    }
+    row_points = {
+        "race": {},
+        "qualifying": {},
+        "sprint": {},
+        "sprint_qualifying": {},
+        "test": {}
+    }
 
     # Para cada tipo de evento
     for event_type, event_bets in bets_data.items():
@@ -289,24 +311,131 @@ def apuestas_carrera(race_name, season_year):
                     resultado_real = resultados.get(event_type.replace('_', ' ').title(), {}).get(bet_name)
                     if resultado_real:
                         if str(user_answer).strip().lower() == str(resultado_real).strip().lower():
-                            bet = Bet.query.join(Bet.parametre).filter(
-                                Bet.user.has(username=user),
-                                Bet.season_id==season.id,
-                                Bet.race==race_name,
-                                Bet.type==event_type.replace('_', ' ').title(),
-                                Bet.parametre.has(bet=bet_name)
-                            ).first()
-                            if bet and bet.parameter_bet_id in bet_scores:
-                                points += bet_scores[bet.parameter_bet_id]
+                            param_id = bet_id_by_user.get((user, event_type, bet_name))
+                            row_score = 0
+                            if param_id in bet_scores:
+                                row_score = template_scores.get((bet_name, event_type), bet_scores[param_id])
+                            if season_year >= 2026 and str(resultado_real).strip().lower() == "dnf":
+                                row_score = 2
+                            points += row_score
+                            if season_year >= 2026:
+                                row_points[event_type].setdefault(bet_name, {})[user] = row_score
+                        elif season_year >= 2026:
+                            row_points[event_type].setdefault(bet_name, {})[user] = 0
                 user_points_data[event_type][user] = points
 
+    users_by_id = {u.id: u.username for u in User.query.all()}
 
+    extra_points = {}
+    powerups_summary = {}
+    users_sorted = sorted({u for event in bets_data.values() for u in event.keys()})
+    summary_points = {}
+    if season_year >= 2026 and use_new_template:
+        extra_points = {
+            "race": {},
+            "qualifying": {},
+            "sprint": {},
+            "sprint_qualifying": {}
+        }
+        for event_label, event_key, extra in [
+            ("Race", "race", 1.0),
+            ("Qualifying", "qualifying", 0.5),
+            ("Sprint", "sprint", 0.5),
+            ("Sprint Qualifying", "sprint_qualifying", 0.5),
+        ]:
+            row = db.session.execute(
+                text("""
+                    SELECT user_id
+                    FROM bet_activity
+                    WHERE season_id = :season_id AND race = :race AND bet_type = :bet_type
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                """),
+                {"season_id": season.id, "race": race_name, "bet_type": event_label}
+            ).fetchone()
+            if row:
+                winner_id = row[0]
+                winner_name = users_by_id.get(winner_id, f"Usuario {winner_id}")
+                extra_points[event_key][winner_name] = extra
+
+        usage_rows = PowerupUsage.query.filter_by(season_id=season.id, race=race_name).all()
+        x2_users = {u.user_id for u in usage_rows if u.powerup_type == "x2"}
+        half_counts = {}
+        for usage in usage_rows:
+            user_name = users_by_id.get(usage.user_id, f"Usuario {usage.user_id}")
+            powerups_summary.setdefault(user_name, {"used": [], "received": []})
+            if usage.powerup_type == "x2":
+                powerups_summary[user_name]["used"].append("x2")
+            elif usage.powerup_type == "/2" and usage.target_user_id:
+                target_name = users_by_id.get(usage.target_user_id, f"Usuario {usage.target_user_id}")
+                powerups_summary[user_name]["used"].append(f"/2 a {target_name}")
+                powerups_summary.setdefault(target_name, {"used": [], "received": []})
+                powerups_summary[target_name]["received"].append(f"/2 de {user_name}")
+                half_counts[usage.target_user_id] = half_counts.get(usage.target_user_id, 0) + 1
+
+        # Resumen por usuario: base, bonus, extra, total
+        for user in users_sorted:
+            base_points = sum(
+                user_points_data.get(evt, {}).get(user, 0)
+                for evt in ["race", "qualifying", "sprint", "sprint_qualifying", "test"]
+            )
+            user_id = next((uid for uid, uname in users_by_id.items() if uname == user), None)
+            half_count = half_counts.get(user_id, 0) if user_id is not None else 0
+            if user_id in x2_users:
+                multiplier = 2 / (2 ** half_count)
+            else:
+                multiplier = 1 / (2 ** half_count)
+            powerup_points = base_points * multiplier
+            aciertos = 0
+            for evt_points in row_points.values():
+                for bet_points in evt_points.values():
+                    if bet_points.get(user, 0) > 0:
+                        aciertos += 1
+            bonus_points = 1 if aciertos >= 7 else 0
+            extra_total = sum(
+                extra_points.get(evt, {}).get(user, 0)
+                for evt in ["race", "qualifying", "sprint", "sprint_qualifying"]
+            )
+            summary_points[user] = {
+                "base": base_points,
+                "powerups": powerup_points,
+                "bonus": bonus_points,
+                "extra": extra_total,
+                "total": powerup_points + bonus_points + extra_total
+            }
+    powerups_counts = dict(
+        db.session.query(PowerupUsage.powerup_type, db.func.count())
+        .filter_by(season_id=season.id, race=race_name)
+        .group_by(PowerupUsage.powerup_type)
+        .all()
+    )
+    powerups_total = sum(powerups_counts.values()) if powerups_counts else 0
+
+    template_name = 'bets_2026.html' if use_new_template else 'bets.html'
     return render_template(
-        'bets.html',
+        template_name,
         race_name=race_name,
         season_year=season_year,
         bets_data=bets_data,
         resultados=resultados,
         user_points_data=user_points_data,
+        row_points=row_points,
+        extra_points=extra_points,
+        powerups_summary=powerups_summary,
+        users_sorted=users_sorted,
+        summary_points=summary_points,
+        powerups_total=powerups_total,
         can_view_others=can_view_others
     )
+
+
+@bets_bp.route('/apuestas/<race_name>-2026')
+@jwt_required(locations=["cookies"])
+def apuestas_carrera_2026(race_name):
+    return _apuestas_carrera_impl(race_name, 2026, use_new_template=True)
+
+
+@bets_bp.route('/apuestas/<race_name>-<int:season_year>')
+@jwt_required(locations=["cookies"])
+def apuestas_carrera(race_name, season_year):
+    return _apuestas_carrera_impl(race_name, season_year, use_new_template=False)
