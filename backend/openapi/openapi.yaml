@@ -1,0 +1,25 @@
+﻿openapi: 3.1.0
+info:
+  title: FutureF1 API
+  version: 0.1.0
+  description: Endpoints base extracted from API_React_PorraF1_EndPoints.docx
+servers:
+  - url: http://localhost:8000/api/v1
+tags:
+  - name: auth
+  - name: seasons
+  - name: race-events
+  - name: testing-events
+  - name: countries
+  - name: circuits
+  - name: contexts
+  - name: bets
+  - name: results
+  - name: ranking
+  - name: rules
+  - name: powerups
+  - name: roster
+  - name: stream
+paths: {}
+components:
+  schemas: {}
