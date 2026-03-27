@@ -6,6 +6,10 @@ def get_season_lock_dt(year: int):
     Devuelve la datetime UTC del primer evento 'testing' de la temporada.
     Si no existe, no bloquea (None).
     """
+
+    if year == 2026:
+        return datetime(2026, 3, 1, 13, 0, 0)
+
     ev = (RaceEvent.query
           .filter_by(year=year, event_format='testing')
           .order_by(RaceEvent.event_date.asc())

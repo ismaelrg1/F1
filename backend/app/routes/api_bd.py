@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from zoneinfo import ZoneInfo
 from sqlalchemy import text
 
@@ -34,10 +34,19 @@ def get_user_bets_for_race(race_name, year):
         "bets":  apuestas realizadas por el usuario o lista vacia
     }
     """
-    username = get_jwt_identity()  # Obtiene el username desde el JWT
 
-    # Obtener el user_id basado en el username
-    user = User.query.filter_by(username=username['username']).first()
+    identity = get_jwt_identity()
+    claims = get_jwt()
+    user = None
+    if isinstance(identity, dict) and identity.get("username"):
+        user = User.query.filter_by(username=identity["username"]).first()
+    elif isinstance(identity, str) and identity.isdigit():
+        user = User.query.filter_by(id=int(identity)).first()
+    else:
+        username = claims.get("username") if isinstance(claims, dict) else None
+        if username:
+            user = User.query.filter_by(username=username).first()
+
     if not user:
         return jsonify({"error": "User not found"}), 404
 
@@ -126,7 +135,16 @@ def get_user_id():
 
     # print(f'user-> {user_identity['username']}')
 
-    user = User.query.filter_by(username=user_identity['username']).first()  # Buscar en la base de datos
+    claims = get_jwt()
+    user = None
+    if isinstance(user_identity, dict) and user_identity.get("username"):
+        user = User.query.filter_by(username=user_identity["username"]).first()
+    elif isinstance(user_identity, str) and user_identity.isdigit():
+        user = User.query.filter_by(id=int(user_identity)).first()
+    else:
+        username = claims.get("username") if isinstance(claims, dict) else None
+        if username:
+            user = User.query.filter_by(username=username).first()
 
     if user:
         return user.id  # Devuelve el ID del usuario

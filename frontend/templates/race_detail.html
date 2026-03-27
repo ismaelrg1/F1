@@ -24,8 +24,16 @@
         <li>{{ session_name }}</li>
         {% endfor %}
     </ul>
+    {% set ns = namespace(all_closed=true) %}
+    {% for bt in bet_order if bt in bets and bets[bt].bets|length > 0 %}
+        {% if not bets[bt].max_edit_time or bets[bt].max_edit_time > current_time %}
+            {% set ns.all_closed = false %}
+        {% endif %}
+    {% endfor %}
+    {% set locked_bets = (open_time and open_time > current_time) or ns.all_closed %}
+
     {% if race_year >= 2026 and race_event.event_format != "testing" %}
-    <div class="powerups-panel" data-race="{{ race_event.event_name }}" data-year="{{ race_year }}">
+    <div class="powerups-panel" data-race="{{ race_event.event_name }}" data-year="{{ race_year }}" data-locked="{{ 'true' if locked_bets else 'false' }}">
         <h3>Power-ups</h3>
         <p class="powerups-status">Cargando...</p>
         <div class="powerups-controls" hidden>
@@ -89,7 +97,7 @@
 
                     {% if bet.options %}
                     <select id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}"
-                        {% if bets[bet_type].max_edit_time and bets[bet_type].max_edit_time <= current_time %}disabled{% endif %}>
+                        {% if (open_time and open_time > current_time) or (bets[bet_type].max_edit_time and bets[bet_type].max_edit_time <= current_time) %}disabled{% endif %}>
                         {% for category, options in bet.options.items() %}
                             <option value="" disabled
                                     {% if not user_bets.get(bet_type, []) | selectattr("parameter_bet", "equalto", bet.bet) | map(attribute="bet_user") | first %}
@@ -115,6 +123,7 @@
                     {% else %}
                     <input {% if bet.bet in numeric_bets %}type="number" min="0"{% else %}type="text"{% endif %}
                            id="{{ bet_type|lower }}-{{ loop.index0 }}" name="{{ bet.bet }}"
+                           {% if (open_time and open_time > current_time) or (bets[bet_type].max_edit_time and bets[bet_type].max_edit_time <= current_time) %}disabled{% endif %}
                            value="{{ user_bets.get(bet_type, []) | selectattr('parameter_bet', 'equalto', bet.bet) | map(attribute='bet_user') | first | default('', true) }}">
 
                     {% endif %}

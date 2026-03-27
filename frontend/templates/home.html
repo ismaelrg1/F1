@@ -39,22 +39,35 @@
     <section class="next-race">
         <h2>Próxima Carrera</h2>
         <div class="container">
-            <a href="{{ url_for('race.race_detail', race_name=next_race.event_name|replace(' ', '-'), race_year=next_race.year) }}">
-                <div class="race-card">
-                    <div class="race-header">
-                        <span class="round">ROUND {{ next_race.round_number }}</span>
-                        <span class="date">{{ next_race.event_date.strftime('%d-%b') }}</span>
-                        <img src="{{ next_race.flag_url }}" alt="Bandera de {{ next_race.country }}" class="flag">
-                    </div>
-                    <div class="race-body">
-                        <h2>{{ next_race.country }}</h2>
-                        <p>{{ next_race.event_name }}</p>
-                        <div class="circuit-container">
-                            <img src="{{ next_race.circuit_image_url }}" alt="Circuito de {{ next_race.country }}" class="circuit" loading="lazy">
+            <div class="next-race-layout">
+                <a href="{{ url_for('race.race_detail', race_name=next_race.event_name|replace(' ', '-'), race_year=next_race.year) }}">
+                    <div class="race-card">
+                        <div class="race-header">
+                            <span class="round">ROUND {{ next_race.round_number }}</span>
+                            <span class="date">{{ next_race.event_date.strftime('%d-%b') }}</span>
+                            <img src="{{ next_race.flag_url }}" alt="Bandera de {{ next_race.country }}" class="flag">
+                        </div>
+                        <div class="race-body">
+                            <h2>{{ next_race.country }}</h2>
+                            <p>{{ next_race.event_name }}</p>
+                            <div class="circuit-container">
+                                <img src="{{ next_race.circuit_image_url }}" alt="Circuito de {{ next_race.country }}" class="circuit" loading="lazy">
+                            </div>
                         </div>
                     </div>
+                </a>
+
+                <div class="next-race-video">
+                    <iframe
+                        src="https://www.youtube.com/embed/iftgrzzJqEE?autoplay=1&playsinline=1"
+                        title="YouTube video"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen>
+                    </iframe>
                 </div>
-            </a>
+
+            </div>
         </div>
     </section>
     
@@ -103,8 +116,11 @@
     <!-- Historial de campeones -->
     <section class="history">
         <h2>Historial de Campeones</h2>
-        <img src="{{ url_for('static', filename='images/ranking/historial_porra.png') }}" alt="Historial de campeones">
+        <img src="{{ url_for('static', filename='images/ranking/historial_1.png') }}" alt="Historial de campeones">
+        <img src="{{ url_for('static', filename='images/ranking/historial_2.png') }}" alt="Historial de campeones 2">
     </section>
+
+
 </div>
 
 <script>

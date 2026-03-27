@@ -1,0 +1,38 @@
+.normativa-container {
+    text-align: center;
+}
+
+.normativa-years {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin: 12px 0 20px;
+}
+
+.normativa-year {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background-color: var(--input-bg-color);
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.normativa-year.active {
+    background-color: var(--button-bg-color);
+    color: #fff;
+}
+
+.normativa-embed embed {
+    width: 100%;
+    height: 80vh;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.normativa-image img {
+    max-width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}

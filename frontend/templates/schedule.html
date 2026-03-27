@@ -9,7 +9,7 @@
     <!-- Enlaces directos a cada temporada -->
     <div class="season-links">
         {% for season_year in seasons %}
-            <a href="{{ url_for('schedule.calendario', season_year=season_year) }}" class="season-link">
+            <a href="{{ url_for('schedule.calendario', season_year=season_year) }}" class="season-link{% if season_year == year %} active{% endif %}">
                 {{ season_year }}
             </a>
         {% endfor %}

@@ -42,6 +42,7 @@ def create_app():
     from backend.app.routes.bets import bets_bp
     from backend.app.routes.season_bets import season_bets_bp
     from backend.app.powerups.routes import powerups_bp
+    from backend.app.routes.normativa import normativa_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(api)
     app.register_blueprint(schedule_bp)
@@ -50,5 +51,6 @@ def create_app():
     app.register_blueprint(bets_bp)
     app.register_blueprint(season_bets_bp)
     app.register_blueprint(powerups_bp)
+    app.register_blueprint(normativa_bp)
 
     return app

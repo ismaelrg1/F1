@@ -47,11 +47,14 @@ def ranking(season_year=None):
 
     # Obtener solo las carreras que ya han ocurrido
     now = datetime.utcnow()
-    carreras_hasta_ahora = [
-        carrera[0]
-        for carrera in carreras
-        if carrera[1] and carrera[1] < now
-    ]
+    seen = set()
+    carreras_hasta_ahora = []
+
+    for event_name, event_date in carreras:
+        if event_date and event_date < now and event_name not in seen:
+            seen.add(event_name)
+            carreras_hasta_ahora.append(event_name)
+
 
     if not carreras_hasta_ahora:
         # Si no hay carreras pasadas, no hay puntuaciones

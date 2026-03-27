@@ -1,0 +1,207 @@
+{% extends "protected.html" %}
+
+{% block title %}Apuestas - {{ race_name }} ({{ season_year }}){% endblock %}
+
+{% block content %}
+<div class="race-bets-container">
+    <h2>Apuestas para {{ race_name }} - {{ season_year }}</h2>
+    {% if powerups_total is not none %}
+    <p class="bets-muted">Power-ups usados: {{ powerups_total }}</p>
+    {% endif %}
+    {% if not can_view_others %}
+    <p class="bets-muted">Debes enviar tu apuesta para ver las apuestas de otros usuarios.</p>
+    {% endif %}
+
+    {% if resultados and powerups_summary %}
+    <h3>Power-ups (GP)</h3>
+    <div class="bet-table-wrapper">
+        <table class="bet-table powerups-table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    {% for user in users_sorted %}
+                        <th>{{ user }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>Usado</th>
+                    {% for user in users_sorted %}
+                        {% set info = powerups_summary.get(user, {}) %}
+                        {% set used_list = info.get('used', []) %}
+                        <td>{{ used_list|join(", ") if used_list else "-" }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <th>Recibido</th>
+                    {% for user in users_sorted %}
+                        {% set info = powerups_summary.get(user, {}) %}
+                        {% set recv_list = info.get('received', []) %}
+                        <td>{{ recv_list|join(", ") if recv_list else "-" }}</td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% for event_type, bets in bets_data.items() if bets %}
+    <h3>
+        {% if event_type == "race" %}Carrera{% endif %}
+        {% if event_type == "qualifying" %}Clasificación{% endif %}
+        {% if event_type == "sprint" %}Sprint{% endif %}
+        {% if event_type == "sprint_qualifying" %}Clasificación Sprint{% endif %}
+    </h3>
+    <div class="bet-table-wrapper">
+        <table class="bet-table">
+            <thead>
+                <tr>
+                    <th>Apuesta</th>
+                    {% for user in bets.keys()|sort %}
+                        <th>{{ user }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for bet_type in (bets.values()|first).keys() %}
+                {% set resultado_real = resultados.get(event_type.replace('_', ' ').title(), {}).get(bet_type, None) %}
+                {% set row_points_event = row_points.get(event_type, {}) %}
+                {% set row_points_bet = row_points_event.get(bet_type, {}) %}
+                <tr>
+                    <th>{{ bet_type }}</th>
+                    {% for user in bets.keys()|sort %}
+                        {% set user_bets = bets.get(user) %}
+                        {% set user_answer = user_bets.get(bet_type, '-') %}
+                        {% set row_point = row_points_bet.get(user, 0) %}
+                        <td class="bet-cell
+                            {% if resultado_real %}
+                                {% if user_answer|string == resultado_real|string %}
+                                    correct
+                                {% else %}
+                                    incorrect
+                                {% endif %}
+                            {% endif %}
+                        " onclick="toggleResult(this)">
+                            <span class="bet-answer">{{ user_answer }}</span>
+                            {% if row_point %}
+                            <span class="row-points">+{{ row_point }}</span>
+                            {% endif %}
+                            {% if resultado_real %}
+                                <div class="result-tooltip">
+                                    {{ resultado_real }}
+                                </div>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+
+                {% set extra_points_event = extra_points.get(event_type, {}) %}
+                {% if resultados and extra_points_event %}
+                <tr class="extra-points-row">
+                    <th>Extra points</th>
+                    {% for user in bets.keys()|sort %}
+                        {% set extra = extra_points_event.get(user, 0) %}
+                        <td class="{% if extra %}extra-hit{% endif %}">
+                            {% if extra %}+{{ extra }}{% else %}-{% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endif %}
+
+                {% set points_for_event = user_points_data.get(event_type, {}) %}
+                {% set sorted_points = points_for_event|dictsort(false, 'value')|reverse %}
+                {% set user_rankings = sorted_points|map(attribute=0)|list %}
+                {% set hay_puntos = points_for_event.values() | select('gt', 0) | list | length > 0 %}
+
+                {% if hay_puntos %}
+                <tr class="total-points-row">
+                    <th>Total puntos</th>
+                    {% for user in bets.keys()|sort %}
+                        {% set puntos = points_for_event.get(user, 0) %}
+                        {% set ranking = user_rankings.index(user) if user in user_rankings else None %}
+                        <td class="
+                            {% if ranking == 0 %}gold
+                            {% elif ranking == 1 %}silver
+                            {% elif ranking == 2 %}bronze
+                            {% endif %}
+                        ">
+                            {{ puntos }}
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+
+    {% if resultados and summary_points %}
+    <h3>Resumen de puntos</h3>
+    <div class="bet-table-wrapper">
+        <table class="bet-table summary-table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    {% for user in users_sorted %}
+                        <th>{{ user }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>Puntos sin extras</th>
+                    {% for user in users_sorted %}
+                        <td>{{ summary_points.get(user, {}).get('base', 0) }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <th>Puntos con power-ups</th>
+                    {% for user in users_sorted %}
+                        <td>{{ summary_points.get(user, {}).get('powerups', 0) }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <th>Bonus</th>
+                    {% for user in users_sorted %}
+                        <td>{{ summary_points.get(user, {}).get('bonus', 0) }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <th>Extras</th>
+                    {% for user in users_sorted %}
+                        <td>{{ summary_points.get(user, {}).get('extra', 0) }}</td>
+                    {% endfor %}
+                </tr>
+                <tr class="total-points-row">
+                    <th>Total puntos</th>
+                    {% for user in users_sorted %}
+                        <td>{{ summary_points.get(user, {}).get('total', 0) }}</td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleResult(cell) {
+    const tooltip = cell.querySelector('.result-tooltip');
+    if (!tooltip) return;
+
+    if (tooltip.style.display === "block") {
+        tooltip.style.opacity = "0";
+        setTimeout(() => {
+            tooltip.style.display = "none";
+        }, 300);
+    } else {
+        tooltip.style.display = "block";
+        setTimeout(() => {
+            tooltip.style.opacity = "1";
+        }, 10);
+    }
+}
+</script>
+{% endblock %}

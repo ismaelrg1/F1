@@ -2,7 +2,7 @@ from datetime import datetime
 import os, sys, json
 
 from flask import Blueprint, render_template, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
 from backend.app.models import Season, Bet, BetScore, SeasonBet, SeasonBetPick, RaceEvent, User
 from backend.app.models.parameters_bets import BetTemplate
@@ -189,7 +189,15 @@ def _apuestas_carrera_impl(race_name, season_year, use_new_template):
             current_username = user.username
         else:
             identity = get_jwt_identity()
-            current_username = identity["username"] if identity else None
+            claims = get_jwt()
+            if isinstance(identity, dict) and identity.get("username"):
+                current_username = identity["username"]
+            elif isinstance(identity, str) and identity.isdigit():
+                user = User.query.filter_by(id=int(identity)).first()
+                current_username = user.username if user else None
+            else:
+                current_username = claims.get("username") if isinstance(claims, dict) else None
+
 
     user_bet_types = set()
     if user_id:

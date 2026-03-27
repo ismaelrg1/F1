@@ -27,8 +27,9 @@ body.dark-mode .special-card {
 
 /* Logo */
 .logo-container img {
-    width: 80%;
-    max-width: 500px;
+    width: 90%;
+    max-width: 750px;
+    height: auto;
 }
 
 /* Introducción */
@@ -182,3 +183,53 @@ body.dark-mode .special-card {
     text-decoration: underline;
 }
 
+/*
+NEXT RACE VIDEO
+*/
+.next-race-layout {
+  --video-size: 280px;
+  display: grid;
+  grid-template-columns: var(--video-size) auto var(--video-size);
+  align-items: center;
+  column-gap: 24px;
+  width: 100%;
+  justify-content: center;
+}
+
+.next-race-layout > a {
+  grid-column: 2;         /* card en el centro real */
+  justify-self: center;
+}
+
+.next-race-video {
+  grid-column: 3;         /* video a la derecha */
+  width: var(--video-size);
+  aspect-ratio: 1 / 1;    /* cuadrado */
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.next-race-video iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .next-race-layout {
+    grid-template-columns: 1fr;
+    row-gap: 16px;
+  }
+
+  .next-race-video {
+    grid-column: 1;
+    grid-row: 1;          /* arriba */
+    justify-self: center;
+  }
+
+  .next-race-layout > a {
+    grid-column: 1;
+    grid-row: 2;          /* abajo */
+    justify-self: center;
+  }
+}

@@ -1,0 +1,33 @@
+{% extends "protected.html" %}
+
+{% block title %}Normativa{% endblock %}
+
+{% block content %}
+<div class="race-bets-container normativa-container">
+    <h2>Normativa</h2>
+
+    {% if years %}
+    <div class="normativa-years">
+        {% for y in years %}
+        <a class="normativa-year {% if y == selected_year %}active{% endif %}" href="/normativa-{{ y }}">
+            {{ y }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if selected_file %}
+        {% if selected_type == "pdf" %}
+            <div class="normativa-embed">
+                <embed src="{{ url_for('static', filename='normativa/' ~ selected_file) }}" type="application/pdf">
+            </div>
+        {% else %}
+            <div class="normativa-image">
+                <img src="{{ url_for('static', filename='normativa/' ~ selected_file) }}" alt="Normativa {{ selected_year }}">
+            </div>
+        {% endif %}
+    {% else %}
+        <p class="bets-muted">No hay normativa disponible para esta temporada.</p>
+    {% endif %}
+</div>
+{% endblock %}

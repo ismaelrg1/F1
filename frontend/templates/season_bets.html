@@ -25,8 +25,7 @@
         {% set _ = groups.generales.append(b) %}
       {% endif %}
     {% endfor %}
-
-    <form method="post">
+    <form method="post" id="season-bets-form" action="{{ url_for('season_bets.season_bets_api', year=year) }}" onsubmit="submitSeasonBets(event)" >
       <div class="sb-section">
         <h4>Generales</h4>
         <div class="sb-grid">
@@ -57,7 +56,7 @@
                   {% if 'equipo' in bet.label|lower %}
                     {% set placeholder = 'Team' %}
                   {% endif %}
-                  <select name="{{ name }}" class="form-control mt-2" required>
+                  <select name="{{ name }}" class="form-control mt-2" required data-bet-id="{{ bet.id }}">
                     {% if bet.options is mapping %}
                       {% for category, options in bet.options.items() %}
                         <option value="" disabled {{ 'selected' if not val else '' }}>{{ category|capitalize }}</option>
@@ -76,20 +75,20 @@
                 {% elif bet.input_type == 'bool' %}
                   <div class="sb-radio-group">
                     <div class="form-check">
-                      <input class="form-check-input" type="radio" name="{{ name }}" id="{{ name }}_yes" value="true" required {{ 'checked' if val is not none and val else '' }}>
+                      <input class="form-check-input" type="radio" name="{{ name }}" id="{{ name }}_yes" value="true" required {{ 'checked' if val is not none and val else '' }} data-bet-id="{{ bet.id }}">
                       <label class="form-check-label" for="{{ name }}_yes">Sí</label>
                     </div>
                     <div class="form-check">
-                      <input class="form-check-input" type="radio" name="{{ name }}" id="{{ name }}_no" value="false" required {{ 'checked' if val is not none and not val else '' }}>
+                      <input class="form-check-input" type="radio" name="{{ name }}" id="{{ name }}_no" value="false" required {{ 'checked' if val is not none and not val else '' }} data-bet-id="{{ bet.id }}">
                       <label class="form-check-label" for="{{ name }}_no">No</label>
                     </div>
                   </div>
 
                 {% elif bet.input_type == 'int' %}
-                  <input type="number" name="{{ name }}" class="form-control mt-2" value="{{ val if val is not none else '' }}" min="0" required>
+                  <input type="number" name="{{ name }}" class="form-control mt-2" value="{{ val if val is not none else '' }}" min="0" required data-bet-id="{{ bet.id }}">
 
                 {% elif bet.input_type == 'position' %}
-                  <select name="{{ name }}" class="form-control mt-2" required>
+                  <select name="{{ name }}" class="form-control mt-2" required data-bet-id="{{ bet.id }}">
                     <option value="" disabled {{ 'selected' if not val else '' }}>Position</option>
                     {% for p in range(1,23) %}
                       <option value="{{ p }}" {{ 'selected' if val==p else '' }}>P{{ p }}</option>
@@ -98,7 +97,7 @@
 
                 {% elif bet.input_type == 'multienum' %}
                   <textarea name="{{ name }}" rows="2" class="form-control mt-2" required
-                            placeholder="Separadas por comas, en orden">{{ val|join(', ') if val else '' }}</textarea>
+                            placeholder="Separadas por comas, en orden" data-bet-id="{{ bet.id }}">{{ val|join(', ') if val else '' }}</textarea>
                   {% if bet.options %}
                     <small class="sb-muted">Opciones válidas: {{ bet.options|join(', ') }}</small>
                   {% endif %}
@@ -130,7 +129,7 @@
                 {% if 'equipo' in bet.label|lower %}
                   {% set placeholder = 'Team' %}
                 {% endif %}
-                <select name="{{ name }}" class="form-control mt-2" required>
+                <select name="{{ name }}" class="form-control mt-2" required data-bet-id="{{ bet.id }}">
                   {% if bet.options is mapping %}
                     {% for category, options in bet.options.items() %}
                       <option value="" disabled {{ 'selected' if not val else '' }}>{{ category|capitalize }}</option>
@@ -158,6 +157,8 @@
       {% endif %}
   </form>
 </div>
+
+<script src="{{ url_for('static', filename='scripts/season_bets_form.js') }}"></script>
 
 <script>
   document.querySelectorAll(".sb-lock-time[data-utc]").forEach((el) => {
