@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     container_name: futuref1-db
     environment:
-      POSTGRES_DB: futuref1
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:

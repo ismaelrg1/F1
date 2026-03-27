@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from uuid import UUID, uuid4
+
 from sqlalchemy import CheckConstraint, Index, text, String, Boolean, UniqueConstraint, Text
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING, List, Optional
@@ -19,6 +22,7 @@ class Group(Base):
     __table_args__ = (
         UniqueConstraint("name", name="uq_groups_name"),
         Index("ix_groups_join_code", "join_code"),
+        Index("ix_groups_public_id", "public_id"),
         CheckConstraint("length(name) >= 2", name="ck_groups_name_minlen"),
         CheckConstraint(
             "join_code IS NULL OR (length(join_code) >= 4 AND length(join_code) <= 20)",
@@ -28,6 +32,12 @@ class Group(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        unique=True,
+        nullable=False,
+        default=uuid4,
+    )
     name: Mapped[str] = mapped_column(
         String(50),
         nullable=False,

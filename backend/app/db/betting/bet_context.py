@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import UUID, uuid4
 
 from sqlalchemy import Index, Enum, String, CheckConstraint, ForeignKey, Boolean, text, DateTime
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING, Optional, List
@@ -79,11 +81,18 @@ class BetContext(Base):
         Index("ix_bet_contexts_group_id", "group_id"),
         Index("ix_bet_contexts_season_id", "season_id"),
         Index("ix_bet_contexts_kind", "kind"),
+        Index("ix_bet_contexts_public_id", "public_id"),
 
         {"schema": "betting"},
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        unique=True,
+        nullable=False,
+        default=uuid4,
+    )
 
     kind: Mapped[BetContextKind] = mapped_column(
         Enum(BetContextKind, name="bet_context_kind_enum", schema="betting", create_type=False),

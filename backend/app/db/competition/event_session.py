@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import UUID, uuid4
 
 from sqlalchemy import Enum, DateTime, ForeignKey, Boolean, UniqueConstraint, Index, text, String
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING, Optional, List
@@ -28,11 +30,18 @@ class EventSession(Base):
         ),
 
         Index("ix_event_sessions_race_event_id", "race_event_id"),
+        Index("ix_event_sessions_public_id", "public_id"),
 
         {"schema": "competition"},
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        unique=True,
+        nullable=False,
+        default=uuid4,
+    )
 
     race_event_id: Mapped[int] = mapped_column(
         ForeignKey("competition.race_events.id", ondelete="CASCADE"),

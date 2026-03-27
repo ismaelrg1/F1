@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from uuid import UUID, uuid4
+
 from sqlalchemy import CheckConstraint, Index, text, String, Boolean, UniqueConstraint, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING, List
@@ -17,11 +20,18 @@ class Team(Base):
     __table_args__ = (
         UniqueConstraint("group_id", "name", name="uq_teams_group_name"),
         Index("ix_teams_group_id", "group_id"),
+        Index("ix_teams_public_id", "public_id"),
         CheckConstraint("length(name) >= 2", name="ck_teams_name_minlen"),
         {"schema": "social"},
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        unique=True,
+        nullable=False,
+        default=uuid4,
+    )
 
     group_id: Mapped[int] = mapped_column(
         ForeignKey("social.groups.id", ondelete="CASCADE"),
