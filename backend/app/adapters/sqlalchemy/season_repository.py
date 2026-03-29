@@ -12,6 +12,10 @@ class SqlAlchemySeasonRepository(SeasonRepository):
     def list_seasons(self):
         stmt = select(Season).order_by(Season.year.desc())
         return list(self._session.execute(stmt).scalars().all())
+    
+    def get_by_year(self, year: int):
+        stmt = select(Season).where(Season.year == year)
+        return self._session.execute(stmt).scalar_one_or_none()
 
     def get_active_season(self):
         stmt = select(Season).where(Season.is_active.is_(True))
@@ -38,3 +42,11 @@ class SqlAlchemySeasonRepository(SeasonRepository):
         teams: list[TeamF1] = [item.team for item in season.season_teams if item.team]
         engines: list[Engine] = [item.engine for item in season.season_engines if item.engine]
         return {"drivers": drivers, "teams": teams, "engines": engines}
+
+    def create(self, *, year: int, is_active: bool):
+        season = Season(year=year, is_active=is_active)
+        self._session.add(season)
+        self._session.commit()
+        self._session.refresh(season)
+        return season
+    

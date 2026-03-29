@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SeasonRead(BaseModel):
@@ -23,3 +23,15 @@ class SeasonRosterResponse(BaseModel):
     drivers: list[SeasonRosterEntry]
     teams: list[SeasonRosterEntry]
     engines: list[SeasonRosterEntry]
+
+
+class SeasonCreateRequest(BaseModel):
+    year: int = Field(ge=1950, le=2100)
+    is_active: bool = False
+
+class SeasonCreateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    year: int
+    is_active: bool

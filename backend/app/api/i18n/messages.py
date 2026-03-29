@@ -27,6 +27,13 @@ MESSAGES = {
         "auth.google_account_not_registered": "No Google account is registered with this identity",
         "auth.invalid_password_reset_token": "Invalid or expired password reset token",
 
+        ##########################################################
+        # ********              Auth Errors             ******** #                   
+        ##########################################################
+
+        "admin.season_already_exists": "Season {year} already exists",
+        "admin.active_season_already_exists": "There is already an active season ({active_year})",
+
         "errors.unhandled": "An unexpected error occurred",
     },
     "es": {
@@ -54,6 +61,13 @@ MESSAGES = {
         "auth.google_email_not_verified": "El email de Google no esta verificado",
         "auth.google_account_not_registered": "No hay una cuenta de Google registrada con esta identidad",
         "auth.invalid_password_reset_token": "El token de restablecimiento no es valido o ha expirado",
+
+        ##########################################################
+        # ********              Auth Errors             ******** #                   
+        ##########################################################
+
+        "admin.season_already_exists": "La temporada {year} ya existe",
+        "admin.active_season_already_exists": "Ya existe una temporada activa({active_year})",
 
         "errors.unhandled": "Ha ocurrido un error inesperado",
     },

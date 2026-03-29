@@ -9,7 +9,7 @@ from app.core.security import (
     ACCESS_TOKEN_COOKIE_NAME,
     get_access_token_subject,
 )
-from app.api.error_catalogs import ACCESS_ERROR_MAP, AUTH_ERROR_MAP
+from app.api.error_catalogs import ACCESS_ERROR_MAP, AUTH_ERROR_MAP, ADMIN_ERROR_MAP
 from app.api.error_translators import get_preferred_locale, translate_domain_error
 from app.db.audit.context import set_audit_actor, set_audit_group
 from app.db.auth import User
@@ -23,6 +23,7 @@ from app.domain.access import (
     ResolveCurrentUser,
 )
 from app.domain.auth import AuthError
+from app.domain.admin import AdminError
 
 
 def _build_access_repository(db: Session) -> SqlAlchemyAccessRepository:
@@ -35,7 +36,8 @@ def _translate_access_error(exc: AccessError, *, locale: str | None) -> HTTPExce
 def _translate_auth_error(exc: AuthError, *, locale: str | None) -> HTTPException:
     return translate_domain_error(exc, error_map=AUTH_ERROR_MAP, locale=locale)
 
-
+def _translate_admin_error(exc: AdminError, *, locale: str | None) -> HTTPException:
+    return translate_domain_error(exc, error_map=ADMIN_ERROR_MAP, locale=locale)
 
 
 

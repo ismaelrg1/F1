@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     seasons,
     stream,
     testing_events,
+    admin,
 )
 
 api_router = APIRouter()
@@ -32,3 +33,6 @@ api_router.include_router(rules.router, prefix="/rules", tags=["rules"])
 api_router.include_router(powerups.router, prefix="/powerups", tags=["powerups"])
 api_router.include_router(roster.router, prefix="/seasons", tags=["roster"])
 api_router.include_router(stream.router, prefix="/contexts", tags=["stream"])
+
+
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
