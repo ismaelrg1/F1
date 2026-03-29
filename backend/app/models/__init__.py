@@ -18,6 +18,7 @@ from app.models.seasons import (
     SeasonRosterEntry,
     SeasonRosterResponse,
 )
+from app.models.countries import CountryCreateRequest, CountryCreateResponse
 
 __all__ = [
     "BetCreate",
@@ -41,4 +42,6 @@ __all__ = [
     "SeasonRosterResponse",
     "UsePowerupRequest",
     "UserSummary",
+    "CountryCreateRequest",
+    "CountryCreateResponse",
 ]

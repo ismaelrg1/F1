@@ -28,7 +28,7 @@ def test_resend_email_sender_builds_password_reset_email_payload(monkeypatch) ->
     payload = captured["payload"]
     assert payload["from"] == "FutureF1 <no-reply@futuref1.app>"
     assert payload["to"] == ["alice@example.com"]
-    assert payload["subject"] == "Reset your FutureF1 API password"
+    assert payload["subject"] == "Reset your FutureF1 password"
     assert reset_url in payload["html"]
     assert reset_url in payload["text"]
     assert "expires in 5 minutes" in payload["html"]

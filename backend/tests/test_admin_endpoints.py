@@ -2,7 +2,7 @@ from sqlalchemy import select
 
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import Permission, Role, User
-from app.db.competition import Season
+from app.db.competition import Season, Country
 from app.db.enums import RoleName
 
 def _create_admin_user_with_permission(
@@ -137,3 +137,74 @@ def test_create_season_endpoint_returns_conflict_when_active_season_exists(clien
 
     assert response.status_code == 409
     assert response.json()["detail"]["error"]["code"] == "admin.active_season_already_exists"
+
+
+def test_create_country_endpoint_creates_country(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_create_country",
+        email="admin_create_country@example.com",
+        password="secret123",
+        permission_code="COMPETITION_MANAGE",
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_create_country", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/countries",
+        json={
+            "iso2": "es",
+            "name": "Spain",
+            "flag_asset_url": "https://example.com/spain.png",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["iso2"] == "ES"
+    assert response.json()["name"] == "Spain"
+
+    country = db_session.execute(
+        select(Country).where(Country.iso2 == "ES")
+    ).scalar_one()
+    assert country.name == "Spain"
+    assert country.flag_asset_url == "https://example.com/spain.png"
+
+def test_create_country_endpoint_returns_conflict_for_duplicate_iso2(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_duplicate_country",
+        email="admin_duplicate_country@example.com",
+        password="secret123",
+        permission_code="COMPETITION_MANAGE",
+    )
+
+    db_session.add(
+        Country(
+            iso2="ES",
+            name="Spain",
+            flag_asset_url=None,
+        )
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_duplicate_country", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/countries",
+        json={
+            "iso2": "es",
+            "name": "España",
+            "flag_asset_url": None,
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error"]["code"] == "admin.country_already_exists"

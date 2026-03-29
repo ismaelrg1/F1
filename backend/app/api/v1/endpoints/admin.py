@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
-import logging
-
-from app.adapters.sqlalchemy import SqlAlchemySeasonRepository
+from app.adapters.sqlalchemy import (
+    SqlAlchemyAdminCountryRepository,
+    SqlAlchemyAdminSeasonRepository,
+)
 from app.api.deps import require_permissions_all, _translate_admin_error
 from app.api.error_translators import get_preferred_locale
 
@@ -13,11 +14,10 @@ from app.domain.admin import (
     PublishResults,
     AdminError,
     CreateSeason,
+    CreateCountry,
 )
 from app.models.seasons import SeasonCreateRequest, SeasonCreateResponse
-
-
-logger = logging.getLogger(__name__)
+from app.models.countries import CountryCreateRequest, CountryCreateResponse
 
 router = APIRouter()
 
@@ -45,7 +45,7 @@ def create_season(
     
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
-    repository = SqlAlchemySeasonRepository(db)
+    repository = SqlAlchemyAdminSeasonRepository(db)
     use_case = CreateSeason(repository)
 
     try:
@@ -57,3 +57,30 @@ def create_season(
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return SeasonCreateResponse.model_validate(season)
+
+@router.post(
+    "/countries",
+    response_model=CountryCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_country(
+    data: CountryCreateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+) -> CountryCreateResponse:
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
+    repository = SqlAlchemyAdminCountryRepository(db)
+    use_case = CreateCountry(repository)
+
+    try:
+        country = use_case.execute(
+            iso2=data.iso2,
+            name=data.name,
+            flag_asset_url=data.flag_asset_url,
+        )
+    except AdminError as exc:
+        raise _translate_admin_error(exc, locale=locale) from exc
+
+    return CountryCreateResponse.model_validate(country)

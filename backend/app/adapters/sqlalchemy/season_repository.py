@@ -1,7 +1,15 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.db.competition import Driver, Engine, Season, SeasonDriver, SeasonEngine, SeasonTeam, TeamF1
+from app.db.competition import(
+    Driver,
+    Engine,
+    Season,
+    SeasonDriver,
+    SeasonEngine,
+    SeasonTeam, 
+    TeamF1,
+)
 from app.domain.seasons.ports import SeasonRepository
 
 
@@ -42,11 +50,3 @@ class SqlAlchemySeasonRepository(SeasonRepository):
         teams: list[TeamF1] = [item.team for item in season.season_teams if item.team]
         engines: list[Engine] = [item.engine for item in season.season_engines if item.engine]
         return {"drivers": drivers, "teams": teams, "engines": engines}
-
-    def create(self, *, year: int, is_active: bool):
-        season = Season(year=year, is_active=is_active)
-        self._session.add(season)
-        self._session.commit()
-        self._session.refresh(season)
-        return season
-    
