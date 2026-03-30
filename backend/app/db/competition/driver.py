@@ -16,7 +16,11 @@ class Driver(Base):
         CheckConstraint(
             "code ~ '^[A-Z]{3}$'",
             name="ck_driver_code_format"
-        ),   
+        ),
+        CheckConstraint(
+            "length(name) >= 2",
+            name="ck_drivers_name_minlen",
+        ),
         {"schema": "competition"}
     )
 

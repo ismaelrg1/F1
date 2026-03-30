@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import String, CheckConstraint
+from sqlalchemy import CheckConstraint, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import List, TYPE_CHECKING, Optional
@@ -15,13 +15,17 @@ class Country(Base):
     __table_args__ = (
         CheckConstraint(
             "iso2 ~ '^[A-Z]{2}$'",
-            name="ck_driver_code_format"
-        ),   
+            name="ck_country_iso2_format"
+        ),
+        CheckConstraint(
+            "length(name) >= 2",
+            name="ck_countries_name_minlen",
+        ),
         {"schema": "competition"}
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    iso2: Mapped[str] = mapped_column(String(2), nullable=False)
+    iso2: Mapped[str] = mapped_column(String(2), nullable=False, unique=True)
 
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     

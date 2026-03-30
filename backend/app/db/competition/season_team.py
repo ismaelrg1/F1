@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import text, ForeignKey, Boolean
+from sqlalchemy import Boolean, ForeignKey, Index, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING
@@ -13,7 +13,10 @@ if TYPE_CHECKING:
 
 class SeasonTeam(Base):
     __tablename__ = "season_teams"
-    __table_args__ = {"schema": "competition"}
+    __table_args__ = (
+        Index("ix_season_teams_team_id", "team_id"),
+        {"schema": "competition"},
+    )
 
     season_id: Mapped[int] = mapped_column(
         ForeignKey("competition.seasons.id", ondelete="RESTRICT"), 

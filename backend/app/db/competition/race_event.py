@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from typing import Optional, TYPE_CHECKING, List
 
-from sqlalchemy import DateTime, String, ForeignKey, Enum, Index, text
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,6 +20,16 @@ class RaceEvent(Base):
     __tablename__ = "race_events"
     __table_args__ = (
         Index("ix_race_events_public_id", "public_id"),
+        Index("ix_race_events_circuit_id", "circuit_id"),
+        UniqueConstraint("season_id", "round_number", name="uq_race_events_season_round"),
+        CheckConstraint(
+            "event_start IS NULL OR event_end IS NULL OR event_start < event_end",
+            name="ck_race_events_event_window_order",
+        ),
+        CheckConstraint(
+            "scheduled_event_start IS NULL OR scheduled_event_end IS NULL OR scheduled_event_start < scheduled_event_end",
+            name="ck_race_events_scheduled_window_order",
+        ),
         {"schema": "competition"},
     )
 
@@ -37,11 +47,14 @@ class RaceEvent(Base):
                                             nullable=False,
                                             index=True)
     
+    round_number: Mapped[int] = mapped_column(Integer, nullable=False)
+
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     circuit_id: Mapped[int] = mapped_column(
         ForeignKey("competition.circuits.id", 
         ondelete="RESTRICT"), 
-        nullable=False)
+        nullable=False,
+    )
     
     event_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     event_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

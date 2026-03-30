@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import text, ForeignKey, Enum
+from sqlalchemy import Enum, ForeignKey, Index, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING
@@ -14,7 +14,10 @@ from app.db.enums import SeasonDriverStatus
 
 class SeasonDriver(Base):
     __tablename__ = "season_drivers"
-    __table_args__ = {"schema": "competition"}
+    __table_args__ = (
+        Index("ix_season_drivers_driver_id", "driver_id"),
+        {"schema": "competition"},
+    )
 
     season_id: Mapped[int] = mapped_column(
         ForeignKey("competition.seasons.id", ondelete="RESTRICT"), 

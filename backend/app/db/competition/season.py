@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import text, Boolean, Integer
+from sqlalchemy import Boolean, CheckConstraint, Index, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import List, TYPE_CHECKING
@@ -15,10 +15,20 @@ if TYPE_CHECKING:
 
 class Season(Base):
     __tablename__ = "seasons"
-    __table_args__ = {"schema": "competition"}
+    __table_args__ = (
+        CheckConstraint("year BETWEEN 1950 AND 2100", name="ck_seasons_year_range"),
+        Index("ix_seasons_year", "year", unique=True),
+        Index(
+            "uq_seasons_single_active",
+            "is_active",
+            unique=True,
+            postgresql_where=text("is_active = true"),
+        ),
+        {"schema": "competition"},
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    year: Mapped[int] = mapped_column(Integer, unique=True, nullable=False, index=True)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
 
 

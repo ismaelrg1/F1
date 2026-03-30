@@ -17,6 +17,10 @@ class Engine(Base):
             "code ~ '^[A-Z]{2,10}$'",
             name="ck_engine_code_format"
         ),
+        CheckConstraint(
+            "length(name) >= 2",
+            name="ck_engines_name_minlen",
+        ),
         {"schema": "competition"},
     )
 
