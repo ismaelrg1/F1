@@ -19,7 +19,9 @@ class Team(Base):
     __tablename__ = "teams"
     __table_args__ = (
         UniqueConstraint("group_id", "name", name="uq_teams_group_name"),
+        UniqueConstraint("group_id", "id", name="uq_teams_group_id_id"),
         Index("ix_teams_group_id", "group_id"),
+        Index("ix_teams_group_active", "group_id", "is_active"),
         Index("ix_teams_public_id", "public_id"),
         CheckConstraint("length(name) >= 2", name="ck_teams_name_minlen"),
         {"schema": "social"},

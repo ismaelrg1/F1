@@ -21,12 +21,21 @@ class Group(Base):
     __tablename__ = "groups"
     __table_args__ = (
         UniqueConstraint("name", name="uq_groups_name"),
+        UniqueConstraint("join_code", name="uq_groups_join_code"),
         Index("ix_groups_join_code", "join_code"),
         Index("ix_groups_public_id", "public_id"),
         CheckConstraint("length(name) >= 2", name="ck_groups_name_minlen"),
         CheckConstraint(
             "join_code IS NULL OR (length(join_code) >= 4 AND length(join_code) <= 20)",
             name="ck_groups_join_code_len",
+        ),
+        CheckConstraint(
+            "max_team_size IS NULL OR max_team_size > 0",
+            name="ck_groups_max_team_size_positive",
+        ),
+        CheckConstraint(
+            "teams_enabled = true OR max_team_size IS NULL",
+            name="ck_groups_max_team_size_requires_teams",
         ),
         {"schema": "social"},
     )

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 import enum
 
-from sqlalchemy import UniqueConstraint, Index, func, DateTime, ForeignKey, Enum
+from sqlalchemy import UniqueConstraint, Index, func, DateTime, ForeignKey, Enum, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING
@@ -34,6 +34,12 @@ class GroupMembership(Base):
         Index("ix_group_memberships_group_id", "group_id"),
         Index("ix_group_memberships_user_id", "user_id"),
         Index("ix_group_memberships_group_role", "group_id", "role"),
+        Index(
+            "uq_group_memberships_single_owner",
+            "group_id",
+            unique=True,
+            postgresql_where=text("role = 'OWNER'"),
+        ),
 
         {"schema": "social"},
     )
