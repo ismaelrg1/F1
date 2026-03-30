@@ -74,11 +74,13 @@ class TeamMembership(Base):
 
     group: Mapped["Group"] = relationship(
         "app.db.social.group.Group",
+        overlaps="team,team_memberships",
     )
 
     team: Mapped["Team"] = relationship(
         "app.db.social.team.Team",
         back_populates="team_memberships",
+        overlaps="group",
     )
 
     user: Mapped["User"] = relationship(

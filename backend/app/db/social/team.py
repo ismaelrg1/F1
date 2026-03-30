@@ -60,6 +60,7 @@ class Team(Base):
         'TeamMembership',
         back_populates="team",
         cascade="all, delete-orphan",
+        overlaps="group",
     )
 
     team_season_aggregates: Mapped[list["TeamSeasonAggregate"]] = relationship(
