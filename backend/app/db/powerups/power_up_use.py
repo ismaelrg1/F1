@@ -7,6 +7,8 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    CheckConstraint,
+    text,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -26,15 +28,37 @@ if TYPE_CHECKING:
 class PowerUpUse(Base):
     __tablename__ = "powerup_uses"
     __table_args__ = (
+        Index(
+            "uq_powerup_uses_user_context_powerup",
+            "user_id",
+            "group_id",
+            "bet_context_id",
+            "powerup_id",
+            unique=True,
+            postgresql_where=text("event_session_id IS NULL"),
+        ),
+        Index(
+            "uq_powerup_uses_user_session_powerup",
+            "user_id",
+            "group_id",
+            "bet_context_id",
+            "event_session_id",
+            "powerup_id",
+            unique=True,
+            postgresql_where=text("event_session_id IS NOT NULL"),
+        ),
         # Lookups importantes
         Index("ix_powerup_uses_user_id", "user_id"),
         Index("ix_powerup_uses_group_id", "group_id"),
         Index("ix_powerup_uses_bet_context_id", "bet_context_id"),
         Index("ix_powerup_uses_event_session_id", "event_session_id"),
         Index("ix_powerup_uses_powerup_id", "powerup_id"),
-
-        # Evitar usar el mismo powerup 2 veces en el mismo contexto (opcional)
-        # UniqueConstraint("user_id", "bet_context_id", "powerup_id"),
+        Index("ix_powerup_uses_group_user", "group_id", "user_id"),
+        Index("ix_powerup_uses_context_powerup", "bet_context_id", "powerup_id"),
+        CheckConstraint(
+            "event_session_id IS NULL OR bet_context_id IS NOT NULL",
+            name="ck_powerup_uses_session_requires_context",
+        ),
 
         {"schema": "powerups"},
     )

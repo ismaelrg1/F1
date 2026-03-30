@@ -89,7 +89,7 @@ class PowerUpAssignment(Base):
 
     season_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("competition.seasons.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
 
     bet_context_id: Mapped[Optional[int]] = mapped_column(

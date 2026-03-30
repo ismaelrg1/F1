@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     CheckConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
@@ -29,6 +30,34 @@ class PowerUpUseTarget(Base):
         Index("ix_put_target_user_id", "target_user_id"),
         Index("ix_put_target_team_id", "target_team_id"),
         Index("ix_put_target_group_id", "target_group_id"),
+        Index(
+            "uq_put_use_user",
+            "powerup_use_id",
+            "target_user_id",
+            unique=True,
+            postgresql_where=text("target_user_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_put_use_team",
+            "powerup_use_id",
+            "target_team_id",
+            unique=True,
+            postgresql_where=text("target_team_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_put_use_group",
+            "powerup_use_id",
+            "target_group_id",
+            "target_type",
+            unique=True,
+            postgresql_where=text("target_group_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_put_use_all",
+            "powerup_use_id",
+            unique=True,
+            postgresql_where=text("target_type = 'ALL'"),
+        ),
 
         # Consistencia de target según target_type
         CheckConstraint(
