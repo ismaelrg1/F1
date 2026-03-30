@@ -26,6 +26,15 @@ from app.domain.admin.testing_events import (
     TestingEventAlreadyExistsError,
 )
 
+from app.domain.admin.race_events import (
+    AdminRaceEventRepository,
+    CircuitNotFoundForRaceEventError,
+    CreateRaceEvent,
+    DuplicateRaceEventSessionTypeError,
+    RaceEventAlreadyExistsError,
+    SeasonNotFoundForRaceEventError,
+)
+
 
 from app.domain.admin.use_cases import PublishResults
 
@@ -49,4 +58,10 @@ __all__ = [
     "DuplicateTestingEventSessionOrderError",
     "SeasonNotFoundForTestingEventError",
     "TestingEventAlreadyExistsError",
+    "AdminRaceEventRepository",
+    "CircuitNotFoundForRaceEventError",
+    "CreateRaceEvent",
+    "DuplicateRaceEventSessionTypeError",
+    "RaceEventAlreadyExistsError",
+    "SeasonNotFoundForRaceEventError",
 ]

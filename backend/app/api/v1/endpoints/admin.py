@@ -7,6 +7,7 @@ from app.adapters.sqlalchemy import (
     SqlAlchemyAdminSeasonRepository,
     SqlAlchemyAdminCircuitRepository,
     SqlAlchemyAdminTestingEventRepository,
+    SqlAlchemyAdminRaceEventRepository,
 )
 from app.api.deps import require_permissions_all, _translate_admin_error
 from app.api.error_translators import get_preferred_locale
@@ -22,6 +23,7 @@ from app.domain.admin import (
     ListFastF1RaceEventPreviews,
     ListFastF1TestingEventPreviews,
     CreateTestingEvent,
+    CreateRaceEvent,
 )
 from app.models.seasons import SeasonCreateRequest, SeasonCreateResponse
 from app.models.countries import CountryCreateRequest, CountryCreateResponse
@@ -31,6 +33,11 @@ from app.models.testing_events import (
     TestingEventCreateRequest,
     TestingEventCreateResponse,
     TestingEventSessionCreateResponse,
+)
+from app.models.race_events import (
+    EventSessionCreateResponse,
+    RaceEventCreateRequest,
+    RaceEventCreateResponse,
 )
 
 router = APIRouter()
@@ -201,6 +208,7 @@ def create_testing_event(
             event_end=data.event_end,
             scheduled_event_start=data.scheduled_event_start,
             scheduled_event_end=data.scheduled_event_end,
+            status=data.status,
             status_reason=data.status_reason,
             sessions=[session.model_dump() for session in data.sessions],
         )
@@ -216,7 +224,7 @@ def create_testing_event(
         event_end=testing_event.event_end,
         scheduled_event_start=testing_event.scheduled_event_start,
         scheduled_event_end=testing_event.scheduled_event_end,
-        status=testing_event.status.value,
+        status=testing_event.status,
         status_reason=testing_event.status_reason,
         sessions=[
             TestingEventSessionCreateResponse(
@@ -229,5 +237,69 @@ def create_testing_event(
                 scheduled_end_datetime=session.scheduled_end_datetime,
             )
             for session in sorted(testing_event.sessions, key=lambda s: s.session_order)
+        ],
+    )
+
+
+
+@router.post(
+    "/race-events",
+    response_model=RaceEventCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_race_event(
+    data: RaceEventCreateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+) -> RaceEventCreateResponse:
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
+    repository = SqlAlchemyAdminRaceEventRepository(db)
+    use_case = CreateRaceEvent(repository)
+
+    try:
+        race_event = use_case.execute(
+            season_year=data.season_year,
+            round_number=data.round_number,
+            circuit_code=data.circuit_code,
+            name=data.name,
+            event_start=data.event_start,
+            event_end=data.event_end,
+            scheduled_event_start=data.scheduled_event_start,
+            scheduled_event_end=data.scheduled_event_end,
+            status=data.status,
+            status_reason=data.status_reason,
+            sessions=[session.model_dump() for session in data.sessions],
+        )
+    except AdminError as exc:
+        raise _translate_admin_error(exc, locale=locale) from exc
+
+    return RaceEventCreateResponse(
+        id=race_event.id,
+        season_year=race_event.season.year,
+        round_number=race_event.round_number,
+        circuit_code=race_event.circuit.code,
+        name=race_event.name,
+        event_start=race_event.event_start,
+        event_end=race_event.event_end,
+        scheduled_event_start=race_event.scheduled_event_start,
+        scheduled_event_end=race_event.scheduled_event_end,
+        status=race_event.status,
+        status_reason=race_event.status_reason,
+        sessions=[
+            EventSessionCreateResponse(
+                id=session.id,
+                session_type=session.session_type,
+                start_datetime=session.start_datetime,
+                scheduled_start_datetime=session.scheduled_start_datetime,
+                lock_cutoff=session.lock_cutoff,
+                scheduled_lock_cutoff=session.scheduled_lock_cutoff,
+                status=session.status,
+                status_reason=session.status_reason,
+                results_published=session.results_published,
+                results_published_at=session.results_published_at,
+            )
+            for session in sorted(race_event.event_sessions, key=lambda s: s.start_datetime)
         ],
     )

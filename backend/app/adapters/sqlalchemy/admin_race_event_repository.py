@@ -1,11 +1,11 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.competition import Circuit, Season, TestingEvent, TestingEventSession
-from app.domain.admin.testing_events.ports import AdminTestingEventRepository
+from app.db.competition import Circuit, EventSession, RaceEvent, Season
+from app.domain.admin.race_events.ports import AdminRaceEventRepository
 
 
-class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
+class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
     def __init__(self, session: Session):
         self._session = session
 
@@ -17,10 +17,10 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
         stmt = select(Circuit).where(Circuit.code == code)
         return self._session.execute(stmt).scalar_one_or_none()
 
-    def get_by_season_and_name(self, *, season_id: int, name: str) -> TestingEvent | None:
-        stmt = select(TestingEvent).where(
-            TestingEvent.season_id == season_id,
-            TestingEvent.name == name,
+    def get_by_season_and_round(self, *, season_id: int, round_number: int) -> RaceEvent | None:
+        stmt = select(RaceEvent).where(
+            RaceEvent.season_id == season_id,
+            RaceEvent.round_number == round_number,
         )
         return self._session.execute(stmt).scalar_one_or_none()
 
@@ -29,6 +29,7 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
         *,
         season_id: int,
         circuit_id: int,
+        round_number: int,
         name: str,
         event_start,
         event_end,
@@ -37,10 +38,11 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
         status,
         status_reason: str | None,
         sessions: list[dict],
-    ) -> TestingEvent:
-        testing_event = TestingEvent(
+    ) -> RaceEvent:
+        race_event = RaceEvent(
             season_id=season_id,
             circuit_id=circuit_id,
+            round_number=round_number,
             name=name,
             event_start=event_start,
             event_end=event_end,
@@ -50,22 +52,26 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
         )
 
         if status is not None:
-            testing_event.status = status
+            race_event.status = status
 
-        testing_event.sessions = [
-            TestingEventSession(
-                session_order=session["session_order"],
-                name=session["name"],
-                start_datetime=session.get("start_datetime"),
-                end_datetime=session.get("end_datetime"),
+        event_sessions: list[EventSession] = []
+        for session in sessions:
+            event_session = EventSession(
+                session_type=session["session_type"],
+                start_datetime=session["start_datetime"],
                 scheduled_start_datetime=session.get("scheduled_start_datetime"),
-                scheduled_end_datetime=session.get("scheduled_end_datetime"),
+                lock_cutoff=session["lock_cutoff"],
+                scheduled_lock_cutoff=session.get("scheduled_lock_cutoff"),
+                status_reason=session.get("status_reason"),
             )
-            for session in sessions
-        ]
+            if session.get("status") is not None:
+                event_session.status = session["status"]
+            event_sessions.append(event_session)
 
-        self._session.add(testing_event)
+        race_event.event_sessions = event_sessions
+
+        self._session.add(race_event)
         self._session.flush()
-        self._session.refresh(testing_event)
+        self._session.refresh(race_event)
 
-        return testing_event
+        return race_event

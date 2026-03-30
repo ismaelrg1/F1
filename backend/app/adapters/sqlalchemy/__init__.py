@@ -8,6 +8,7 @@ from app.adapters.sqlalchemy.password_reset_token_repository import SqlAlchemyPa
 from app.adapters.sqlalchemy.admin_circuit_repository import SqlAlchemyAdminCircuitRepository
 from app.adapters.sqlalchemy.country_repository import SqlAlchemyCountryRepository
 from app.adapters.sqlalchemy.admin_testing_event_repository import SqlAlchemyAdminTestingEventRepository
+from app.adapters.sqlalchemy.admin_race_event_repository import SqlAlchemyAdminRaceEventRepository
 
 
 __all__ = [
@@ -21,4 +22,5 @@ __all__ = [
     "SqlAlchemyAdminCircuitRepository",
     "SqlAlchemyCountryRepository",
     "SqlAlchemyAdminTestingEventRepository",
+    "SqlAlchemyAdminRaceEventRepository",
 ]

@@ -21,6 +21,7 @@ class CreateTestingEvent:
         event_end,
         scheduled_event_start,
         scheduled_event_end,
+        status,
         status_reason: str | None,
         sessions: list[dict],
     ):
@@ -29,7 +30,6 @@ class CreateTestingEvent:
             raise SeasonNotFoundForTestingEventError(season_year)
 
         normalized_circuit_code = circuit_code.strip().lower()
-
         circuit = self._repository.get_circuit_by_code(normalized_circuit_code)
         if circuit is None:
             raise CircuitNotFoundForTestingEventError(normalized_circuit_code)
@@ -53,6 +53,7 @@ class CreateTestingEvent:
             event_end=event_end,
             scheduled_event_start=scheduled_event_start,
             scheduled_event_end=scheduled_event_end,
+            status=status,
             status_reason=status_reason,
             sessions=sessions,
         )
