@@ -9,5 +9,6 @@ from .season_team import SeasonTeam # noqa
 from .season import Season # noqa
 from .team import TeamF1 # noqa
 from .testing_event import TestingEvent # noqa
+from .testing_event_session import TestingEventSession # noqa
 from .event_session import EventSession # noqa
 from .driver_entry import DriverEntry # noqa

@@ -21,6 +21,7 @@ from app.db.competition.season_team import SeasonTeam  # noqa: F401
 from app.db.competition.season_engine import SeasonEngine  # noqa: F401
 from app.db.competition.race_event import RaceEvent  # noqa: F401
 from app.db.competition.testing_event import TestingEvent  # noqa: F401
+from app.db.competition.testing_event_session import TestingEventSession  # noqa: F401
 from app.db.competition.event_session import EventSession  # noqa: F401
 from app.db.competition.driver_entry import DriverEntry  # noqa: F401
 

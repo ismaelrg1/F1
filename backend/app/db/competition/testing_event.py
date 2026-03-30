@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from uuid import UUID, uuid4
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 
 from sqlalchemy import DateTime, String, ForeignKey, Enum, Index, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.db.competition import Season, Circuit
+    from app.db.competition import Season, Circuit, TestingEventSession
     from app.db.betting import BetContext
 
 from app.db.enums import TestingEventStatus
@@ -62,6 +62,12 @@ class TestingEvent(Base):
         'Circuit',
         back_populates="testing_events"
 
+    )
+
+    sessions: Mapped[List["TestingEventSession"]] = relationship(
+        "TestingEventSession",
+        back_populates="testing_event",
+        cascade="all, delete-orphan",
     )
 
     bet_context: Mapped[Optional["BetContext"]] = relationship(
