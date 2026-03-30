@@ -8,7 +8,7 @@ from app.db.base import Base
 
 class RolePermission(Base):
     __tablename__ = "role_permissions"
-    __table_args__ = __table_args__ = (
+    __table_args__ = (
         Index("ix_role_permissions_role_id", "role_id"),
         Index("ix_role_permissions_permission_id", "permission_id"),
         {"schema": "auth"},

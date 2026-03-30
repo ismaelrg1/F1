@@ -15,6 +15,7 @@ from app.db.enums import RoleName
 class Role(Base):
     __tablename__ = "roles"
     __table_args__ = (
+        CheckConstraint("length(description) >= 2", name="ck_roles_desc_minlen"),
         CheckConstraint("length(description) <= 255", name="ck_roles_desc_len"),
         {"schema": "auth"},
     )

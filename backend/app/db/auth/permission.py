@@ -14,6 +14,7 @@ class Permission(Base):
     __tablename__ = "permissions"
     __table_args__ = (
         CheckConstraint("code ~ '^[A-Z0-9_]+$'", name="ck_permissions_code_format"),
+        CheckConstraint("length(description) >= 2", name="ck_permissions_desc_minlen"),
         CheckConstraint("length(description) <= 255", name="ck_permissions_desc_len"),
         {"schema": "auth"},
     )
