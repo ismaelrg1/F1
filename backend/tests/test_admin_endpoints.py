@@ -2,7 +2,7 @@ from sqlalchemy import select
 
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import Permission, Role, User
-from app.db.competition import Season, Country
+from app.db.competition import Season, Country, Circuit
 from app.db.enums import RoleName
 
 def _create_admin_user_with_permission(
@@ -208,3 +208,126 @@ def test_create_country_endpoint_returns_conflict_for_duplicate_iso2(client, db_
 
     assert response.status_code == 409
     assert response.json()["detail"]["error"]["code"] == "admin.country_already_exists"
+
+
+
+
+
+def test_create_circuit_endpoint_creates_circuit(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_create_circuit",
+        email="admin_create_circuit@example.com",
+        password="secret123",
+        permission_code="COMPETITION_MANAGE",
+    )
+
+    country = Country(
+        iso2="ES",
+        name="Spain",
+        flag_asset_url="https://example.com/flags/es.png",
+    )
+    db_session.add(country)
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_create_circuit", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/circuits",
+        json={
+            "code": "barcelona",
+            "name": "Circuit de Barcelona-Catalunya",
+            "country_id": country.id,
+            "map_asset_url": "https://example.com/maps/barcelona.png",
+            "image_asset_url": "https://example.com/images/barcelona.jpg",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["code"] == "barcelona"
+    assert response.json()["country_id"] == country.id
+
+    circuit = db_session.execute(
+        select(Circuit).where(Circuit.code == "barcelona")
+    ).scalar_one()
+    assert circuit.name == "Circuit de Barcelona-Catalunya"
+
+
+def test_create_circuit_endpoint_returns_conflict_for_duplicate_code(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_duplicate_circuit",
+        email="admin_duplicate_circuit@example.com",
+        password="secret123",
+        permission_code="COMPETITION_MANAGE",
+    )
+
+    country = Country(iso2="ES", name="Spain", flag_asset_url=None)
+    db_session.add(country)
+    db_session.flush()
+
+    db_session.add(
+        Circuit(
+            code="barcelona",
+            name="Circuit de Barcelona-Catalunya",
+            country_id=country.id,
+            map_asset_url=None,
+            image_asset_url=None,
+        )
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_duplicate_circuit", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/circuits",
+        json={
+            "code": "barcelona",
+            "name": "Otro nombre",
+            "country_id": country.id,
+            "map_asset_url": None,
+            "image_asset_url": None,
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error"]["code"] == "admin.circuit_already_exists"
+
+
+
+def test_create_circuit_endpoint_returns_not_found_for_missing_country(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_missing_country_circuit",
+        email="admin_missing_country_circuit@example.com",
+        password="secret123",
+        permission_code="COMPETITION_MANAGE",
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_missing_country_circuit", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/circuits",
+        json={
+            "code": "barcelona",
+            "name": "Circuit de Barcelona-Catalunya",
+            "country_id": 999999,
+            "map_asset_url": None,
+            "image_asset_url": None,
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["error"]["code"] == "admin.country_not_found_for_circuit"

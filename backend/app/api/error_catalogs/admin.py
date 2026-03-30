@@ -6,6 +6,10 @@ from app.domain.admin.seasons.errors import (
     ActiveSeasonAlreadyExistsError,
     SeasonAlreadyExistsError,
 )
+from app.domain.admin.circuits.errors import (
+    CircuitAlreadyExistsError,
+    CountryNotFoundForCircuitError,
+)
 
 ADMIN_ERROR_MAP = {
     SeasonAlreadyExistsError: ErrorCatalogEntry(
@@ -19,5 +23,13 @@ ADMIN_ERROR_MAP = {
     CountryAlreadyExistsError: ErrorCatalogEntry(
         status_code=status.HTTP_409_CONFLICT,
         error_code="admin.country_already_exists",
+    ),
+    CircuitAlreadyExistsError: ErrorCatalogEntry(
+        status_code=status.HTTP_409_CONFLICT,
+        error_code="admin.circuit_already_exists",
+    ),
+    CountryNotFoundForCircuitError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="admin.country_not_found_for_circuit",
     ),
 }

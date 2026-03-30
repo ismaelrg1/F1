@@ -5,6 +5,13 @@ from app.domain.admin.seasons import (
     CreateSeason,
     SeasonAlreadyExistsError,
 )
+from app.domain.admin.circuits import (
+    CircuitAlreadyExistsError,
+    CountryNotFoundForCircuitError,
+    CreateCircuit,
+)
+
+
 from app.domain.admin.use_cases import PublishResults
 
 __all__ = [
@@ -15,4 +22,7 @@ __all__ = [
     "CreateSeason",
     "CountryAlreadyExistsError",
     "CreateCountry",
+    "CircuitAlreadyExistsError",
+    "CountryNotFoundForCircuitError",
+    "CreateCircuit",
 ]
