@@ -36,6 +36,8 @@ class BetScore(Base):
         # para búsquedas rápidas por value_type si filtras por tipo a menudo
         Index("ix_bet_scores_value_type", "value_type"),
 
+        CheckConstraint("length(label) >= 2", name="ck_bet_scores_label_minlen"),
+
         {"schema": "betting"},
     )
 

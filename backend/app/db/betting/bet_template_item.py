@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, Index, text, Boolean, UniqueConstraint, Integer
+from sqlalchemy import ForeignKey, Index, text, Boolean, UniqueConstraint, Integer, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING
@@ -20,6 +20,10 @@ class BetTemplateItem(Base):
 
         # Display_order único dentro del template
         UniqueConstraint("template_id", "display_order", name="uq_template_display_order"),
+        CheckConstraint(
+            "display_order >= 0",
+            name="ck_bet_template_items_display_order_nonneg",
+        ),
 
         Index("ix_template_items_template_id", "template_id"),
         Index("ix_template_items_bet_score_id", "bet_score_id"),

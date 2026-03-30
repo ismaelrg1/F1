@@ -18,6 +18,10 @@ from app.db.enums import BetContextKind, SessionType, BetTemplateScope
 class BetTemplate(Base):
     __tablename__ = "bet_templates"
     __table_args__ = (
+        CheckConstraint(
+            "length(name) >= 2",
+            name="ck_bet_templates_name_minlen",
+        ),
         # Reglas coherencia:
         # - Si NO es GP: scope debe ser EVENT y session_type NULL
         # - Si es GP:

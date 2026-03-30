@@ -45,6 +45,10 @@ class BetContext(Base):
             "results_published = true OR results_published_at IS NULL",
             name="ck_bet_contexts_unpublished_has_no_timestamp",
         ),
+        CheckConstraint(
+            "length(label) >= 2",
+            name="ck_bet_contexts_label_minlen",
+        ),
 
         # ✅ SEASON: 1 por (group, season)
         Index(
@@ -80,6 +84,8 @@ class BetContext(Base):
         Index("ix_bet_contexts_group_season_kind", "group_id", "season_id", "kind"),
         Index("ix_bet_contexts_group_id", "group_id"),
         Index("ix_bet_contexts_season_id", "season_id"),
+        Index("ix_bet_contexts_race_event_id", "race_event_id"),
+        Index("ix_bet_contexts_testing_event_id", "testing_event_id"),
         Index("ix_bet_contexts_kind", "kind"),
         Index("ix_bet_contexts_public_id", "public_id"),
 

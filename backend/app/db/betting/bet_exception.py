@@ -51,6 +51,10 @@ class BetException(Base):
             "override_points IS NOT NULL OR is_disabled IS NOT NULL OR override_constraints_json IS NOT NULL",
             name="ck_bet_exceptions_has_effect",
         ),
+        CheckConstraint(
+            "note IS NULL OR length(note) <= 500",
+            name="ck_bet_exceptions_note_len",
+        ),
 
         {"schema": "betting"},
     )
