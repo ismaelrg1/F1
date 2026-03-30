@@ -5,6 +5,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Numeric,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -43,6 +44,11 @@ class TeamEventAggregate(Base):
         Index("ix_team_event_agg_ctx_id", "bet_context_id"),
         Index("ix_team_event_agg_group_id", "group_id"),
         Index("ix_team_event_agg_group_team", "group_id", "team_id"),
+
+        CheckConstraint(
+            "total_points >= 0",
+            name="ck_team_event_agg_total_points_nonneg",
+        ),
 
         {"schema": "scoring"},
     )

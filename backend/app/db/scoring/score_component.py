@@ -27,9 +27,11 @@ class ScoreComponent(Base):
         # Puntos razonables (puede ser negativo si una penalización resta)
         # Si quieres prohibir negativos, cambia a "points >= 0"
         CheckConstraint(
-            "points IS NOT NULL",
-            name="ck_score_components_points_notnull",
+            "points >= 0",
+            name="ck_score_components_points_notneg",
         ),
+
+        CheckConstraint("length(code) >= 2", name="ck_score_components_code_minlen"),
 
         # Para queries típicas: sumar componentes por score, filtrar por tipo
         Index("ix_score_components_score_id", "score_id"),

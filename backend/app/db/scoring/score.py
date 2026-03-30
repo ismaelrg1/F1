@@ -37,7 +37,6 @@ class Score(Base):
         # 3) Índices típicos de queries
         Index("ix_scores_user_id", "user_id"),
         Index("ix_scores_bet_context_id", "bet_context_id"),
-        Index("ix_scores_context_ranking", "bet_context_id", "total_points", "computed_at"),
 
         Index("ix_scores_context_ranking","bet_context_id", "total_points", "computed_at", "user_id"),
 

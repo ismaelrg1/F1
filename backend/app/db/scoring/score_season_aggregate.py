@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from datetime import datetime
 
-from sqlalchemy import Numeric, DateTime, text, ForeignKey, func, Index
+from sqlalchemy import Numeric, DateTime, text, ForeignKey, func, Index, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING
@@ -28,6 +28,11 @@ class ScoreSeasonAggregate(Base):
         Index(
             "ix_score_season_agg_group_season_rank",
             "group_id", "season_id", "total_points", "computed_at",
+        ),
+
+        CheckConstraint(
+            "total_points >= 0",
+            name="ck_score_season_agg_points_notneg",
         ),
 
         Index("ix_score_season_agg_user_id", "user_id"),

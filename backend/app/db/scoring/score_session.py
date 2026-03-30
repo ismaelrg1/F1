@@ -36,7 +36,7 @@ class ScoreSession(Base):
         ),
 
         # Lookups por usuario
-        Index("ix_score_sessions_user_ctx", "user_id", "bet_context_id"),
+        Index("ix_score_sessions_user_ctx", "user_id", "bet_context_id", "computed_at"),
 
         {"schema": "scoring"},
     )

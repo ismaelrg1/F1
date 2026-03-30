@@ -24,9 +24,11 @@ class ScoreSessionComponent(Base):
         ),
 
         CheckConstraint(
-            "points IS NOT NULL",
-            name="ck_score_sess_components_points_notnull",
+            "points >= 0",
+            name="ck_score_sess_components_points_notneg",
         ),
+
+        CheckConstraint("length(code) >= 2", name="ck_score_sess_components_code_minlen"),
 
         Index("ix_score_sess_components_session_id", "score_session_id"),
         Index("ix_score_sess_components_sess_type", "score_session_id", "component_type"),
@@ -60,7 +62,7 @@ class ScoreSessionComponent(Base):
         server_default=text("0"),
     )
 
-    datails_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+    details_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(
         JSONB,
         nullable=True,
     )

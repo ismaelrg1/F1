@@ -12,7 +12,6 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
-    UniqueConstraint,
     func,
     text,
 )
@@ -38,14 +37,59 @@ class ScoringRule(Base):
             "(event_session_id IS NULL) OR (bet_context_id IS NOT NULL)",
             name="ck_scoring_rules_session_requires_context",
         ),
-        UniqueConstraint(
+        CheckConstraint(
+            "("
+            " (scope = 'GLOBAL' AND bet_context_id IS NULL AND event_session_id IS NULL AND bet_score_id IS NULL) OR "
+            " (scope = 'BET_SCORE' AND bet_score_id IS NOT NULL AND bet_context_id IS NULL AND event_session_id IS NULL) OR "
+            " (scope = 'CONTEXT' AND bet_context_id IS NOT NULL AND event_session_id IS NULL AND bet_score_id IS NULL) OR "
+            " (scope = 'SESSION' AND bet_context_id IS NOT NULL AND event_session_id IS NOT NULL AND bet_score_id IS NULL) "
+            ")",
+            name="ck_scoring_rules_scope_targets",
+        ),
+        CheckConstraint("length(code) >= 2", name="ck_scoring_rules_code_minlen"),
+        CheckConstraint(
+            "length(evaluator_key) >= 2",
+            name="ck_scoring_rules_evaluator_key_minlen",
+        ),
+        Index(
+            "uq_scoring_rules_global",
             "season_id",
-            "scope",
+            "code",
+            unique=True,
+            postgresql_where=text(
+                "scope = 'GLOBAL' AND bet_context_id IS NULL AND event_session_id IS NULL AND bet_score_id IS NULL"
+            ),
+        ),
+        Index(
+            "uq_scoring_rules_bet_score",
+            "season_id",
+            "code",
+            "bet_score_id",
+            unique=True,
+            postgresql_where=text(
+                "scope = 'BET_SCORE' AND bet_score_id IS NOT NULL AND bet_context_id IS NULL AND event_session_id IS NULL"
+            ),
+        ),
+        Index(
+            "uq_scoring_rules_context",
+            "season_id",
+            "code",
+            "bet_context_id",
+            unique=True,
+            postgresql_where=text(
+                "scope = 'CONTEXT' AND bet_context_id IS NOT NULL AND event_session_id IS NULL AND bet_score_id IS NULL"
+            ),
+        ),
+        Index(
+            "uq_scoring_rules_session",
+            "season_id",
             "code",
             "bet_context_id",
             "event_session_id",
-            "bet_score_id",
-            name="uq_scoring_rules_scope_code_target",
+            unique=True,
+            postgresql_where=text(
+                "scope = 'SESSION' AND bet_context_id IS NOT NULL AND event_session_id IS NOT NULL AND bet_score_id IS NULL"
+            ),
         ),
         Index("ix_scoring_rules_season_id", "season_id"),
         Index("ix_scoring_rules_scope", "scope"),
