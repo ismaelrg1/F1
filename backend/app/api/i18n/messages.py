@@ -40,10 +40,12 @@ MESSAGES = {
         "admin.circuit_not_found_for_testing_event": "Circuit '{circuit_code}' was not found.",
         "admin.testing_event_already_exists": "Testing event '{name}' already exists for season {season_year}.",
         "admin.duplicate_testing_event_session_order": "Session order '{session_order}' is duplicated.",
+        "admin.testing_event_not_found": "Testing event '{testing_event_id}' was not found.",
         "admin.season_not_found_for_race_event": "Season '{season_year}' was not found.",
         "admin.circuit_not_found_for_race_event": "Circuit '{circuit_code}' was not found.",
         "admin.race_event_already_exists": "Race event for round {round_number} already exists in season {season_year}.",
         "admin.duplicate_race_event_session_type": "Session type '{session_type}' is duplicated.",
+        "admin.race_event_not_found": "Race event '{race_event_id}' was not found.",
 
 
         "errors.unhandled": "An unexpected error occurred",

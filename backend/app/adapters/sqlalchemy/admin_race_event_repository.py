@@ -9,6 +9,9 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
     def __init__(self, session: Session):
         self._session = session
 
+    def get_by_id(self, race_event_id: int) -> RaceEvent | None:
+        return self._session.get(RaceEvent, race_event_id)
+
     def get_season_by_year(self, year: int) -> Season | None:
         stmt = select(Season).where(Season.year == year)
         return self._session.execute(stmt).scalar_one_or_none()
@@ -74,4 +77,51 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
         self._session.flush()
         self._session.refresh(race_event)
 
+        return race_event
+
+    def update(
+        self,
+        *,
+        race_event: RaceEvent,
+        season_id: int,
+        circuit_id: int,
+        round_number: int,
+        name: str,
+        event_start,
+        event_end,
+        scheduled_event_start,
+        scheduled_event_end,
+        status,
+        status_reason: str | None,
+        sessions: list[dict],
+    ) -> RaceEvent:
+        race_event.season_id = season_id
+        race_event.circuit_id = circuit_id
+        race_event.round_number = round_number
+        race_event.name = name
+        race_event.event_start = event_start
+        race_event.event_end = event_end
+        race_event.scheduled_event_start = scheduled_event_start
+        race_event.scheduled_event_end = scheduled_event_end
+        race_event.status_reason = status_reason
+        if status is not None:
+            race_event.status = status
+
+        race_event.event_sessions.clear()
+        self._session.flush()
+        for session in sessions:
+            event_session = EventSession(
+                session_type=session["session_type"],
+                start_datetime=session["start_datetime"],
+                scheduled_start_datetime=session.get("scheduled_start_datetime"),
+                lock_cutoff=session["lock_cutoff"],
+                scheduled_lock_cutoff=session.get("scheduled_lock_cutoff"),
+                status_reason=session.get("status_reason"),
+            )
+            if session.get("status") is not None:
+                event_session.status = session["status"]
+            race_event.event_sessions.append(event_session)
+
+        self._session.flush()
+        self._session.refresh(race_event)
         return race_event

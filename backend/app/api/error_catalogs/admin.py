@@ -15,11 +15,13 @@ from app.domain.admin.testing_events.errors import (
     DuplicateTestingEventSessionOrderError,
     SeasonNotFoundForTestingEventError,
     TestingEventAlreadyExistsError,
+    TestingEventNotFoundError,
 )
 from app.domain.admin.race_events.errors import (
     CircuitNotFoundForRaceEventError,
     DuplicateRaceEventSessionTypeError,
     RaceEventAlreadyExistsError,
+    RaceEventNotFoundError,
     SeasonNotFoundForRaceEventError,
 )
 
@@ -60,6 +62,10 @@ ADMIN_ERROR_MAP = {
         status_code=status.HTTP_409_CONFLICT,
         error_code="admin.duplicate_testing_event_session_order",
     ),
+    TestingEventNotFoundError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="admin.testing_event_not_found",
+    ),
     SeasonNotFoundForRaceEventError: ErrorCatalogEntry(
         status_code=status.HTTP_404_NOT_FOUND,
         error_code="admin.season_not_found_for_race_event",
@@ -75,5 +81,9 @@ ADMIN_ERROR_MAP = {
     DuplicateRaceEventSessionTypeError: ErrorCatalogEntry(
         status_code=status.HTTP_409_CONFLICT,
         error_code="admin.duplicate_race_event_session_type",
+    ),
+    RaceEventNotFoundError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="admin.race_event_not_found",
     ),
 }

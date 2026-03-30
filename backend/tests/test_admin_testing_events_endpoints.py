@@ -1,9 +1,17 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import select
 
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import Permission, Role, User
-from app.db.competition import Circuit, Country, Season
-from app.db.enums import RoleName
+from app.db.competition import (
+    Circuit,
+    Country,
+    Season,
+    TestingEvent as CompetitionTestingEvent,
+    TestingEventSession as CompetitionTestingEventSession,
+)
+from app.db.enums import RoleName, TestingEventStatus as CompetitionTestingEventStatus
 
 
 def _create_admin_user_with_permission(
@@ -160,3 +168,73 @@ def test_create_testing_event_returns_conflict_for_duplicate(client, db_session)
 
     second_response = client.post("/api/v1/admin/testing-events", json=payload)
     assert second_response.status_code == 409
+
+
+def test_update_testing_event_replaces_sessions(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_testing_update",
+        email="admin_testing_update@example.com",
+        password="secret123",
+        permission_code="COMPETITION_MANAGE",
+    )
+
+    season = Season(year=2026, is_active=False)
+    country = Country(iso2="ES", name="Spain", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code="barcelona",
+        name="Circuit de Barcelona-Catalunya",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    testing_event = CompetitionTestingEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        name="Pre-Season Testing 1",
+        status=CompetitionTestingEventStatus.SCHEDULED,
+    )
+    testing_event.sessions = [
+        CompetitionTestingEventSession(session_order=1, name="Day 1"),
+        CompetitionTestingEventSession(session_order=2, name="Day 2"),
+    ]
+    db_session.add(testing_event)
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_testing_update", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.patch(
+        f"/api/v1/admin/testing-events/{testing_event.id}",
+        json={
+            "season_year": 2026,
+            "circuit_code": "barcelona",
+            "name": "Pre-Season Testing Updated",
+            "status": "CANCELLED",
+            "status_reason": "Weather",
+            "sessions": [
+                {
+                    "session_order": 1,
+                    "name": "Replanned Day 1",
+                    "scheduled_start_datetime": "2026-02-11T08:00:00Z",
+                    "scheduled_end_datetime": "2026-02-11T18:00:00Z",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["name"] == "Pre-Season Testing Updated"
+    assert payload["status"] == "CANCELLED"
+    assert len(payload["sessions"]) == 1
+    assert payload["sessions"][0]["name"] == "Replanned Day 1"

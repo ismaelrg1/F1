@@ -56,3 +56,17 @@ class DuplicateTestingEventSessionOrderError(AdminError):
     @property
     def public_params(self) -> dict:
         return {"session_order": self.session_order}
+
+
+class TestingEventNotFoundError(AdminError):
+    def __init__(self, *, testing_event_id: int):
+        self.testing_event_id = testing_event_id
+        super().__init__()
+
+    @property
+    def context(self) -> dict:
+        return {"testing_event_id": self.testing_event_id}
+
+    @property
+    def public_params(self) -> dict:
+        return {"testing_event_id": self.testing_event_id}

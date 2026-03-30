@@ -5,6 +5,9 @@ from app.db.enums import TestingEventStatus
 
 
 class AdminTestingEventRepository(Protocol):
+    def get_by_id(self, testing_event_id: int) -> TestingEvent | None:
+        ...
+
     def get_season_by_year(self, year: int) -> Season | None:
         ...
 
@@ -25,6 +28,23 @@ class AdminTestingEventRepository(Protocol):
         scheduled_event_start,
         scheduled_event_end,
         status: TestingEventStatus | None,
+        status_reason: str | None,
+        sessions: list[dict],
+    ) -> TestingEvent:
+        ...
+
+    def update(
+        self,
+        *,
+        testing_event: TestingEvent,
+        season_id: int,
+        circuit_id: int,
+        name: str,
+        event_start,
+        event_end,
+        scheduled_event_start,
+        scheduled_event_end,
+        status,
         status_reason: str | None,
         sessions: list[dict],
     ) -> TestingEvent:

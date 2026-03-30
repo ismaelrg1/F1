@@ -1,9 +1,11 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import select
 
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import Permission, Role, User
-from app.db.competition import Circuit, Country, Season
-from app.db.enums import RoleName
+from app.db.competition import Circuit, Country, EventSession, RaceEvent, Season
+from app.db.enums import RaceEventStatus, RoleName, SessionType
 
 
 def _create_admin_user_with_permission(
@@ -173,3 +175,80 @@ def test_create_race_event_returns_conflict_for_duplicate(client, db_session) ->
 
     second_response = client.post("/api/v1/admin/race-events", json=payload)
     assert second_response.status_code == 409
+
+
+def test_update_race_event_replaces_sessions(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_race_update",
+        email="admin_race_update@example.com",
+        password="secret123",
+        permission_code="COMPETITION_MANAGE",
+    )
+
+    season = Season(year=2026, is_active=False)
+    country = Country(iso2="ES", name="Spain", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code="barcelona",
+        name="Circuit de Barcelona-Catalunya",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=1,
+        name="Spanish Grand Prix",
+        status=RaceEventStatus.SCHEDULED,
+    )
+    race_event.event_sessions = [
+        EventSession(
+            session_type=SessionType.FP1,
+            start_datetime=datetime(2026, 5, 29, 11, 30, tzinfo=timezone.utc),
+            lock_cutoff=datetime(2026, 5, 29, 11, 25, tzinfo=timezone.utc),
+        )
+    ]
+    db_session.add(race_event)
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_race_update", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.patch(
+        f"/api/v1/admin/race-events/{race_event.id}",
+        json={
+            "season_year": 2026,
+            "round_number": 2,
+            "circuit_code": "barcelona",
+            "name": "Spanish Grand Prix Updated",
+            "status": "POSTPONED",
+            "status_reason": "Rain",
+            "sessions": [
+                {
+                    "session_type": "QUALY",
+                    "start_datetime": "2026-05-30T14:00:00Z",
+                    "scheduled_start_datetime": "2026-05-30T14:00:00Z",
+                    "lock_cutoff": "2026-05-30T13:55:00Z",
+                    "scheduled_lock_cutoff": "2026-05-30T13:55:00Z",
+                    "status": "POSTPONED",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["round_number"] == 2
+    assert payload["status"] == "POSTPONED"
+    assert len(payload["sessions"]) == 1
+    assert payload["sessions"][0]["session_type"] == "QUALY"

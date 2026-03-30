@@ -62,3 +62,17 @@ class DuplicateRaceEventSessionTypeError(AdminError):
     @property
     def public_params(self) -> dict:
         return {"session_type": self.session_type}
+
+
+class RaceEventNotFoundError(AdminError):
+    def __init__(self, *, race_event_id: int):
+        self.race_event_id = race_event_id
+        super().__init__()
+
+    @property
+    def context(self) -> dict:
+        return {"race_event_id": self.race_event_id}
+
+    @property
+    def public_params(self) -> dict:
+        return {"race_event_id": self.race_event_id}
