@@ -6,7 +6,7 @@ class AdminCircuitRepository(Protocol):
     def get_by_code(self, code: str) -> Circuit | None:
         ...
 
-    def get_country_by_id(self, country_id: int) -> Country | None:
+    def get_country_by_iso2(self, iso2: str) -> Country | None:
         ...
 
     def create(

@@ -113,11 +113,18 @@ def create_circuit(
         circuit = use_case.execute(
             code=data.code,
             name=data.name,
-            country_id=data.country_id,
+            country_iso2=data.country_iso2,
             map_asset_url=data.map_asset_url,
             image_asset_url=data.image_asset_url,
         )
     except AdminError as exc:
         raise _translate_admin_error(exc, locale=locale) from exc
     
-    return CircuitCreateResponse.model_validate(circuit)
+    return CircuitCreateResponse(
+        id=circuit.id,
+        code=circuit.code,
+        name=circuit.name,
+        country_iso2=circuit.country.iso2,
+        map_asset_url=circuit.map_asset_url,
+        image_asset_url=circuit.image_asset_url,
+    )

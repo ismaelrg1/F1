@@ -241,7 +241,7 @@ def test_create_circuit_endpoint_creates_circuit(client, db_session) -> None:
         json={
             "code": "barcelona",
             "name": "Circuit de Barcelona-Catalunya",
-            "country_id": country.id,
+            "country_iso2": "es",
             "map_asset_url": "https://example.com/maps/barcelona.png",
             "image_asset_url": "https://example.com/images/barcelona.jpg",
         },
@@ -249,7 +249,7 @@ def test_create_circuit_endpoint_creates_circuit(client, db_session) -> None:
 
     assert response.status_code == 201
     assert response.json()["code"] == "barcelona"
-    assert response.json()["country_id"] == country.id
+    assert response.json()["country_iso2"] == "ES"
 
     circuit = db_session.execute(
         select(Circuit).where(Circuit.code == "barcelona")
@@ -292,7 +292,7 @@ def test_create_circuit_endpoint_returns_conflict_for_duplicate_code(client, db_
         json={
             "code": "barcelona",
             "name": "Otro nombre",
-            "country_id": country.id,
+            "country_iso2": "es",
             "map_asset_url": None,
             "image_asset_url": None,
         },
@@ -323,7 +323,7 @@ def test_create_circuit_endpoint_returns_not_found_for_missing_country(client, d
         json={
             "code": "barcelona",
             "name": "Circuit de Barcelona-Catalunya",
-            "country_id": 999999,
+            "country_iso2": "zz",
             "map_asset_url": None,
             "image_asset_url": None,
         },

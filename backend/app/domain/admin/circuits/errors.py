@@ -14,14 +14,14 @@ class CircuitAlreadyExistsError(AdminError):
         return {"code": self.code}
     
 class CountryNotFoundForCircuitError(AdminError):
-    def __init__(self, *, country_id: int):
-        self.country_id = country_id
+    def __init__(self, *, country_iso2: str):
+        self.country_iso2 = country_iso2
         super().__init__()
 
     @property
     def context(self) -> dict:
-        return {"country_id": self.country_id}
+        return {"country_iso2": self.country_iso2}
     
     @property
     def public_params(self) -> dict:
-        return {"country_id": self.country_id}
+        return {"country_iso2": self.country_iso2}

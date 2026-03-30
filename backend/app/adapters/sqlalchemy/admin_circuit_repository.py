@@ -12,8 +12,9 @@ class SqlAlchemyAdminCircuitRepository(AdminCircuitRepository):
         stmt = select(Circuit).where(Circuit.code == code)
         return self._session.execute(stmt).scalar_one_or_none()
     
-    def get_country_by_id(self, country_id: int):
-        return self._session.get(Country, country_id)
+    def get_country_by_iso2(self, iso2: str):
+        stmt = select(Country).where(Country.iso2 == iso2)
+        return self._session.execute(stmt).scalar_one_or_none()
     
     def create(
         self,

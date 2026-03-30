@@ -35,7 +35,7 @@ MESSAGES = {
         "admin.active_season_already_exists": "There is already an active season ({active_year})",
         "admin.country_already_exists": "Country {iso2} already exists",
         "admin.circuit_already_exists": "Circuit {code} already exists",
-        "admin.country_not_found_for_circuit": "Country {country_id} was not found",
+        "admin.country_not_found_for_circuit": "Country {country_iso2} was not found",
 
         "errors.unhandled": "An unexpected error occurred",
     },
@@ -73,7 +73,7 @@ MESSAGES = {
         "admin.active_season_already_exists": "Ya existe una temporada activa({active_year})",
         "admin.country_already_exists": "El pais {iso2} ya existe",
         "admin.circuit_already_exists": "El circuito {code} ya existe",
-        "admin.country_not_found_for_circuit": "No se ha encontrado el pais {country_id}",
+        "admin.country_not_found_for_circuit": "No se ha encontrado el pais {country_iso2}",
 
 
         "errors.unhandled": "Ha ocurrido un error inesperado",
