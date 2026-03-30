@@ -36,6 +36,10 @@ MESSAGES = {
         "admin.country_already_exists": "Country {iso2} already exists",
         "admin.circuit_already_exists": "Circuit {code} already exists",
         "admin.country_not_found_for_circuit": "Country {country_iso2} was not found",
+        "admin.season_not_found_for_testing_event": "Season '{season_year}' was not found.",
+        "admin.circuit_not_found_for_testing_event": "Circuit '{circuit_code}' was not found.",
+        "admin.testing_event_already_exists": "Testing event '{name}' already exists for season {season_year}.",
+        "admin.duplicate_testing_event_session_order": "Session order '{session_order}' is duplicated.",
 
         "errors.unhandled": "An unexpected error occurred",
     },
@@ -74,7 +78,10 @@ MESSAGES = {
         "admin.country_already_exists": "El pais {iso2} ya existe",
         "admin.circuit_already_exists": "El circuito {code} ya existe",
         "admin.country_not_found_for_circuit": "No se ha encontrado el pais {country_iso2}",
-
+        "admin.season_not_found_for_testing_event": "No se ha encontrado la temporada '{season_year}'.",
+        "admin.circuit_not_found_for_testing_event": "No se ha encontrado el circuito '{circuit_code}'.",
+        "admin.testing_event_already_exists": "Testing event '{name}' ya existe para la sesion {season_year}.",
+        "admin.duplicate_testing_event_session_order": "El orden de sesión '{session_order}' está duplicado.",
 
         "errors.unhandled": "Ha ocurrido un error inesperado",
     },

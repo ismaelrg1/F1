@@ -17,6 +17,16 @@ from app.domain.admin.fastf1 import (
     ListFastF1TestingEventPreviews
 )
 
+from app.domain.admin.testing_events import (
+    AdminTestingEventRepository,
+    CircuitNotFoundForTestingEventError,
+    CreateTestingEvent,
+    DuplicateTestingEventSessionOrderError,
+    SeasonNotFoundForTestingEventError,
+    TestingEventAlreadyExistsError,
+)
+
+
 from app.domain.admin.use_cases import PublishResults
 
 __all__ = [
@@ -33,4 +43,10 @@ __all__ = [
     "AdminFastF1Repository",
     "ListFastF1RaceEventPreviews",
     "ListFastF1TestingEventPreviews",
+    "AdminTestingEventRepository",
+    "CircuitNotFoundForTestingEventError",
+    "CreateTestingEvent",
+    "DuplicateTestingEventSessionOrderError",
+    "SeasonNotFoundForTestingEventError",
+    "TestingEventAlreadyExistsError",
 ]

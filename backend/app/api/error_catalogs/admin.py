@@ -10,6 +10,12 @@ from app.domain.admin.circuits.errors import (
     CircuitAlreadyExistsError,
     CountryNotFoundForCircuitError,
 )
+from app.domain.admin.testing_events.errors import (
+    CircuitNotFoundForTestingEventError,
+    DuplicateTestingEventSessionOrderError,
+    SeasonNotFoundForTestingEventError,
+    TestingEventAlreadyExistsError,
+)
 
 ADMIN_ERROR_MAP = {
     SeasonAlreadyExistsError: ErrorCatalogEntry(
@@ -31,5 +37,21 @@ ADMIN_ERROR_MAP = {
     CountryNotFoundForCircuitError: ErrorCatalogEntry(
         status_code=status.HTTP_404_NOT_FOUND,
         error_code="admin.country_not_found_for_circuit",
+    ),
+    SeasonNotFoundForTestingEventError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="admin.season_not_found_for_testing_event",
+    ),
+    CircuitNotFoundForTestingEventError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="admin.circuit_not_found_for_testing_event",
+    ),
+    TestingEventAlreadyExistsError: ErrorCatalogEntry(
+        status_code=status.HTTP_409_CONFLICT,
+        error_code="admin.testing_event_already_exists",
+    ),
+    DuplicateTestingEventSessionOrderError: ErrorCatalogEntry(
+        status_code=status.HTTP_409_CONFLICT,
+        error_code="admin.duplicate_testing_event_session_order",
     ),
 }
