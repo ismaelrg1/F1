@@ -28,7 +28,10 @@ from app.models.countries import (
 from app.models.admin_fastf1 import (
     FastF1SessionPreview,
     FastF1RaceEventPreview,
-    FastF1RaceEventPreviewListResponse
+    FastF1RaceEventPreviewListResponse,
+    FastF1TestingSessionPreview,
+    FastF1TestingEventPreview,
+    FastF1TestingEventPreviewListResponse
 )
 
 __all__ = [
@@ -60,4 +63,7 @@ __all__ = [
     "FastF1SessionPreview",
     "FastF1RaceEventPreview",
     "FastF1RaceEventPreviewListResponse",
+    "FastF1TestingSessionPreview",
+    "FastF1TestingEventPreview",
+    "FastF1TestingEventPreviewListResponse",
 ]

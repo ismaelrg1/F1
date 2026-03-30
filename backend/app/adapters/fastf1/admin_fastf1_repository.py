@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+import pandas as pd
+
 import fastf1
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -29,19 +31,23 @@ class FastF1AdminRepository(AdminFastF1Repository):
             country = self._find_country_by_name(country_name)
 
             sessions: list[dict[str, Any]] = []
-            for index in range(1, 6):
-                session_name = event.get(f"Session{index}")
-                if not session_name:
+            for index in self._get_session_indexes(event):
+                raw_session_name = event.get(f"Session{index}")
+                raw_session_date_utc = event.get(f"Session{index}DateUtc")
+
+                session_name_missing = self._is_missing(raw_session_name)
+                scheduled_start_utc = self._to_datetime(raw_session_date_utc)
+
+                if session_name_missing and scheduled_start_utc is None:
                     continue
 
-                session_date_utc = event.get(f"Session{index}DateUtc")
-                scheduled_start_utc = self._to_datetime(session_date_utc)
+                session_name = None if session_name_missing else str(raw_session_name).strip()
 
                 sessions.append(
                     {
                         "order": index,
-                        "fastf1_name": str(session_name),
-                        "session_type": self._map_session_type(str(session_name)),
+                        "fastf1_name": session_name,
+                        "session_type": self._map_session_type(session_name) if session_name else None,
                         "scheduled_start_utc": scheduled_start_utc,
                     }
                 )
@@ -63,6 +69,58 @@ class FastF1AdminRepository(AdminFastF1Repository):
             )
 
         return items
+    
+
+    def list_testing_event_previews(self, year: int) -> list[dict[str, Any]]:
+        schedule = fastf1.get_event_schedule(year)
+        items: list[dict[str, Any]] = []
+
+        for _, event in schedule.iterrows():
+            event_format = str(event["EventFormat"])
+
+            if event_format != "testing":
+                continue
+
+            country_name = str(event["Country"]).strip()
+            country = self._find_country_by_name(country_name)
+
+            sessions: list[dict[str, Any]] = []
+            for index in self._get_session_indexes(event):
+                raw_session_name = event.get(f"Session{index}")
+                raw_session_date_utc = event.get(f"Session{index}DateUtc")
+
+                session_name_missing = self._is_missing(raw_session_name)
+                scheduled_start_utc = self._to_datetime(raw_session_date_utc)
+
+                if session_name_missing and scheduled_start_utc is None:
+                    continue
+
+                session_name = None if session_name_missing else str(raw_session_name).strip()
+
+                sessions.append(
+                    {
+                        "order": index,
+                        "fastf1_name": session_name,
+                        "scheduled_start_utc": scheduled_start_utc,
+                    }
+                )
+
+            items.append(
+                {
+                    "season_year": year,
+                    "country_name": country_name,
+                    "country_iso2_suggestion": country.iso2 if country else None,
+                    "event_name": str(event["EventName"]),
+                    "official_event_name": str(event["OfficialEventName"]),
+                    "location": str(event["Location"]),
+                    "event_format": event_format,
+                    "circuit_code_suggestion": self._slugify(str(event["Location"])),
+                    "scheduled_event_end_utc": self._to_datetime(event.get("EventDate")),
+                    "sessions": sessions,
+                }
+            )
+
+        return items
 
     def _find_country_by_name(self, country_name: str) -> Country | None:
         stmt = select(Country).where(func.lower(Country.name) == country_name.lower())
@@ -70,7 +128,7 @@ class FastF1AdminRepository(AdminFastF1Repository):
 
     @staticmethod
     def _to_datetime(value):
-        if value is None:
+        if value is None or pd.isna(value):
             return None
 
         try:
@@ -97,3 +155,27 @@ class FastF1AdminRepository(AdminFastF1Repository):
             "Race": "RACE",
         }
         return mapping.get(name)
+    
+    @staticmethod
+    def _is_missing(value: Any) -> bool:
+        if value is None:
+            return True
+
+        if pd.isna(value):
+            return True
+
+        normalized = str(value).strip().lower()
+        return normalized in {"", "none", "nan", "nat"}
+    
+    @staticmethod
+    def _get_session_indexes(event) -> list[int]:
+        indexes = []
+        for key in event.keys():
+            if not key.startswith("Session"):
+                continue
+
+            suffix = key.replace("Session", "")
+            if suffix.isdigit():
+                indexes.append(int(suffix))
+
+        return sorted(indexes)

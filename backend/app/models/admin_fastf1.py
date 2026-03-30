@@ -23,3 +23,25 @@ class FastF1RaceEventPreview(BaseModel):
 
 class FastF1RaceEventPreviewListResponse(BaseModel):
     items: list[FastF1RaceEventPreview]
+
+class FastF1TestingSessionPreview(BaseModel):
+    order: int
+    fastf1_name: str
+    scheduled_start_utc: datetime | None
+
+
+class FastF1TestingEventPreview(BaseModel):
+    season_year: int
+    country_name: str
+    country_iso2_suggestion: str | None
+    event_name: str
+    official_event_name: str
+    location: str
+    event_format: str
+    circuit_code_suggestion: str
+    scheduled_event_end_utc: datetime | None
+    sessions: list[FastF1TestingSessionPreview]
+
+
+class FastF1TestingEventPreviewListResponse(BaseModel):
+    items: list[FastF1TestingEventPreview]

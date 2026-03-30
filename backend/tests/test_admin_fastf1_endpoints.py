@@ -162,3 +162,24 @@ def test_preview_fastf1_race_events_prints_payload(client, db_session) -> None:
     assert response.status_code == 200
 
     print(json.dumps(response.json(), indent=2, ensure_ascii=False))
+
+@pytest.mark.manual
+def test_preview_fastf1_testing_events_prints_payload(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_fastf1_testing_preview",
+        email="admin_fastf1_testing_preview@example.com",
+        password="secret123",
+        permission_code="COMPETITION_MANAGE",
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_fastf1_testing_preview", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get("/api/v1/admin/fastf1/testing-events/2026")
+    assert response.status_code == 200
+
+    print(json.dumps(response.json(), indent=2, ensure_ascii=False))

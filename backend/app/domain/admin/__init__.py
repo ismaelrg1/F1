@@ -14,6 +14,7 @@ from app.domain.admin.circuits import (
 from app.domain.admin.fastf1 import (
     AdminFastF1Repository,
     ListFastF1RaceEventPreviews,
+    ListFastF1TestingEventPreviews
 )
 
 from app.domain.admin.use_cases import PublishResults
@@ -31,4 +32,5 @@ __all__ = [
     "CreateCircuit",
     "AdminFastF1Repository",
     "ListFastF1RaceEventPreviews",
+    "ListFastF1TestingEventPreviews",
 ]
