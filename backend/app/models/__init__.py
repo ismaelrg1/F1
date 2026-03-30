@@ -25,6 +25,12 @@ from app.models.countries import (
     CountryRead
 )
 
+from app.models.admin_fastf1 import (
+    FastF1SessionPreview,
+    FastF1RaceEventPreview,
+    FastF1RaceEventPreviewListResponse
+)
+
 __all__ = [
     "BetCreate",
     "BetRead",
@@ -51,4 +57,7 @@ __all__ = [
     "CountryCreateResponse",
     "CountryListResponse",
     "CountryRead",
+    "FastF1SessionPreview",
+    "FastF1RaceEventPreview",
+    "FastF1RaceEventPreviewListResponse",
 ]

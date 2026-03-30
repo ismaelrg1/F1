@@ -10,3 +10,4 @@ google-auth==2.40.3
 requests==2.32.3
 PyJWT==2.10.1
 resend==2.13.1
+fastf1==3.8.1

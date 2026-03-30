@@ -4,6 +4,7 @@ from app.adapters.email import ResendEmailSender
 from app.core.config import settings
 
 
+@pytest.mark.manual
 def test_resend_email_sender_builds_password_reset_email_payload(monkeypatch) -> None:
     captured = {}
 

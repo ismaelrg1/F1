@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
+from app.adapters.fastf1 import FastF1AdminRepository
 from app.adapters.sqlalchemy import (
     SqlAlchemyAdminCountryRepository,
     SqlAlchemyAdminSeasonRepository,
@@ -17,14 +18,14 @@ from app.domain.admin import (
     CreateSeason,
     CreateCountry,
     CreateCircuit,
+    ListFastF1RaceEventPreviews,
 )
 from app.models.seasons import SeasonCreateRequest, SeasonCreateResponse
 from app.models.countries import CountryCreateRequest, CountryCreateResponse
 from app.models.circuits import CircuitCreateRequest, CircuitCreateResponse
-
+from app.models.admin_fastf1 import FastF1RaceEventPreviewListResponse
 
 router = APIRouter()
-
 
 @router.post("/results/publish")
 def publish_results(
@@ -128,3 +129,22 @@ def create_circuit(
         map_asset_url=circuit.map_asset_url,
         image_asset_url=circuit.image_asset_url,
     )
+
+
+
+@router.get(
+    "/fastf1/race-events/{year}",
+    response_model=FastF1RaceEventPreviewListResponse,
+    status_code=status.HTTP_200_OK,
+)
+def list_fastf1_race_events(
+    year: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+) -> FastF1RaceEventPreviewListResponse:
+    repository = FastF1AdminRepository(db)
+    use_case = ListFastF1RaceEventPreviews(repository)
+
+    items = use_case.execute(year=year)
+
+    return FastF1RaceEventPreviewListResponse(items=items)

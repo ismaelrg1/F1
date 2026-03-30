@@ -23,3 +23,5 @@ docker compose exec db psql -U postgres -d futuref1 -c "\dn"
 docker compose exec db psql -U postgres -d futuref1 -c "\dt auth.*"
 docker compose exec db psql -U postgres -d futuref1 -c "\dt competition.*"
 
+## build
+docker compose build backend
