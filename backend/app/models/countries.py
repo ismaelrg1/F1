@@ -13,3 +13,15 @@ class CountryCreateResponse(BaseModel):
     iso2: str
     name: str
     flag_asset_url: str | None
+
+
+class CountryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    iso2: str
+    name: str
+    flag_asset_url: str | None
+
+class CountryListResponse(BaseModel):
+    items: list[CountryRead]

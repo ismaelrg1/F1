@@ -6,6 +6,7 @@ from app.adapters.sqlalchemy.powerup_repository import SqlAlchemyPowerupReposito
 from app.adapters.sqlalchemy.season_repository import SqlAlchemySeasonRepository
 from app.adapters.sqlalchemy.password_reset_token_repository import SqlAlchemyPasswordResetTokenRepository
 from app.adapters.sqlalchemy.admin_circuit_repository import SqlAlchemyAdminCircuitRepository
+from app.adapters.sqlalchemy.country_repository import SqlAlchemyCountryRepository
 
 __all__ = [
     "SqlAlchemyAccessRepository",
@@ -16,4 +17,5 @@ __all__ = [
     "SqlAlchemySeasonRepository",
     "SqlAlchemyPasswordResetTokenRepository",
     "SqlAlchemyAdminCircuitRepository",
+    "SqlAlchemyCountryRepository",
 ]
