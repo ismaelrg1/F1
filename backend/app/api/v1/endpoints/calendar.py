@@ -3,9 +3,11 @@ from sqlalchemy.orm import Session
 
 from app.adapters.sqlalchemy import SqlAlchemyCalendarRepository
 from app.api.deps import get_current_user
+
 from app.db.auth import User
 from app.db.session import get_db
 from app.domain.calendar import GetCalendar
+
 from app.models.calendar import (
     CalendarEventRead,
     CalendarRaceSessionRead,
@@ -14,7 +16,6 @@ from app.models.calendar import (
 )
 
 router = APIRouter()
-
 
 @router.get(
     "/calendar",

@@ -1,40 +1,64 @@
 from sqlalchemy import select
 
 from app.adapters.security import PasslibPasswordHasher
-from app.db.auth import User
+from app.db.auth import Permission, Role, User
 from app.db.competition import Country
+from app.db.enums import RoleName
 
 
-def _create_user(
+def _create_admin_user_with_permission(
     db_session,
     *,
     username: str,
     email: str,
     password: str,
+    permission_code: str,
 ) -> None:
     hasher = PasslibPasswordHasher()
+
+    permission = db_session.execute(
+        select(Permission).where(Permission.code == permission_code)
+    ).scalar_one_or_none()
+    if permission is None:
+        permission = Permission(code=permission_code, description=permission_code)
+        db_session.add(permission)
+        db_session.flush()
+
+    role = db_session.execute(
+        select(Role).where(Role.name == RoleName.ADMIN)
+    ).scalar_one_or_none()
+    if role is None:
+        role = Role(name=RoleName.ADMIN, description="Admin")
+        db_session.add(role)
+        db_session.flush()
+
+    if permission not in role.permissions:
+        role.permissions.append(permission)
+
     user = User(
         username=username,
         email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
+        roles=[role],
     )
     db_session.add(user)
     db_session.flush()
 
 
 def test_list_countries_requires_authentication(client) -> None:
-    response = client.get("/api/v1/countries")
+    response = client.get("/api/v1/admin/countries")
 
     assert response.status_code == 401
 
 
 def test_list_countries_returns_ordered_countries(client, db_session) -> None:
-    _create_user(
+    _create_admin_user_with_permission(
         db_session,
         username="countries_reader",
         email="countries_reader@example.com",
         password="secret123",
+        permission_code="COMPETITION_MANAGE",
     )
 
     db_session.add_all(
@@ -51,7 +75,7 @@ def test_list_countries_returns_ordered_countries(client, db_session) -> None:
     )
     assert login_response.status_code == 200
 
-    response = client.get("/api/v1/countries")
+    response = client.get("/api/v1/admin/countries")
 
     assert response.status_code == 200
     payload = response.json()

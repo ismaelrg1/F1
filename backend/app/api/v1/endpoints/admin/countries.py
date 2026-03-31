@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters.sqlalchemy import (
     SqlAlchemyAdminCountryRepository,
+    SqlAlchemyCountryRepository
 )
 from app.api.deps import require_permissions_all, _translate_admin_error
 from app.api.error_translators import get_preferred_locale
@@ -13,8 +14,14 @@ from app.domain.admin import (
     AdminError,
     CreateCountry,
 )
+from app.domain.countries import ListCountries
 
-from app.models.countries import CountryCreateRequest, CountryCreateResponse
+from app.models.countries import ( 
+    CountryCreateRequest, 
+    CountryCreateResponse,
+    CountryListResponse, 
+    CountryRead,
+)
 
 router = APIRouter()
 
@@ -44,3 +51,22 @@ def create_country(
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return CountryCreateResponse.model_validate(country)
+
+
+@router.get(
+    "/countries",
+    response_model=CountryListResponse,    
+)
+def list_countries(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+) -> CountryListResponse:
+    repository = SqlAlchemyCountryRepository(db)
+    use_case = ListCountries(repository)
+
+    countries = use_case.execute()
+
+    return CountryListResponse(
+        items=[CountryRead.model_validate(country) for country in countries]
+    )

@@ -3,13 +3,14 @@ from sqlalchemy.orm import Session
 
 from app.adapters.sqlalchemy import SqlAlchemyHomeRepository
 from app.api.deps import get_current_user
+
 from app.db.auth import User
 from app.db.session import get_db
 from app.domain.home import GetHome
+
 from app.models.home import HomeNextEventRead, HomeResponse
 
 router = APIRouter()
-
 
 @router.get(
     "/home",
