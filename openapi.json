@@ -1,0 +1,3050 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FutureF1 API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/auth/login/local": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login Local",
+        "operationId": "login_local_api_v1_auth_login_local_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginLocalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login Local",
+        "operationId": "login_local_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginLocalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login/google": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login Google",
+        "operationId": "login_google_api_v1_auth_login_google_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginGoogleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register/local": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register Local",
+        "operationId": "register_local_api_v1_auth_register_local_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterLocalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register/google": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register Google",
+        "operationId": "register_google_api_v1_auth_register_google_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterGoogleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password/forgot": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Password Forgot",
+        "operationId": "password_forgot_api_v1_auth_password_forgot_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordForgotRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordForgotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password/reset": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Password Reset",
+        "operationId": "password_reset_api_v1_auth_password_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordResetResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh",
+        "operationId": "refresh_api_v1_auth_refresh_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Refresh Api V1 Auth Refresh Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Logout Api V1 Auth Logout Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/countries/": {
+      "get": {
+        "tags": [
+          "countries"
+        ],
+        "summary": "List Countries",
+        "operationId": "list_countries_api_v1_countries__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountryListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Healthcheck",
+        "operationId": "healthcheck_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Healthcheck Api V1 Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/seasons": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Season",
+        "operationId": "create_season_api_v1_admin_seasons_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeasonCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/countries": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Country",
+        "operationId": "create_country_api_v1_admin_countries_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CountryCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountryCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/circuits": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Circuit",
+        "operationId": "create_circuit_api_v1_admin_circuits_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CircuitCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircuitCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/fastf1/race-events/{year}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Fastf1 Race Events",
+        "operationId": "list_fastf1_race_events_api_v1_admin_fastf1_race_events__year__get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FastF1RaceEventPreviewListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/fastf1/testing-events/{year}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Fastf1 Testing Events",
+        "operationId": "list_fastf1_testing_events_api_v1_admin_fastf1_testing_events__year__get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FastF1TestingEventPreviewListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/testing-events": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Testing Event",
+        "operationId": "create_testing_event_api_v1_admin_testing_events_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestingEventCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingEventCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Testing Events",
+        "operationId": "list_testing_events_api_v1_admin_testing_events_get",
+        "parameters": [
+          {
+            "name": "season_year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Season Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTestingEventListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/testing-events/{testing_event_id}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Testing Event",
+        "operationId": "update_testing_event_api_v1_admin_testing_events__testing_event_id__patch",
+        "parameters": [
+          {
+            "name": "testing_event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Testing Event Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestingEventCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestingEventCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/race-events": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Race Event",
+        "operationId": "create_race_event_api_v1_admin_race_events_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RaceEventCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaceEventCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Race Events",
+        "operationId": "list_race_events_api_v1_admin_race_events_get",
+        "parameters": [
+          {
+            "name": "season_year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Season Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRaceEventListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/race-events/{race_event_id}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Race Event",
+        "operationId": "update_race_event_api_v1_admin_race_events__race_event_id__patch",
+        "parameters": [
+          {
+            "name": "race_event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Race Event Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RaceEventCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RaceEventCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdminRaceEventListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminRaceEventRead"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "AdminRaceEventListResponse"
+      },
+      "AdminRaceEventRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "season_year": {
+            "type": "integer",
+            "title": "Season Year"
+          },
+          "round_number": {
+            "type": "integer",
+            "title": "Round Number"
+          },
+          "circuit_code": {
+            "type": "string",
+            "title": "Circuit Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Start"
+          },
+          "event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event End"
+          },
+          "scheduled_event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event Start"
+          },
+          "scheduled_event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event End"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RaceEventStatus"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/AdminRaceEventSessionRead"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "season_year",
+          "round_number",
+          "circuit_code",
+          "name",
+          "source_provider",
+          "source_key",
+          "event_start",
+          "event_end",
+          "scheduled_event_start",
+          "scheduled_event_end",
+          "status",
+          "status_reason",
+          "sessions"
+        ],
+        "title": "AdminRaceEventRead"
+      },
+      "AdminRaceEventSessionRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "session_type": {
+            "$ref": "#/components/schemas/SessionType"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "start_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Datetime"
+          },
+          "scheduled_start_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start Datetime"
+          },
+          "lock_cutoff": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Lock Cutoff"
+          },
+          "scheduled_lock_cutoff": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Lock Cutoff"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RaceEventStatus"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "results_published": {
+            "type": "boolean",
+            "title": "Results Published"
+          },
+          "results_published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Results Published At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "session_type",
+          "source_provider",
+          "source_key",
+          "start_datetime",
+          "scheduled_start_datetime",
+          "lock_cutoff",
+          "scheduled_lock_cutoff",
+          "status",
+          "status_reason",
+          "results_published",
+          "results_published_at"
+        ],
+        "title": "AdminRaceEventSessionRead"
+      },
+      "AdminTestingEventListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminTestingEventRead"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "AdminTestingEventListResponse"
+      },
+      "AdminTestingEventRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "season_year": {
+            "type": "integer",
+            "title": "Season Year"
+          },
+          "circuit_code": {
+            "type": "string",
+            "title": "Circuit Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Start"
+          },
+          "event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event End"
+          },
+          "scheduled_event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event Start"
+          },
+          "scheduled_event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event End"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TestingEventStatus"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/AdminTestingEventSessionRead"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "season_year",
+          "circuit_code",
+          "name",
+          "source_provider",
+          "source_key",
+          "event_start",
+          "event_end",
+          "scheduled_event_start",
+          "scheduled_event_end",
+          "status",
+          "status_reason",
+          "sessions"
+        ],
+        "title": "AdminTestingEventRead"
+      },
+      "AdminTestingEventSessionRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "session_order": {
+            "type": "integer",
+            "title": "Session Order"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "start_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Datetime"
+          },
+          "end_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Datetime"
+          },
+          "scheduled_start_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start Datetime"
+          },
+          "scheduled_end_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled End Datetime"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "session_order",
+          "name",
+          "source_provider",
+          "source_key",
+          "start_datetime",
+          "end_datetime",
+          "scheduled_start_datetime",
+          "scheduled_end_datetime"
+        ],
+        "title": "AdminTestingEventSessionRead"
+      },
+      "CircuitCreateRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 2,
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "country_iso2": {
+            "type": "string",
+            "maxLength": 2,
+            "minLength": 2,
+            "title": "Country Iso2"
+          },
+          "map_asset_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Map Asset Url"
+          },
+          "image_asset_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Asset Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "country_iso2"
+        ],
+        "title": "CircuitCreateRequest"
+      },
+      "CircuitCreateResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "country_iso2": {
+            "type": "string",
+            "title": "Country Iso2"
+          },
+          "map_asset_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Map Asset Url"
+          },
+          "image_asset_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Asset Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "name",
+          "country_iso2",
+          "map_asset_url",
+          "image_asset_url"
+        ],
+        "title": "CircuitCreateResponse"
+      },
+      "CountryCreateRequest": {
+        "properties": {
+          "iso2": {
+            "type": "string",
+            "maxLength": 2,
+            "minLength": 2,
+            "title": "Iso2"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "flag_asset_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag Asset Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "iso2",
+          "name"
+        ],
+        "title": "CountryCreateRequest"
+      },
+      "CountryCreateResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "iso2": {
+            "type": "string",
+            "title": "Iso2"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "flag_asset_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag Asset Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "iso2",
+          "name",
+          "flag_asset_url"
+        ],
+        "title": "CountryCreateResponse"
+      },
+      "CountryListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CountryRead"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "CountryListResponse"
+      },
+      "CountryRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "iso2": {
+            "type": "string",
+            "title": "Iso2"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "flag_asset_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag Asset Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "iso2",
+          "name",
+          "flag_asset_url"
+        ],
+        "title": "CountryRead"
+      },
+      "EventSessionCreateRequest": {
+        "properties": {
+          "session_type": {
+            "$ref": "#/components/schemas/SessionType"
+          },
+          "start_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Datetime"
+          },
+          "scheduled_start_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start Datetime"
+          },
+          "lock_cutoff": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Lock Cutoff"
+          },
+          "scheduled_lock_cutoff": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Lock Cutoff"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider",
+            "default": "MANUAL"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RaceEventStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_type",
+          "start_datetime",
+          "lock_cutoff"
+        ],
+        "title": "EventSessionCreateRequest"
+      },
+      "EventSessionCreateResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "session_type": {
+            "$ref": "#/components/schemas/SessionType"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "start_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Datetime"
+          },
+          "scheduled_start_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start Datetime"
+          },
+          "lock_cutoff": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Lock Cutoff"
+          },
+          "scheduled_lock_cutoff": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Lock Cutoff"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RaceEventStatus"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "results_published": {
+            "type": "boolean",
+            "title": "Results Published"
+          },
+          "results_published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Results Published At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "session_type",
+          "source_provider",
+          "source_key",
+          "start_datetime",
+          "scheduled_start_datetime",
+          "lock_cutoff",
+          "scheduled_lock_cutoff",
+          "status",
+          "status_reason",
+          "results_published",
+          "results_published_at"
+        ],
+        "title": "EventSessionCreateResponse"
+      },
+      "FastF1RaceEventPreview": {
+        "properties": {
+          "season_year": {
+            "type": "integer",
+            "title": "Season Year"
+          },
+          "round_number": {
+            "type": "integer",
+            "title": "Round Number"
+          },
+          "country_name": {
+            "type": "string",
+            "title": "Country Name"
+          },
+          "country_iso2_suggestion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Iso2 Suggestion"
+          },
+          "event_name": {
+            "type": "string",
+            "title": "Event Name"
+          },
+          "official_event_name": {
+            "type": "string",
+            "title": "Official Event Name"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "event_format": {
+            "type": "string",
+            "title": "Event Format"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "type": "string",
+            "title": "Source Key"
+          },
+          "circuit_code_suggestion": {
+            "type": "string",
+            "title": "Circuit Code Suggestion"
+          },
+          "scheduled_event_end_utc": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event End Utc"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/FastF1SessionPreview"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "season_year",
+          "round_number",
+          "country_name",
+          "country_iso2_suggestion",
+          "event_name",
+          "official_event_name",
+          "location",
+          "event_format",
+          "source_provider",
+          "source_key",
+          "circuit_code_suggestion",
+          "scheduled_event_end_utc",
+          "sessions"
+        ],
+        "title": "FastF1RaceEventPreview"
+      },
+      "FastF1RaceEventPreviewListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FastF1RaceEventPreview"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "FastF1RaceEventPreviewListResponse"
+      },
+      "FastF1SessionPreview": {
+        "properties": {
+          "order": {
+            "type": "integer",
+            "title": "Order"
+          },
+          "fastf1_name": {
+            "type": "string",
+            "title": "Fastf1 Name"
+          },
+          "session_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Type"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "type": "string",
+            "title": "Source Key"
+          },
+          "scheduled_start_utc": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start Utc"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order",
+          "fastf1_name",
+          "session_type",
+          "source_provider",
+          "source_key",
+          "scheduled_start_utc"
+        ],
+        "title": "FastF1SessionPreview"
+      },
+      "FastF1TestingEventPreview": {
+        "properties": {
+          "season_year": {
+            "type": "integer",
+            "title": "Season Year"
+          },
+          "country_name": {
+            "type": "string",
+            "title": "Country Name"
+          },
+          "country_iso2_suggestion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Iso2 Suggestion"
+          },
+          "event_name": {
+            "type": "string",
+            "title": "Event Name"
+          },
+          "official_event_name": {
+            "type": "string",
+            "title": "Official Event Name"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "event_format": {
+            "type": "string",
+            "title": "Event Format"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "type": "string",
+            "title": "Source Key"
+          },
+          "circuit_code_suggestion": {
+            "type": "string",
+            "title": "Circuit Code Suggestion"
+          },
+          "scheduled_event_end_utc": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event End Utc"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/FastF1TestingSessionPreview"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "season_year",
+          "country_name",
+          "country_iso2_suggestion",
+          "event_name",
+          "official_event_name",
+          "location",
+          "event_format",
+          "source_provider",
+          "source_key",
+          "circuit_code_suggestion",
+          "scheduled_event_end_utc",
+          "sessions"
+        ],
+        "title": "FastF1TestingEventPreview"
+      },
+      "FastF1TestingEventPreviewListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FastF1TestingEventPreview"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "FastF1TestingEventPreviewListResponse"
+      },
+      "FastF1TestingSessionPreview": {
+        "properties": {
+          "order": {
+            "type": "integer",
+            "title": "Order"
+          },
+          "fastf1_name": {
+            "type": "string",
+            "title": "Fastf1 Name"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "type": "string",
+            "title": "Source Key"
+          },
+          "scheduled_start_utc": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start Utc"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order",
+          "fastf1_name",
+          "source_provider",
+          "source_key",
+          "scheduled_start_utc"
+        ],
+        "title": "FastF1TestingSessionPreview"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginGoogleRequest": {
+        "properties": {
+          "id_token": {
+            "type": "string",
+            "title": "Id Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_token"
+        ],
+        "title": "LoginGoogleRequest"
+      },
+      "LoginLocalRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginLocalRequest"
+      },
+      "LoginResponse": {
+        "properties": {
+          "msg": {
+            "type": "string",
+            "title": "Msg"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "msg",
+          "user"
+        ],
+        "title": "LoginResponse"
+      },
+      "PasswordForgotRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "PasswordForgotRequest"
+      },
+      "PasswordForgotResponse": {
+        "properties": {
+          "msg": {
+            "type": "string",
+            "title": "Msg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "msg"
+        ],
+        "title": "PasswordForgotResponse"
+      },
+      "PasswordResetRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "new_password": {
+            "type": "string",
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "PasswordResetRequest"
+      },
+      "PasswordResetResponse": {
+        "properties": {
+          "msg": {
+            "type": "string",
+            "title": "Msg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "msg"
+        ],
+        "title": "PasswordResetResponse"
+      },
+      "RaceEventCreateRequest": {
+        "properties": {
+          "season_year": {
+            "type": "integer",
+            "title": "Season Year"
+          },
+          "round_number": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Round Number"
+          },
+          "circuit_code": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 2,
+            "title": "Circuit Code"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Start"
+          },
+          "event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event End"
+          },
+          "scheduled_event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event Start"
+          },
+          "scheduled_event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event End"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider",
+            "default": "MANUAL"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RaceEventStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/EventSessionCreateRequest"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "season_year",
+          "round_number",
+          "circuit_code",
+          "name"
+        ],
+        "title": "RaceEventCreateRequest"
+      },
+      "RaceEventCreateResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "season_year": {
+            "type": "integer",
+            "title": "Season Year"
+          },
+          "round_number": {
+            "type": "integer",
+            "title": "Round Number"
+          },
+          "circuit_code": {
+            "type": "string",
+            "title": "Circuit Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Start"
+          },
+          "event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event End"
+          },
+          "scheduled_event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event Start"
+          },
+          "scheduled_event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event End"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RaceEventStatus"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/EventSessionCreateResponse"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "season_year",
+          "round_number",
+          "circuit_code",
+          "name",
+          "source_provider",
+          "source_key",
+          "event_start",
+          "event_end",
+          "scheduled_event_start",
+          "scheduled_event_end",
+          "status",
+          "status_reason",
+          "sessions"
+        ],
+        "title": "RaceEventCreateResponse"
+      },
+      "RaceEventStatus": {
+        "type": "string",
+        "enum": [
+          "SCHEDULED",
+          "CANCELLED",
+          "POSTPONED",
+          "COMPLETED"
+        ],
+        "title": "RaceEventStatus"
+      },
+      "RegisterGoogleRequest": {
+        "properties": {
+          "id_token": {
+            "type": "string",
+            "title": "Id Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_token"
+        ],
+        "title": "RegisterGoogleRequest"
+      },
+      "RegisterLocalRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "email",
+          "password"
+        ],
+        "title": "RegisterLocalRequest"
+      },
+      "RegisterResponse": {
+        "properties": {
+          "msg": {
+            "type": "string",
+            "title": "Msg"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "msg",
+          "user"
+        ],
+        "title": "RegisterResponse"
+      },
+      "SeasonCreateRequest": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "maximum": 2100,
+            "minimum": 1950,
+            "title": "Year"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "year"
+        ],
+        "title": "SeasonCreateRequest"
+      },
+      "SeasonCreateResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "year",
+          "is_active"
+        ],
+        "title": "SeasonCreateResponse"
+      },
+      "SessionType": {
+        "type": "string",
+        "enum": [
+          "FP1",
+          "FP2",
+          "FP3",
+          "QUALY",
+          "SPRINT_QUALY",
+          "SPRINT",
+          "RACE"
+        ],
+        "title": "SessionType"
+      },
+      "SourceProvider": {
+        "type": "string",
+        "enum": [
+          "MANUAL",
+          "FASTF1"
+        ],
+        "title": "SourceProvider"
+      },
+      "TestingEventCreateRequest": {
+        "properties": {
+          "season_year": {
+            "type": "integer",
+            "title": "Season Year"
+          },
+          "circuit_code": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 2,
+            "title": "Circuit Code"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Start"
+          },
+          "event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event End"
+          },
+          "scheduled_event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event Start"
+          },
+          "scheduled_event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event End"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider",
+            "default": "MANUAL"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TestingEventStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/TestingEventSessionCreateRequest"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "season_year",
+          "circuit_code",
+          "name"
+        ],
+        "title": "TestingEventCreateRequest"
+      },
+      "TestingEventCreateResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "season_year": {
+            "type": "integer",
+            "title": "Season Year"
+          },
+          "circuit_code": {
+            "type": "string",
+            "title": "Circuit Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Start"
+          },
+          "event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event End"
+          },
+          "scheduled_event_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event Start"
+          },
+          "scheduled_event_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Event End"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TestingEventStatus"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/TestingEventSessionCreateResponse"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "season_year",
+          "circuit_code",
+          "name",
+          "source_provider",
+          "source_key",
+          "event_start",
+          "event_end",
+          "scheduled_event_start",
+          "scheduled_event_end",
+          "status",
+          "status_reason",
+          "sessions"
+        ],
+        "title": "TestingEventCreateResponse"
+      },
+      "TestingEventSessionCreateRequest": {
+        "properties": {
+          "session_order": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Session Order"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider",
+            "default": "MANUAL"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "start_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Datetime"
+          },
+          "end_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Datetime"
+          },
+          "scheduled_start_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start Datetime"
+          },
+          "scheduled_end_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled End Datetime"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_order",
+          "name"
+        ],
+        "title": "TestingEventSessionCreateRequest"
+      },
+      "TestingEventSessionCreateResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "session_order": {
+            "type": "integer",
+            "title": "Session Order"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_provider": {
+            "$ref": "#/components/schemas/SourceProvider"
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Key"
+          },
+          "start_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Datetime"
+          },
+          "end_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Datetime"
+          },
+          "scheduled_start_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Start Datetime"
+          },
+          "scheduled_end_datetime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled End Datetime"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "session_order",
+          "name",
+          "source_provider",
+          "source_key",
+          "start_datetime",
+          "end_datetime",
+          "scheduled_start_datetime",
+          "scheduled_end_datetime"
+        ],
+        "title": "TestingEventSessionCreateResponse"
+      },
+      "TestingEventStatus": {
+        "type": "string",
+        "enum": [
+          "SCHEDULED",
+          "CANCELLED",
+          "POSTPONED",
+          "COMPLETED"
+        ],
+        "title": "TestingEventStatus"
+      },
+      "UserSummary": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "public_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Public Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "public_id",
+          "username",
+          "email"
+        ],
+        "title": "UserSummary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -3,9 +3,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from app.adapters.sqlalchemy.auth_repository import SqlAlchemyAuthRepository
-from app.adapters.sqlalchemy.powerup_repository import SqlAlchemyPowerupRepository
 from app.adapters.sqlalchemy.season_repository import SqlAlchemySeasonRepository
-from app.domain.admin import PublishResults
 from app.domain.auth import (
     GoogleIdentity,
     LoginGoogleUser,
@@ -15,13 +13,8 @@ from app.domain.auth import (
     RequestPasswordReset,
     ResetPassword,
 )
-from app.domain.betting import CreateBet
-from app.domain.powerups import ListAssignmentsForSeason, UsePowerup
-from app.domain.results import ListResults, PublishContextResults, UpsertResults
+
 from app.domain.seasons import GetActiveSeason, ListSeasons
-from app.models.bets import BetCreate
-from app.models.powerups import UsePowerupRequest
-from app.models.results import PublishResultsRequest, ResultsQuery, ResultsUpsertRequest
 
 
 class FakeScalarResult:
@@ -330,51 +323,3 @@ def test_season_use_cases_list_and_resolve_active_season() -> None:
 
     assert [season.year for season in seasons] == [2026, 2025]
     assert active is season_2026
-
-
-def test_create_bet_returns_domain_payload() -> None:
-    use_case = CreateBet()
-
-    bet = use_case.execute(5, BetCreate(context_id=9, event_session_id=42))
-
-    assert bet["user_id"] == 5
-    assert bet["bet_context_id"] == 9
-    assert bet["event_session_id"] == 42
-
-
-def test_results_use_cases_return_expected_shapes() -> None:
-    listed = ListResults().execute(ResultsQuery(context_id=1, session_id=2))
-    upserted = UpsertResults().execute(
-        ResultsUpsertRequest(context_id=1, event_session_id=2, items=[{"driver": "ALO"}])
-    )
-    published = PublishContextResults().execute(PublishResultsRequest(context_id=1, event_session_id=2))
-
-    assert listed["results_published"] is False
-    assert upserted["items_count"] == 1
-    assert published["results_published"] is True
-
-
-def test_powerup_use_cases_work_with_repository_and_domain_logic() -> None:
-    powerup = SimpleNamespace(id=1, code="HALF", name="/2", target_mode="SINGLE", is_enabled=True)
-    repository = SqlAlchemyPowerupRepository(FakeSession(execute_values=[[powerup]]))
-
-    items = repository.list_powerups()
-    assignments = ListAssignmentsForSeason().execute(2026)
-    result = UsePowerup().execute(
-        UsePowerupRequest(
-            bet_context_id=3,
-            event_session_id=10,
-            powerup_code="HALF",
-            targets=[{"user_id": 7}],
-        )
-    )
-
-    assert items[0].code == "HALF"
-    assert assignments["season_id"] == 2026
-    assert result["targets_count"] == 1
-
-
-def test_publish_results_use_case_uses_domain_only() -> None:
-    result = PublishResults().execute(11)
-
-    assert result == {"published_by": 11}

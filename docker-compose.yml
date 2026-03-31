@@ -18,7 +18,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       args:
-        INSTALL_DEV: "true"
+        INSTALL_DEV: "false"
     container_name: futuref1-backend
     env_file:
       - ./.env

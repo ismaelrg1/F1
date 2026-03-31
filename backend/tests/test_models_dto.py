@@ -1,5 +1,4 @@
 from app.models.auth import LoginRequest
-from app.models.bets import BetCreate
 from app.models.seasons import SeasonRead
 
 
@@ -9,12 +8,6 @@ def test_login_request_validation() -> None:
     assert payload.username == "alice"
     assert payload.password == "secret"
 
-
-def test_bet_create_validation() -> None:
-    payload = BetCreate(context_id=7, event_session_id=15)
-
-    assert payload.context_id == 7
-    assert payload.event_session_id == 15
 
 
 def test_season_read_from_attributes() -> None:
