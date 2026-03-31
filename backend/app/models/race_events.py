@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -48,7 +49,7 @@ class RaceEventCreateRequest(BaseModel):
 
 
 class EventSessionCreateResponse(BaseModel):
-    id: int
+    public_id: UUID
     session_type: SessionType
     source_provider: SourceProvider
     source_key: str | None
@@ -63,7 +64,7 @@ class EventSessionCreateResponse(BaseModel):
 
 
 class RaceEventCreateResponse(BaseModel):
-    id: int
+    public_id: UUID
     season_year: int
     round_number: int
     circuit_code: str

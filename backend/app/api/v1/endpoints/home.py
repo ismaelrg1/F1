@@ -5,6 +5,7 @@ from app.adapters.sqlalchemy import SqlAlchemyHomeRepository
 from app.api.deps import get_current_user
 from app.db.auth import User
 from app.db.session import get_db
+from app.domain.home import GetHome
 from app.models.home import HomeNextEventRead, HomeResponse
 
 router = APIRouter()
@@ -19,15 +20,18 @@ def get_home(
     user: User = Depends(get_current_user),
 ) -> HomeResponse:
     repository = SqlAlchemyHomeRepository(db)
-    next_event = repository.get_next_event_for_active_season()
+    use_case = GetHome(repository)
+    result = use_case.execute()
 
-    if next_event is None:
+    if result is None:
         return HomeResponse(next_event=None)
+
+    next_event = result.event
 
     return HomeResponse(
         next_event=HomeNextEventRead(
-            id=next_event.id,
-            event_kind="RACE" if hasattr(next_event, "round_number") else "TESTING",
+            public_id=next_event.public_id,
+            event_kind=result.kind,
             season_year=next_event.season.year,
             round_number=getattr(next_event, "round_number", None),
             name=next_event.name,

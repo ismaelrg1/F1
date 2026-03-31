@@ -223,7 +223,7 @@ def create_testing_event(
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return TestingEventCreateResponse(
-        id=testing_event.id,
+        public_id=testing_event.public_id,
         season_year=testing_event.season.year,
         circuit_code=testing_event.circuit.code,
         name=testing_event.name,
@@ -237,7 +237,7 @@ def create_testing_event(
         status_reason=testing_event.status_reason,
         sessions=[
             TestingEventSessionCreateResponse(
-                id=session.id,
+                public_id=session.public_id,
                 session_order=session.session_order,
                 name=session.name,
                 source_provider=session.source_provider,
@@ -289,7 +289,7 @@ def update_testing_event(
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return TestingEventCreateResponse(
-        id=testing_event.id,
+        public_id=testing_event.public_id,
         season_year=testing_event.season.year,
         circuit_code=testing_event.circuit.code,
         name=testing_event.name,
@@ -303,7 +303,7 @@ def update_testing_event(
         status_reason=testing_event.status_reason,
         sessions=[
             TestingEventSessionCreateResponse(
-                id=session.id,
+                public_id=session.public_id,
                 session_order=session.session_order,
                 name=session.name,
                 source_provider=session.source_provider,
@@ -355,7 +355,7 @@ def create_race_event(
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return RaceEventCreateResponse(
-        id=race_event.id,
+        public_id=race_event.public_id,
         season_year=race_event.season.year,
         round_number=race_event.round_number,
         circuit_code=race_event.circuit.code,
@@ -370,7 +370,7 @@ def create_race_event(
         status_reason=race_event.status_reason,
         sessions=[
             EventSessionCreateResponse(
-                id=session.id,
+                public_id=session.public_id,
                 session_type=session.session_type,
                 source_provider=session.source_provider,
                 source_key=session.source_key,
@@ -426,7 +426,7 @@ def update_race_event(
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return RaceEventCreateResponse(
-        id=race_event.id,
+        public_id=race_event.public_id,
         season_year=race_event.season.year,
         round_number=race_event.round_number,
         circuit_code=race_event.circuit.code,
@@ -441,7 +441,7 @@ def update_race_event(
         status_reason=race_event.status_reason,
         sessions=[
             EventSessionCreateResponse(
-                id=session.id,
+                public_id=session.public_id,
                 session_type=session.session_type,
                 source_provider=session.source_provider,
                 source_key=session.source_key,

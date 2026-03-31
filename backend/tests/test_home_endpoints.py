@@ -196,3 +196,68 @@ def test_get_home_returns_null_when_no_upcoming_event_exists(client, db_session)
 
     assert response.status_code == 200
     assert response.json() == {"next_event": None}
+
+
+import json
+import pytest
+
+@pytest.mark.manual
+def test_preview_home_payload_prints_result(client, db_session) -> None:
+    now = datetime.now(UTC)
+
+    _create_user(
+        db_session,
+        username="home_manual",
+        email="home_manual@example.com",
+        password="secret123",
+    )
+
+    season = Season(year=2026, is_active=True)
+    country = Country(iso2="BH", name="Bahrain", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code="bahrain",
+        name="Bahrain International Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    testing_event = CompetitionTestingEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        name="Pre-Season Testing 1",
+        scheduled_event_start=now + timedelta(days=2),
+        scheduled_event_end=now + timedelta(days=4),
+        source_provider=SourceProvider.MANUAL,
+        status=CompetitionTestingEventStatus.SCHEDULED,
+    )
+
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=1,
+        name="Bahrain Grand Prix",
+        scheduled_event_start=now + timedelta(days=10),
+        scheduled_event_end=now + timedelta(days=12),
+        source_provider=SourceProvider.MANUAL,
+        status=RaceEventStatus.SCHEDULED,
+    )
+
+    db_session.add_all([testing_event, race_event])
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "home_manual", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get("/api/v1/home")
+    assert response.status_code == 200
+
+    print(json.dumps(response.json(), indent=2, ensure_ascii=False))

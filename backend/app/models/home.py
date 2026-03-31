@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel
 
 class HomeNextEventRead(BaseModel):
-    id: int
+    public_id: UUID
     event_kind: Literal["RACE", "TESTING"]
     season_year: int
     round_number: int | None

@@ -9,6 +9,7 @@ from app.adapters.sqlalchemy.country_repository import SqlAlchemyCountryReposito
 from app.adapters.sqlalchemy.admin_testing_event_repository import SqlAlchemyAdminTestingEventRepository
 from app.adapters.sqlalchemy.admin_race_event_repository import SqlAlchemyAdminRaceEventRepository
 from app.adapters.sqlalchemy.home_repository import SqlAlchemyHomeRepository
+from app.adapters.sqlalchemy.calendar_repository import SqlAlchemyCalendarRepository
 
 
 __all__ = [
@@ -33,4 +34,6 @@ __all__ = [
     "SqlAlchemyAdminRaceEventRepository",
 
     "SqlAlchemyHomeRepository",
+
+    "SqlAlchemyCalendarRepository",
 ]
