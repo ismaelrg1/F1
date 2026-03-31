@@ -16,6 +16,9 @@ class AdminRaceEventRepository(Protocol):
     def get_by_season_and_round(self, *, season_id: int, round_number: int) -> RaceEvent | None:
         ...
 
+    def list_race_events(self, *, season_year: int | None = None) -> list[RaceEvent]:
+        ...
+
     def create(
         self,
         *,

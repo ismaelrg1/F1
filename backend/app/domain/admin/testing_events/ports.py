@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Protocol
 
 from app.db.competition import Circuit, Season, TestingEvent
@@ -15,6 +17,9 @@ class AdminTestingEventRepository(Protocol):
         ...
 
     def get_by_season_and_name(self, *, season_id: int, name: str) -> TestingEvent | None:
+        ...
+
+    def list_testing_events(self, *, season_year: int | None = None) -> list[TestingEvent]:
         ...
 
     def create(

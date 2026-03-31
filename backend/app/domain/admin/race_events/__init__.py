@@ -6,7 +6,7 @@ from app.domain.admin.race_events.errors import (
     SeasonNotFoundForRaceEventError,
 )
 from app.domain.admin.race_events.ports import AdminRaceEventRepository
-from app.domain.admin.race_events.use_cases import CreateRaceEvent, UpdateRaceEvent
+from app.domain.admin.race_events.use_cases import CreateRaceEvent, UpdateRaceEvent, ListRaceEvents
 
 __all__ = [
     "AdminRaceEventRepository",
@@ -17,4 +17,5 @@ __all__ = [
     "RaceEventNotFoundError",
     "SeasonNotFoundForRaceEventError",
     "UpdateRaceEvent",
+    "ListRaceEvents"
 ]

@@ -26,6 +26,7 @@ from app.domain.admin.testing_events import (
     TestingEventAlreadyExistsError,
     TestingEventNotFoundError,
     UpdateTestingEvent,
+    ListTestingEvents,
 )
 
 from app.domain.admin.race_events import (
@@ -37,6 +38,7 @@ from app.domain.admin.race_events import (
     RaceEventNotFoundError,
     SeasonNotFoundForRaceEventError,
     UpdateRaceEvent,
+    ListRaceEvents,
 )
 
 
@@ -72,4 +74,6 @@ __all__ = [
     "RaceEventNotFoundError",
     "SeasonNotFoundForRaceEventError",
     "UpdateRaceEvent",
+    "ListTestingEvents",
+    "ListRaceEvents"
 ]

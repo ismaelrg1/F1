@@ -124,3 +124,11 @@ class UpdateTestingEvent:
             status_reason=status_reason,
             sessions=sessions,
         )
+
+
+class ListTestingEvents:
+    def __init__(self, repository: AdminTestingEventRepository):
+        self._repository = repository
+
+    def execute(self, *, season_year: int | None = None):
+        return self._repository.list_testing_events(season_year=season_year)

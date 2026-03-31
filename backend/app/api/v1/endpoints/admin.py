@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, status, Query
 from sqlalchemy.orm import Session
 
 from app.adapters.fastf1 import FastF1AdminRepository
@@ -22,6 +22,8 @@ from app.domain.admin import (
     CreateCircuit,
     ListFastF1RaceEventPreviews,
     ListFastF1TestingEventPreviews,
+    ListRaceEvents,
+    ListTestingEvents,
     CreateTestingEvent,
     CreateRaceEvent,
     UpdateTestingEvent,
@@ -40,6 +42,15 @@ from app.models.race_events import (
     EventSessionCreateResponse,
     RaceEventCreateRequest,
     RaceEventCreateResponse,
+)
+
+from app.models.admin_event_reads import (
+    AdminRaceEventListResponse,
+    AdminRaceEventRead,
+    AdminRaceEventSessionRead,
+    AdminTestingEventListResponse,
+    AdminTestingEventRead,
+    AdminTestingEventSessionRead,
 )
 
 router = APIRouter()
@@ -453,4 +464,109 @@ def update_race_event(
             )
             for session in sorted(race_event.event_sessions, key=lambda s: s.start_datetime)
         ],
+    )
+
+
+
+@router.get(
+    "/race-events",
+    response_model=AdminRaceEventListResponse,
+    status_code=status.HTTP_200_OK,
+)
+def list_race_events(
+    season_year: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+) -> AdminRaceEventListResponse:
+    repository = SqlAlchemyAdminRaceEventRepository(db)
+    use_case = ListRaceEvents(repository)
+
+    race_events = use_case.execute(season_year=season_year)
+
+    return AdminRaceEventListResponse(
+        items=[
+            AdminRaceEventRead(
+                id=race_event.id,
+                season_year=race_event.season.year,
+                round_number=race_event.round_number,
+                circuit_code=race_event.circuit.code,
+                name=race_event.name,
+                source_provider=race_event.source_provider,
+                source_key=race_event.source_key,
+                event_start=race_event.event_start,
+                event_end=race_event.event_end,
+                scheduled_event_start=race_event.scheduled_event_start,
+                scheduled_event_end=race_event.scheduled_event_end,
+                status=race_event.status,
+                status_reason=race_event.status_reason,
+                sessions=[
+                    AdminRaceEventSessionRead(
+                        id=session.id,
+                        session_type=session.session_type,
+                        source_provider=session.source_provider,
+                        source_key=session.source_key,
+                        start_datetime=session.start_datetime,
+                        scheduled_start_datetime=session.scheduled_start_datetime,
+                        lock_cutoff=session.lock_cutoff,
+                        scheduled_lock_cutoff=session.scheduled_lock_cutoff,
+                        status=session.status,
+                        status_reason=session.status_reason,
+                        results_published=session.results_published,
+                        results_published_at=session.results_published_at,
+                    )
+                    for session in sorted(race_event.event_sessions, key=lambda s: s.start_datetime)
+                ],
+            )
+            for race_event in race_events
+        ]
+    )
+
+
+@router.get(
+    "/testing-events",
+    response_model=AdminTestingEventListResponse,
+    status_code=status.HTTP_200_OK,
+)
+def list_testing_events(
+    season_year: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+) -> AdminTestingEventListResponse:
+    repository = SqlAlchemyAdminTestingEventRepository(db)
+    use_case = ListTestingEvents(repository)
+
+    testing_events = use_case.execute(season_year=season_year)
+
+    return AdminTestingEventListResponse(
+        items=[
+            AdminTestingEventRead(
+                id=testing_event.id,
+                season_year=testing_event.season.year,
+                circuit_code=testing_event.circuit.code,
+                name=testing_event.name,
+                source_provider=testing_event.source_provider,
+                source_key=testing_event.source_key,
+                event_start=testing_event.event_start,
+                event_end=testing_event.event_end,
+                scheduled_event_start=testing_event.scheduled_event_start,
+                scheduled_event_end=testing_event.scheduled_event_end,
+                status=testing_event.status,
+                status_reason=testing_event.status_reason,
+                sessions=[
+                    AdminTestingEventSessionRead(
+                        id=session.id,
+                        session_order=session.session_order,
+                        name=session.name,
+                        source_provider=session.source_provider,
+                        source_key=session.source_key,
+                        start_datetime=session.start_datetime,
+                        end_datetime=session.end_datetime,
+                        scheduled_start_datetime=session.scheduled_start_datetime,
+                        scheduled_end_datetime=session.scheduled_end_datetime,
+                    )
+                    for session in sorted(testing_event.sessions, key=lambda s: s.session_order)
+                ],
+            )
+            for testing_event in testing_events
+        ]
     )

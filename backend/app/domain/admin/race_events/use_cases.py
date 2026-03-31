@@ -140,3 +140,10 @@ class UpdateRaceEvent:
             status_reason=status_reason,
             sessions=sessions,
         )
+    
+class ListRaceEvents:
+    def __init__(self, repository: AdminRaceEventRepository):
+        self._repository = repository
+
+    def execute(self, *, season_year: int | None = None):
+        return self._repository.list_race_events(season_year=season_year)

@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.competition import Circuit, EventSession, RaceEvent, Season
 from app.domain.admin.race_events.ports import AdminRaceEventRepository
@@ -26,6 +26,22 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
             RaceEvent.round_number == round_number,
         )
         return self._session.execute(stmt).scalar_one_or_none()
+    
+    def list_race_events(self, *, season_year: int | None = None) -> list[RaceEvent]:
+        stmt = (
+            select(RaceEvent)
+            .options(
+                selectinload(RaceEvent.season),
+                selectinload(RaceEvent.circuit),
+                selectinload(RaceEvent.event_sessions),
+            )
+            .order_by(RaceEvent.round_number.asc(), RaceEvent.id.asc())
+        )
+
+        if season_year is not None:
+            stmt = stmt.join(RaceEvent.season).where(Season.year == season_year)
+
+        return list(self._session.execute(stmt).scalars().unique().all())
 
     def create(
         self,

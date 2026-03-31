@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.competition import Circuit, Season, TestingEvent, TestingEventSession
 from app.domain.admin.testing_events.ports import AdminTestingEventRepository
@@ -26,6 +26,22 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
             TestingEvent.name == name,
         )
         return self._session.execute(stmt).scalar_one_or_none()
+    
+    def list_testing_events(self, *, season_year: int | None = None) -> list[TestingEvent]:
+        stmt = (
+            select(TestingEvent)
+            .options(
+                selectinload(TestingEvent.season),
+                selectinload(TestingEvent.circuit),
+                selectinload(TestingEvent.sessions),
+            )
+            .order_by(TestingEvent.id.asc())
+        )
+
+        if season_year is not None:
+            stmt = stmt.join(TestingEvent.season).where(Season.year == season_year)
+
+        return list(self._session.execute(stmt).scalars().unique().all())
 
     def create(
         self,

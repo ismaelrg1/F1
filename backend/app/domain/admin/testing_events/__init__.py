@@ -6,7 +6,7 @@ from app.domain.admin.testing_events.errors import (
     TestingEventNotFoundError,
 )
 from app.domain.admin.testing_events.ports import AdminTestingEventRepository
-from app.domain.admin.testing_events.use_cases import CreateTestingEvent, UpdateTestingEvent
+from app.domain.admin.testing_events.use_cases import CreateTestingEvent, UpdateTestingEvent, ListTestingEvents
 
 __all__ = [
     "AdminTestingEventRepository",
@@ -17,4 +17,5 @@ __all__ = [
     "TestingEventAlreadyExistsError",
     "TestingEventNotFoundError",
     "UpdateTestingEvent",
+    "ListTestingEvents"
 ]
