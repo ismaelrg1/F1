@@ -9,13 +9,15 @@ from app.domain.admin.testing_events.ports import AdminTestingEventRepository
 from app.domain.admin.testing_events.use_cases import CreateTestingEvent, UpdateTestingEvent, ListTestingEvents
 
 __all__ = [
-    "AdminTestingEventRepository",
     "CircuitNotFoundForTestingEventError",
-    "CreateTestingEvent",
     "DuplicateTestingEventSessionOrderError",
     "SeasonNotFoundForTestingEventError",
     "TestingEventAlreadyExistsError",
     "TestingEventNotFoundError",
+
+    "AdminTestingEventRepository",
+    
+    "CreateTestingEvent",
     "UpdateTestingEvent",
     "ListTestingEvents"
 ]

@@ -15,7 +15,6 @@ from app.api.error_translators import get_preferred_locale
 from app.db.auth import User
 from app.db.session import get_db
 from app.domain.admin import (
-    PublishResults,
     AdminError,
     CreateSeason,
     CreateCountry,
@@ -54,13 +53,6 @@ from app.models.admin_event_reads import (
 )
 
 router = APIRouter()
-
-@router.post("/results/publish")
-def publish_results(
-    db: Session = Depends(get_db),
-    user: User = Depends(require_permissions_all("RESULTS_PUBLISH")),
-):
-    return PublishResults().execute(user.id)
 
 
 @router.post(

@@ -19,18 +19,21 @@ from app.domain.access.use_cases import (
 
 __all__ = [
     "AccessError",
-    "AccessGroup",
-    "AccessRepository",
-    "AuthenticatedUser",
-    "EnsureGroupMember",
-    "EnsurePermissions",
     "GroupNotFoundError",
     "InvalidGroupIdError",
     "InvalidSubjectError",
     "MissingPermissionsError",
     "MissingSubjectError",
     "NotGroupMemberError",
+    "UserNotFoundError",
+    
+    "AccessGroup",
+    "AuthenticatedUser",
+
+    "AccessRepository",
+    
+    "EnsureGroupMember",
+    "EnsurePermissions",
     "ResolveCurrentGroup",
     "ResolveCurrentUser",
-    "UserNotFoundError",
 ]
