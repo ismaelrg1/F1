@@ -10,6 +10,9 @@ from app.adapters.sqlalchemy.admin_testing_event_repository import SqlAlchemyAdm
 from app.adapters.sqlalchemy.admin_race_event_repository import SqlAlchemyAdminRaceEventRepository
 from app.adapters.sqlalchemy.home_repository import SqlAlchemyHomeRepository
 from app.adapters.sqlalchemy.calendar_repository import SqlAlchemyCalendarRepository
+from app.adapters.sqlalchemy.admin_driver_repository import SqlAlchemyAdminDriverRepository
+from app.adapters.sqlalchemy.admin_engine_repository import SqlAlchemyAdminEngineRepository
+from app.adapters.sqlalchemy.admin_team_repository import SqlAlchemyAdminTeamRepository
 
 
 __all__ = [
@@ -36,4 +39,10 @@ __all__ = [
     "SqlAlchemyHomeRepository",
 
     "SqlAlchemyCalendarRepository",
+
+    "SqlAlchemyAdminDriverRepository",
+
+    "SqlAlchemyAdminEngineRepository",
+
+    "SqlAlchemyAdminTeamRepository",
 ]

@@ -10,11 +10,15 @@ setup_logging()
 Base.metadata.create_all(bind=engine)
 
 
-app = FastAPI(title=settings.app_name, version="0.1.0")
+is_production = settings.app_env.lower() == "production"
+
+app = FastAPI(
+    title=settings.app_name,
+    version="0.1.0",
+    docs_url=None if is_production else "/docs",
+    redoc_url=None if is_production else "/redoc",
+    openapi_url=None if is_production else "/openapi.json",
+)
 
 app.include_router(api_router, prefix="/api/v1")
 
-
-@app.get("/api/v1/health", tags=["health"])
-def healthcheck() -> dict:
-    return {"status": "ok", "env": settings.app_env}

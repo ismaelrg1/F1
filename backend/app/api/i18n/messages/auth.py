@@ -1,0 +1,30 @@
+MESSAGES_AUTH = {
+    "en": {
+        "auth.invalid_credentials": "Invalid credentials",
+        "auth.inactive_user": "This account cannot use password login",
+        "auth.missing_access_token": "Missing access token",
+        "auth.invalid_access_token": "Invalid access token",
+        "auth.missing_refresh_token": "Missing refresh token",
+        "auth.invalid_refresh_token": "Invalid refresh token",
+        "auth.missing_refresh_subject": "Missing refresh subject",
+        "auth.user_already_exists": "A user with this data already exists",
+        "auth.invalid_google_token": "Invalid Google token",
+        "auth.google_email_not_verified": "Google email is not verified",
+        "auth.google_account_not_registered": "No Google account is registered with this identity",
+        "auth.invalid_password_reset_token": "Invalid or expired password reset token",
+    },
+    "es": {
+        "auth.invalid_credentials": "Credenciales invalidas",
+        "auth.inactive_user": "Esta cuenta no puede usar inicio de sesion por contrasena",
+        "auth.missing_access_token": "Falta el token de acceso",
+        "auth.invalid_access_token": "El token de acceso no es valido",
+        "auth.missing_refresh_token": "Falta el token de refresh",
+        "auth.invalid_refresh_token": "El token de refresh no es valido",
+        "auth.missing_refresh_subject": "Falta el subject del refresh",
+        "auth.user_already_exists": "Ya existe un usuario con estos datos",
+        "auth.invalid_google_token": "El token de Google no es valido",
+        "auth.google_email_not_verified": "El email de Google no esta verificado",
+        "auth.google_account_not_registered": "No hay una cuenta de Google registrada con esta identidad",
+        "auth.invalid_password_reset_token": "El token de restablecimiento no es valido o ha expirado",
+    }
+}

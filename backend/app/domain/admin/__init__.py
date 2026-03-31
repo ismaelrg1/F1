@@ -41,6 +41,34 @@ from app.domain.admin.race_events import (
     ListRaceEvents,
 )
 
+from app.domain.admin.drivers import (
+    AdminDriverRepository,
+    CreateDriver,
+    CreateSeasonDriver,
+    DriverAlreadyExistsError,
+    DriverNotFoundForSeasonDriverError,
+    SeasonDriverAlreadyExistsError,
+    SeasonNotFoundForSeasonDriverError,
+)
+from app.domain.admin.engines import (
+    AdminEngineRepository,
+    CreateEngine,
+    CreateSeasonEngine,
+    EngineAlreadyExistsError,
+    EngineNotFoundForSeasonEngineError,
+    SeasonEngineAlreadyExistsError,
+    SeasonNotFoundForSeasonEngineError,
+)
+from app.domain.admin.teams import (
+    AdminTeamRepository,
+    CreateSeasonTeam,
+    CreateTeam,
+    SeasonNotFoundForSeasonTeamError,
+    SeasonTeamAlreadyExistsError,
+    TeamAlreadyExistsError,
+    TeamNotFoundForSeasonTeamError,
+)
+
 __all__ = [
     "CountryAlreadyExistsError",
     "CreateCountry",
@@ -77,5 +105,30 @@ __all__ = [
     "RaceEventNotFoundError",
     "SeasonNotFoundForRaceEventError",
     "UpdateRaceEvent",
-    "ListRaceEvents"
+    "ListRaceEvents",
+
+    "AdminDriverRepository",
+    "CreateDriver",
+    "CreateSeasonDriver",
+    "DriverAlreadyExistsError",
+    "DriverNotFoundForSeasonDriverError",
+    "SeasonDriverAlreadyExistsError",
+    "SeasonNotFoundForSeasonDriverError",
+
+    "AdminEngineRepository",
+    "CreateEngine",
+    "CreateSeasonEngine",
+    "EngineAlreadyExistsError",
+    "EngineNotFoundForSeasonEngineError",
+    "SeasonEngineAlreadyExistsError",
+    "SeasonNotFoundForSeasonEngineError",
+
+    "AdminTeamRepository",
+    "CreateSeasonTeam",
+    "CreateTeam",
+    "SeasonNotFoundForSeasonTeamError",
+    "SeasonTeamAlreadyExistsError",
+    "TeamAlreadyExistsError",
+    "TeamNotFoundForSeasonTeamError",
+
 ]
