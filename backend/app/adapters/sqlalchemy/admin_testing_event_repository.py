@@ -33,6 +33,8 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
         season_id: int,
         circuit_id: int,
         name: str,
+        source_provider,
+        source_key: str | None,
         event_start,
         event_end,
         scheduled_event_start,
@@ -45,6 +47,8 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
             season_id=season_id,
             circuit_id=circuit_id,
             name=name,
+            source_provider=source_provider,
+            source_key=source_key,
             event_start=event_start,
             event_end=event_end,
             scheduled_event_start=scheduled_event_start,
@@ -59,6 +63,8 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
             TestingEventSession(
                 session_order=session["session_order"],
                 name=session["name"],
+                source_provider=session["source_provider"],
+                source_key=session.get("source_key"),
                 start_datetime=session.get("start_datetime"),
                 end_datetime=session.get("end_datetime"),
                 scheduled_start_datetime=session.get("scheduled_start_datetime"),
@@ -80,6 +86,8 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
         season_id: int,
         circuit_id: int,
         name: str,
+        source_provider,
+        source_key: str | None,
         event_start,
         event_end,
         scheduled_event_start,
@@ -91,6 +99,8 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
         testing_event.season_id = season_id
         testing_event.circuit_id = circuit_id
         testing_event.name = name
+        testing_event.source_provider = source_provider
+        testing_event.source_key = source_key
         testing_event.event_start = event_start
         testing_event.event_end = event_end
         testing_event.scheduled_event_start = scheduled_event_start
@@ -106,6 +116,8 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
                 TestingEventSession(
                     session_order=session["session_order"],
                     name=session["name"],
+                    source_provider=session["source_provider"],
+                    source_key=session.get("source_key"),
                     start_datetime=session.get("start_datetime"),
                     end_datetime=session.get("end_datetime"),
                     scheduled_start_datetime=session.get("scheduled_start_datetime"),

@@ -86,3 +86,8 @@ class PowerUpTargetMode(str, enum.Enum):
     SINGLE = "SINGLE"
     MULTI = "MULTI"
     RULE = "RULE"
+
+
+class SourceProvider(str, enum.Enum):
+    MANUAL = "MANUAL"
+    FASTF1 = "FASTF1"

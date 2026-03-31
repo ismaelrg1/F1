@@ -34,6 +34,8 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
         circuit_id: int,
         round_number: int,
         name: str,
+        source_provider,
+        source_key: str | None,
         event_start,
         event_end,
         scheduled_event_start,
@@ -47,6 +49,8 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
             circuit_id=circuit_id,
             round_number=round_number,
             name=name,
+            source_provider=source_provider,
+            source_key=source_key,
             event_start=event_start,
             event_end=event_end,
             scheduled_event_start=scheduled_event_start,
@@ -61,6 +65,8 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
         for session in sessions:
             event_session = EventSession(
                 session_type=session["session_type"],
+                source_provider=session["source_provider"],
+                source_key=session.get("source_key"),
                 start_datetime=session["start_datetime"],
                 scheduled_start_datetime=session.get("scheduled_start_datetime"),
                 lock_cutoff=session["lock_cutoff"],
@@ -87,6 +93,8 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
         circuit_id: int,
         round_number: int,
         name: str,
+        source_provider,
+        source_key: str | None,
         event_start,
         event_end,
         scheduled_event_start,
@@ -99,6 +107,8 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
         race_event.circuit_id = circuit_id
         race_event.round_number = round_number
         race_event.name = name
+        race_event.source_provider = source_provider
+        race_event.source_key = source_key
         race_event.event_start = event_start
         race_event.event_end = event_end
         race_event.scheduled_event_start = scheduled_event_start
@@ -112,6 +122,8 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
         for session in sessions:
             event_session = EventSession(
                 session_type=session["session_type"],
+                source_provider=session["source_provider"],
+                source_key=session.get("source_key"),
                 start_datetime=session["start_datetime"],
                 scheduled_start_datetime=session.get("scheduled_start_datetime"),
                 lock_cutoff=session["lock_cutoff"],

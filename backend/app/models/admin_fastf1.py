@@ -1,10 +1,13 @@
 from datetime import datetime
 from pydantic import BaseModel
+from app.db.enums import SourceProvider
 
 class FastF1SessionPreview(BaseModel):
     order: int
     fastf1_name: str
     session_type: str | None
+    source_provider: SourceProvider
+    source_key: str
     scheduled_start_utc: datetime | None
 
 
@@ -17,6 +20,8 @@ class FastF1RaceEventPreview(BaseModel):
     official_event_name: str
     location: str
     event_format: str
+    source_provider: SourceProvider
+    source_key: str
     circuit_code_suggestion: str
     scheduled_event_end_utc: datetime | None
     sessions: list[FastF1SessionPreview]
@@ -27,6 +32,8 @@ class FastF1RaceEventPreviewListResponse(BaseModel):
 class FastF1TestingSessionPreview(BaseModel):
     order: int
     fastf1_name: str
+    source_provider: SourceProvider
+    source_key: str
     scheduled_start_utc: datetime | None
 
 
@@ -38,6 +45,8 @@ class FastF1TestingEventPreview(BaseModel):
     official_event_name: str
     location: str
     event_format: str
+    source_provider: SourceProvider
+    source_key: str
     circuit_code_suggestion: str
     scheduled_event_end_utc: datetime | None
     sessions: list[FastF1TestingSessionPreview]

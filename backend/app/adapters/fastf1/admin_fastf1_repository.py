@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.competition import Country
+from app.db.enums import SourceProvider
 from app.domain.admin.fastf1.ports import AdminFastF1Repository
 
 
@@ -29,6 +30,12 @@ class FastF1AdminRepository(AdminFastF1Repository):
 
             country_name = str(event["Country"]).strip()
             country = self._find_country_by_name(country_name)
+            event_source_key = self._build_event_source_key(
+                kind="race",
+                year=year,
+                official_event_name=str(event["OfficialEventName"]),
+                location=str(event["Location"]),
+            )
 
             sessions: list[dict[str, Any]] = []
             for index in self._get_session_indexes(event):
@@ -48,6 +55,12 @@ class FastF1AdminRepository(AdminFastF1Repository):
                         "order": index,
                         "fastf1_name": session_name,
                         "session_type": self._map_session_type(session_name) if session_name else None,
+                        "source_provider": SourceProvider.FASTF1,
+                        "source_key": self._build_session_source_key(
+                            event_source_key,
+                            self._map_session_type(session_name),
+                            index,
+                        ),
                         "scheduled_start_utc": scheduled_start_utc,
                     }
                 )
@@ -62,6 +75,8 @@ class FastF1AdminRepository(AdminFastF1Repository):
                     "official_event_name": str(event["OfficialEventName"]),
                     "location": str(event["Location"]),
                     "event_format": event_format,
+                    "source_provider": SourceProvider.FASTF1,
+                    "source_key": event_source_key,
                     "circuit_code_suggestion": self._slugify(str(event["Location"])),
                     "scheduled_event_end_utc": self._to_datetime(event.get("EventDate")),
                     "sessions": sessions,
@@ -83,6 +98,12 @@ class FastF1AdminRepository(AdminFastF1Repository):
 
             country_name = str(event["Country"]).strip()
             country = self._find_country_by_name(country_name)
+            event_source_key = self._build_event_source_key(
+                kind="testing",
+                year=year,
+                official_event_name=str(event["OfficialEventName"]),
+                location=str(event["Location"]),
+            )
 
             sessions: list[dict[str, Any]] = []
             for index in self._get_session_indexes(event):
@@ -101,6 +122,8 @@ class FastF1AdminRepository(AdminFastF1Repository):
                     {
                         "order": index,
                         "fastf1_name": session_name,
+                        "source_provider": SourceProvider.FASTF1,
+                        "source_key": self._build_session_source_key(event_source_key, None, index),
                         "scheduled_start_utc": scheduled_start_utc,
                     }
                 )
@@ -114,6 +137,8 @@ class FastF1AdminRepository(AdminFastF1Repository):
                     "official_event_name": str(event["OfficialEventName"]),
                     "location": str(event["Location"]),
                     "event_format": event_format,
+                    "source_provider": SourceProvider.FASTF1,
+                    "source_key": event_source_key,
                     "circuit_code_suggestion": self._slugify(str(event["Location"])),
                     "scheduled_event_end_utc": self._to_datetime(event.get("EventDate")),
                     "sessions": sessions,
@@ -179,3 +204,12 @@ class FastF1AdminRepository(AdminFastF1Repository):
                 indexes.append(int(suffix))
 
         return sorted(indexes)
+
+    @classmethod
+    def _build_event_source_key(cls, *, kind: str, year: int, official_event_name: str, location: str) -> str:
+        return f"fastf1:{kind}:{year}:{cls._slugify(official_event_name)}:{cls._slugify(location)}"
+
+    @staticmethod
+    def _build_session_source_key(event_source_key: str, session_type: str | None, index: int) -> str:
+        suffix = session_type.lower() if session_type else f"session-{index}"
+        return f"{event_source_key}:{suffix}"

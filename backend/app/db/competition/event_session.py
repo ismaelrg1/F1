@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from app.db.scoring import ScoreSession, OfficialResult, ResultPublication, ScoringRule
     from app.db.powerups import PowerUpUse, PowerUpRestriction
 
-from app.db.enums import SessionType, RaceEventStatus
+from app.db.enums import SessionType, RaceEventStatus, SourceProvider
 
 class EventSession(Base):
     __tablename__ = "event_sessions"
@@ -31,6 +31,13 @@ class EventSession(Base):
 
         Index("ix_event_sessions_race_event_id", "race_event_id"),
         Index("ix_event_sessions_public_id", "public_id"),
+        Index(
+            "uq_event_sessions_source",
+            "source_provider",
+            "source_key",
+            unique=True,
+            postgresql_where=text("source_key IS NOT NULL"),
+        ),
 
         {"schema": "competition"},
     )
@@ -57,6 +64,13 @@ class EventSession(Base):
         ),
         nullable=False,
     )
+
+    source_provider: Mapped[SourceProvider] = mapped_column(
+        Enum(SourceProvider, name="source_provider_enum", schema="competition", create_type=False),
+        nullable=False,
+        server_default=text("'MANUAL'"),
+    )
+    source_key: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
 
     status: Mapped[RaceEventStatus] = mapped_column(
         Enum(RaceEventStatus, name="race_event_status_enum", schema="competition"),

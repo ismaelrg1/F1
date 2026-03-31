@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from app.db.competition import Season, Circuit, DriverEntry, EventSession
     from app.db.betting import BetContext
 
-from app.db.enums import RaceEventStatus
+from app.db.enums import RaceEventStatus, SourceProvider
 
 class RaceEvent(Base):
     __tablename__ = "race_events"
@@ -29,6 +29,13 @@ class RaceEvent(Base):
         CheckConstraint(
             "scheduled_event_start IS NULL OR scheduled_event_end IS NULL OR scheduled_event_start < scheduled_event_end",
             name="ck_race_events_scheduled_window_order",
+        ),
+        Index(
+            "uq_race_events_source",
+            "source_provider",
+            "source_key",
+            unique=True,
+            postgresql_where=text("source_key IS NOT NULL"),
         ),
         {"schema": "competition"},
     )
@@ -60,6 +67,13 @@ class RaceEvent(Base):
     event_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     scheduled_event_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     scheduled_event_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    source_provider: Mapped[SourceProvider] = mapped_column(
+        Enum(SourceProvider, name="source_provider_enum", schema="competition"),
+        nullable=False,
+        server_default=text("'MANUAL'"),
+    )
+    source_key: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
 
     status: Mapped[RaceEventStatus] = mapped_column(
         Enum(RaceEventStatus, name="race_event_status_enum", schema="competition"),

@@ -14,12 +14,19 @@ if TYPE_CHECKING:
     from app.db.competition import Season, Circuit, TestingEventSession
     from app.db.betting import BetContext
 
-from app.db.enums import TestingEventStatus
+from app.db.enums import TestingEventStatus, SourceProvider
 
 class TestingEvent(Base):
     __tablename__ = "testing_events"
     __table_args__ = (
         Index("ix_testing_events_public_id", "public_id"),
+        Index(
+            "uq_testing_events_source",
+            "source_provider",
+            "source_key",
+            unique=True,
+            postgresql_where=text("source_key IS NOT NULL"),
+        ),
         {"schema": "competition"},
     )
 
@@ -45,6 +52,13 @@ class TestingEvent(Base):
     event_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     scheduled_event_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     scheduled_event_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    source_provider: Mapped[SourceProvider] = mapped_column(
+        Enum(SourceProvider, name="source_provider_enum", schema="competition", create_type=False),
+        nullable=False,
+        server_default=text("'MANUAL'"),
+    )
+    source_key: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
 
     status: Mapped[TestingEventStatus] = mapped_column(
                                         Enum(TestingEventStatus, name="testing_event_status_enum", schema="competition"),
