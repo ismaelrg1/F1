@@ -98,8 +98,8 @@ def login_local(
     except AuthError as exc:
         raise _translate_auth_error(exc, locale=locale) from exc
 
-    access_token = create_token(subject=str(user.id), token_type="access")
-    refresh_token = create_token(subject=str(user.id), token_type="refresh")
+    access_token = create_token(subject=str(user.public_id), token_type="access")
+    refresh_token = create_token(subject=str(user.public_id), token_type="refresh")
     set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token)
     return _build_login_response(user=user, message="Logged in")
 
@@ -121,8 +121,8 @@ def login_google(
     except AuthError as exc:
         raise _translate_auth_error(exc, locale=locale) from exc
 
-    access_token = create_token(subject=str(user.id), token_type="access")
-    refresh_token = create_token(subject=str(user.id), token_type="refresh")
+    access_token = create_token(subject=str(user.public_id), token_type="access")
+    refresh_token = create_token(subject=str(user.public_id), token_type="refresh")
     set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token)
     return _build_login_response(user=user, message="Logged in with Google")
 

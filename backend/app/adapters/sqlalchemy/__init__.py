@@ -13,6 +13,7 @@ from app.adapters.sqlalchemy.calendar_repository import SqlAlchemyCalendarReposi
 from app.adapters.sqlalchemy.admin_driver_repository import SqlAlchemyAdminDriverRepository
 from app.adapters.sqlalchemy.admin_engine_repository import SqlAlchemyAdminEngineRepository
 from app.adapters.sqlalchemy.admin_team_repository import SqlAlchemyAdminTeamRepository
+from app.adapters.sqlalchemy.bet_questions_repository import SqlAlchemyBetQuestionsRepository
 
 
 __all__ = [
@@ -45,4 +46,6 @@ __all__ = [
     "SqlAlchemyAdminEngineRepository",
 
     "SqlAlchemyAdminTeamRepository",
+
+    "SqlAlchemyBetQuestionsRepository",
 ]

@@ -2,10 +2,12 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
 
+import jwt
 from sqlalchemy import select
 
 from app.adapters.google import GoogleIdTokenVerifier
 from app.adapters.security import PasslibPasswordHasher, Sha256ResetTokenHasher
+from app.core.config import settings
 from app.db.auth import PasswordResetToken
 from app.db.auth import User
 
@@ -77,6 +79,30 @@ def test_login_local_endpoint_sets_jwt_cookies(client, db_session) -> None:
     assert response.status_code == 200
     assert response.cookies.get("access_token_cookie") is not None
     assert response.cookies.get("refresh_token_cookie") is not None
+
+
+def test_login_local_endpoint_sets_public_id_as_jwt_subject(client, db_session) -> None:
+    username, email = _unique_user_data("login_subject")
+
+    _create_local_user(db_session, username=username, email=email, password="secret123")
+    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+
+    response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": username, "password": "secret123"},
+    )
+
+    assert response.status_code == 200
+
+    access_token = response.cookies.get("access_token_cookie")
+    assert access_token is not None
+
+    payload = jwt.decode(
+        access_token,
+        settings.jwt_secret,
+        algorithms=[settings.jwt_algorithm],
+    )
+    assert payload["sub"] == str(user.public_id)
 
 
 def test_refresh_endpoint_uses_refresh_cookie_after_login(client, db_session) -> None:

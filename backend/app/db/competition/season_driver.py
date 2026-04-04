@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Enum, ForeignKey, Index, text
+from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING
@@ -16,6 +16,17 @@ class SeasonDriver(Base):
     __tablename__ = "season_drivers"
     __table_args__ = (
         Index("ix_season_drivers_driver_id", "driver_id"),
+        CheckConstraint(
+            "driver_number IS NULL OR driver_number > 0",
+            name="ck_season_drivers_driver_number_positive",
+        ),
+        Index(
+            "uq_season_drivers_season_driver_number",
+            "season_id",
+            "driver_number",
+            unique=True,
+            postgresql_where=text("driver_number IS NOT NULL"),
+        ),
         {"schema": "competition"},
     )
 
@@ -28,6 +39,11 @@ class SeasonDriver(Base):
         ForeignKey("competition.drivers.id", ondelete="RESTRICT"), 
         primary_key=True
         )
+
+    driver_number: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
 
     status: Mapped[SeasonDriverStatus] = mapped_column(
         Enum(SeasonDriverStatus, name="season_driver_status_enum", schema="competition"),

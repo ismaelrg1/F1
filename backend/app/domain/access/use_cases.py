@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from app.domain.access.errors import (
     GroupNotFoundError,
     InvalidGroupIdError,
@@ -20,31 +22,45 @@ class ResolveCurrentUser:
             raise MissingSubjectError()
 
         try:
-            user_id = int(subject)
+            user_public_id = UUID(subject)
         except (TypeError, ValueError) as exc:
             raise InvalidSubjectError() from exc
 
-        user = self._repository.get_authenticated_user(user_id)
+        user = self._repository.get_authenticated_user_by_public_id(user_public_id)
         if user is None:
             raise UserNotFoundError()
         return user
 
 
 class ResolveCurrentGroup:
-    def __init__(self, repository: AccessRepository, *, default_group_id: int):
+    def __init__(
+        self,
+        repository: AccessRepository,
+        *,
+        default_group_id: int | None = None,
+        default_group_public_id: UUID | None = None,
+    ):
         self._repository = repository
         self._default_group_id = default_group_id
+        self._default_group_public_id = default_group_public_id
 
     def execute(self, raw_group_id: str | None) -> AccessGroup:
         if raw_group_id is None:
-            group_id = self._default_group_id
+            if self._default_group_public_id is not None:
+                group = self._repository.get_group_by_public_id(self._default_group_public_id)
+            elif self._default_group_id is not None:
+                group = self._repository.get_group_by_id(self._default_group_id)
+            else:
+                group = None
+
         else:
             try:
-                group_id = int(raw_group_id)
-            except ValueError as exc:
+                group_public_id = UUID(raw_group_id)
+            except (TypeError, ValueError) as exc:
                 raise InvalidGroupIdError() from exc
 
-        group = self._repository.get_group(group_id)
+            group = self._repository.get_group_by_public_id(group_public_id)
+
         if group is None:
             raise GroupNotFoundError()
         return group

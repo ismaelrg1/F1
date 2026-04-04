@@ -64,7 +64,7 @@ def _resolve_access_user(db: Session, subject: str | None):
 
 def _resolve_access_group(db: Session, raw_group_id: str | None):
     repository = _build_access_repository(db)
-    use_case = ResolveCurrentGroup(repository, default_group_id=settings.default_group_id)
+    use_case = ResolveCurrentGroup(repository, default_group_id=settings.default_group_id, default_group_public_id=getattr(settings, "default_group_public_id", None))
     return use_case.execute(raw_group_id)
 
 
@@ -126,8 +126,8 @@ def require_group_member(
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
     try:
-        auth_user = _resolve_access_user(db, str(user.id))
-        auth_group = _resolve_access_group(db, str(group.id))
+        auth_user = _resolve_access_user(db, str(user.public_id))
+        auth_group = _resolve_access_group(db, str(group.public_id))
         ensure_membership.execute(auth_user, auth_group)
     except AccessError as exc:
         raise _translate_access_error(exc, locale=locale) from exc
@@ -145,7 +145,7 @@ def require_permissions_all(*required: str) -> Callable[..., User]:
         locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
         try:
-            auth_user = _resolve_access_user(db, str(user.id))
+            auth_user = _resolve_access_user(db, str(user.public_id))
             ensure_permissions.execute_all(auth_user, required)
         except AccessError as exc:
             raise _translate_access_error(exc, locale=locale) from exc

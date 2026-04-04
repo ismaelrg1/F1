@@ -60,6 +60,13 @@ class BetValueType(str, enum.Enum):
     POSITION = "POSITION"
 
 
+class BetScoreRelationType(str, enum.Enum):
+    DISTINCT = "DISTINCT"
+    IMPLIES_VALUE = "IMPLIES_VALUE"
+    MATCHES_POSITION = "MATCHES_POSITION"
+    MUTUALLY_EXCLUSIVE = "MUTUALLY_EXCLUSIVE"
+
+
 class ScoreComponentType(str, enum.Enum):
     BASE = "BASE"
     EXTRA = "EXTRA"

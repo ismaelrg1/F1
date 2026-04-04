@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Optional, List
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.db.betting import BetTemplateItem, BetPick, BetException
+    from app.db.betting import BetException, BetPick, BetScoreRelation, BetTemplateItem
     from app.db.scoring import OfficialResult, ScoringRule
 
 from app.db.enums import BetValueType
@@ -84,6 +84,20 @@ class BetScore(Base):
     bet_exceptions: Mapped[List["BetException"]] = relationship(
         "BetException",
         back_populates="bet_score",
+    )
+
+    source_relations: Mapped[list["BetScoreRelation"]] = relationship(
+        "BetScoreRelation",
+        foreign_keys="BetScoreRelation.source_bet_score_id",
+        back_populates="source_bet_score",
+        cascade="all, delete-orphan",
+    )
+
+    target_relations: Mapped[list["BetScoreRelation"]] = relationship(
+        "BetScoreRelation",
+        foreign_keys="BetScoreRelation.target_bet_score_id",
+        back_populates="target_bet_score",
+        cascade="all, delete-orphan",
     )
 
     official_results: Mapped[list["OfficialResult"]] = relationship(
