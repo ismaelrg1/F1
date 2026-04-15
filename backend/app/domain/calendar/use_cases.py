@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from app.db.competition import RaceEvent, TestingEvent
+from app.domain.calendar.models import CalendarEvent, CalendarEventResult
 from app.domain.calendar.ports import CalendarRepository
-
-from app.domain.calendar.models import CalendarEventResult
 
 
 class GetCalendar:
@@ -13,54 +11,48 @@ class GetCalendar:
         self._repository = repository
 
     @staticmethod
-    def _event_sort_datetime(event: RaceEvent | TestingEvent) -> datetime:
+    def _event_sort_datetime(event: CalendarEvent) -> datetime:
         return event.event_start or event.scheduled_event_start or datetime.max.replace(tzinfo=UTC)
 
     def execute(self, *, season_year: int | None = None) -> list[CalendarEventResult]:
-        testing_events = self._repository.list_testing_events(season_year=season_year)
-        race_events = self._repository.list_race_events(season_year=season_year)
-
-        raw_items: list[tuple[str, RaceEvent | TestingEvent]] = [
-            *[("TESTING", event) for event in testing_events],
-            *[("RACE", event) for event in race_events],
-        ]
+        events = self._repository.list_events(season_year=season_year)
 
         now = datetime.now(UTC)
         upcoming_candidates = [
-            (kind, event)
-            for kind, event in raw_items
+            event
+            for event in events
             if (event.event_start or event.scheduled_event_start) is not None
             and (event.event_start or event.scheduled_event_start) >= now
-            and event.status.value in {"SCHEDULED", "POSTPONED"}
+            and event.status in {"SCHEDULED", "POSRPONED"}
         ]
 
-        up_next_key: tuple[str, int] | None = None
+        up_next_id: int | None = None
         if upcoming_candidates:
-            next_kind, next_event = min(
+            next_event = min(
                 upcoming_candidates,
-                key=lambda item: (
-                    self._event_sort_datetime(item[1]),
-                    getattr(item[1], "round_number", 0) or 0,
-                    item[1].id,
+                key=lambda event: (
+                    self._event_sort_datetime(event),
+                    0 if event.kind == "TESTING" else 1,
+                    event.round_number or 0,
+                    event.id,
                 ),
             )
-            up_next_key = (next_kind, next_event.id)
+            up_next_id = next_event.id
 
         sorted_items = sorted(
-            raw_items,
-            key=lambda item: (
-                0 if item[0] == "TESTING" else 1,
-                self._event_sort_datetime(item[1]),
-                getattr(item[1], "round_number", 0) or 0,
-                item[1].id,
+            events,
+            key=lambda event: (
+                0 if event.kind == "TESTING" else 1,
+                self._event_sort_datetime(event),
+                event.round_number or 0,
+                event.id,
             ),
         )
 
         return [
             CalendarEventResult(
-                kind=kind,
                 event=event,
-                is_up_next=(kind, event.id) == up_next_key,
+                is_up_next=event.id == up_next_id,
             )
-            for kind, event in sorted_items
+            for event in sorted_items
         ]

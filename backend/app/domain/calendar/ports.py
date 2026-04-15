@@ -1,11 +1,8 @@
 from typing import Protocol
 
-from app.db.competition import RaceEvent, TestingEvent
+from app.domain.calendar.models import CalendarEvent
 
 
 class CalendarRepository(Protocol):
-    def list_testing_events(self, *, season_year: int | None = None) -> list[TestingEvent]:
-        ...
-
-    def list_race_events(self, *, season_year: int | None = None) -> list[RaceEvent]:
+    def list_events(self, *, season_year: int | None = None) -> list[CalendarEvent]:
         ...

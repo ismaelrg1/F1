@@ -30,78 +30,50 @@ def get_calendar(
     use_case = GetCalendar(repository)
     results = use_case.execute(season_year=season_year)
 
-    items: list[CalendarEventRead] = []
-    for result in results:
-        event = result.event
-        if result.kind == "TESTING":
-            items.append(
-                CalendarEventRead(
-                    kind="TESTING",
-                    public_id=event.public_id,
-                    season_year=event.season.year,
-                    round_number=None,
-                    name=event.name,
-                    circuit_code=event.circuit.code,
-                    circuit_name=event.circuit.name,
-                    country_name=event.circuit.country.name,
-                    event_start=event.event_start,
-                    event_end=event.event_end,
-                    scheduled_event_start=event.scheduled_event_start,
-                    scheduled_event_end=event.scheduled_event_end,
-                    status=event.status.value,
-                    status_reason=event.status_reason,
-                    is_up_next=result.is_up_next,
-                    testing_sessions=[
-                        CalendarTestingSessionRead(
-                            public_id=session.public_id,
-                            session_order=session.session_order,
-                            name=session.name,
-                            start_datetime=session.start_datetime,
-                            end_datetime=session.end_datetime,
-                            scheduled_start_datetime=session.scheduled_start_datetime,
-                            scheduled_end_datetime=session.scheduled_end_datetime,
-                        )
-                        for session in sorted(event.sessions, key=lambda s: s.session_order)
-                    ],
-                    race_sessions=[],
+    items = [
+        CalendarEventRead(
+            kind=result.event.kind,
+            public_id=result.event.public_id,
+            season_year=result.event.season_year,
+            round_number=result.event.round_number,
+            name=result.event.name,
+            circuit_code=result.event.circuit_code,
+            circuit_name=result.event.circuit_name,
+            country_name=result.event.country_name,
+            event_start=result.event.event_start,
+            event_end=result.event.event_end,
+            scheduled_event_start=result.event.scheduled_event_start,
+            scheduled_event_end=result.event.scheduled_event_end,
+            status=result.event.status,
+            status_reason=result.event.status_reason,
+            is_up_next=result.is_up_next,
+            testing_sessions=[
+                CalendarTestingSessionRead(
+                    public_id=session.public_id,
+                    session_order=session.session_order,
+                    name=session.name,
+                    start_datetime=session.start_datetime,
+                    end_datetime=session.end_datetime,
+                    scheduled_start_datetime=session.scheduled_start_datetime,
+                    scheduled_end_datetime=session.scheduled_end_datetime,
                 )
-            )
-        else:
-            items.append(
-                CalendarEventRead(
-                    kind="RACE",
-                    public_id=event.public_id,
-                    season_year=event.season.year,
-                    round_number=event.round_number,
-                    name=event.name,
-                    circuit_code=event.circuit.code,
-                    circuit_name=event.circuit.name,
-                    country_name=event.circuit.country.name,
-                    event_start=event.event_start,
-                    event_end=event.event_end,
-                    scheduled_event_start=event.scheduled_event_start,
-                    scheduled_event_end=event.scheduled_event_end,
-                    status=event.status.value,
-                    status_reason=event.status_reason,
-                    is_up_next=result.is_up_next,
-                    testing_sessions=[],
-                    race_sessions=[
-                        CalendarRaceSessionRead(
-                            public_id=session.public_id,
-                            session_type=session.session_type,
-                            start_datetime=session.start_datetime,
-                            scheduled_start_datetime=session.scheduled_start_datetime,
-                            lock_cutoff=session.lock_cutoff,
-                            scheduled_lock_cutoff=session.scheduled_lock_cutoff,
-                            status=session.status,
-                            status_reason=session.status_reason,
-                        )
-                        for session in sorted(
-                            event.event_sessions,
-                            key=lambda s: (s.scheduled_start_datetime or s.start_datetime, s.id),
-                        )
-                    ],
+                for session in result.event.testing_sessions
+            ],
+            race_sessions=[
+                CalendarRaceSessionRead(
+                    public_id=session.public_id,
+                    session_type=session.session_type,
+                    start_datetime=session.start_datetime,
+                    scheduled_start_datetime=session.scheduled_start_datetime,
+                    lock_cutoff=session.lock_cutoff,
+                    scheduled_lock_cutoff=session.scheduled_lock_cutoff,
+                    status=session.status,
+                    status_reason=session.status_reason,
                 )
-            )
+                for session in result.event.race_sessions
+            ],
+        )
+        for result in results
+    ]
 
     return CalendarResponse(items=items)

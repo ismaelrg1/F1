@@ -5,11 +5,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db.competition import RaceEvent, TestingEvent, Circuit
 from app.db.enums import RaceEventStatus, TestingEventStatus
+
 from app.domain.home.models import HomeEvent, HomeEventResult
+
 from app.domain.home.ports import HomeRepository
 
 
-class SqlAlchemyHomeRepository:
+class SqlAlchemyHomeRepository(HomeRepository):
     def __init__(self, session: Session):
         self._session = session
 
