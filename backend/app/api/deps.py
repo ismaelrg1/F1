@@ -165,7 +165,7 @@ def require_permissions_any(*required: str) -> Callable[..., User]:
         locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
         try:
-            auth_user = _resolve_access_user(db, str(user.id))
+            auth_user = _resolve_access_user(db, str(user.public_id))
             ensure_permissions.execute_any(auth_user, required)
         except AccessError as exc:
             raise _translate_access_error(exc, locale=locale) from exc

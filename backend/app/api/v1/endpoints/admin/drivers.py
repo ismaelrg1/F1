@@ -6,6 +6,7 @@ from app.adapters.sqlalchemy import (
 )
 from app.api.deps import require_permissions_all, _translate_admin_error
 from app.api.error_translators import get_preferred_locale
+from app.core.permissions import COMPETITION_MANAGE
 
 from app.db.auth import User
 from app.db.session import get_db
@@ -33,7 +34,7 @@ def create_driver(
     data: DriverCreateRequest,
     request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
 ) -> DriverCreateResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
@@ -64,7 +65,7 @@ def create_season_driver(
     data: SeasonDriverCreateRequest,
     request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
 ) -> SeasonDriverCreateResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 

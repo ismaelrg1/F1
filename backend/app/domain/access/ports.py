@@ -8,9 +8,6 @@ class AccessRepository(Protocol):
     def get_authenticated_user_by_public_id(self, public_id: UUID) -> AuthenticatedUser | None:
         ...
 
-    def get_authenticated_user(self, user_id: int) -> AuthenticatedUser | None:
-        ...
-
     def get_group_by_public_id(self, public_id: UUID) -> AccessGroup | None:
         ...
 

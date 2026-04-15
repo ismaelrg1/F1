@@ -6,6 +6,7 @@ from app.adapters.sqlalchemy import (
 )
 from app.api.deps import require_permissions_all, _translate_admin_error
 from app.api.error_translators import get_preferred_locale
+from app.core.permissions import COMPETITION_MANAGE
 
 from app.db.auth import User
 from app.db.session import get_db
@@ -37,7 +38,7 @@ router = APIRouter()
 def list_testing_events(
     season_year: int | None = Query(default=None),
     db: Session = Depends(get_db),
-    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
 ) -> AdminTestingEventListResponse:
     repository = SqlAlchemyAdminTestingEventRepository(db)
     use_case = ListTestingEvents(repository)
@@ -88,7 +89,7 @@ def create_testing_event(
     data: TestingEventCreateRequest,
     request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
 ) -> TestingEventCreateResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
@@ -153,7 +154,7 @@ def update_testing_event(
     data: TestingEventCreateRequest,
     request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
 ) -> TestingEventCreateResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 

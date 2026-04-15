@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters.fastf1 import FastF1AdminRepository
 from app.api.deps import require_permissions_all
+from app.core.permissions import COMPETITION_MANAGE
 
 from app.db.auth import User
 from app.db.session import get_db
@@ -24,7 +25,7 @@ router = APIRouter()
 def list_fastf1_race_events(
     year: int,
     db: Session = Depends(get_db),
-    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
 ) -> FastF1RaceEventPreviewListResponse:
     repository = FastF1AdminRepository(db)
     use_case = ListFastF1RaceEventPreviews(repository)
@@ -42,7 +43,7 @@ def list_fastf1_race_events(
 def list_fastf1_testing_events(
     year: int,
     db: Session = Depends(get_db),
-    user: User = Depends(require_permissions_all("COMPETITION_MANAGE")),
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
 ) -> FastF1TestingEventPreviewListResponse:
     repository = FastF1AdminRepository(db)
     use_case = ListFastF1TestingEventPreviews(repository)
