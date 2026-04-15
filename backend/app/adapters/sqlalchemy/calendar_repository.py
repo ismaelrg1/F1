@@ -5,11 +5,9 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.db.competition import ( 
     Circuit,
-    EventSession,
     RaceEvent,
     Season,
     TestingEvent,
-    TestingEventSession,
 )
 
 from app.domain.calendar.models import (

@@ -23,7 +23,7 @@ class GetCalendar:
             for event in events
             if (event.event_start or event.scheduled_event_start) is not None
             and (event.event_start or event.scheduled_event_start) >= now
-            and event.status in {"SCHEDULED", "POSRPONED"}
+            and event.status in {"SCHEDULED", "POSTPONED"}
         ]
 
         up_next_id: int | None = None

@@ -28,7 +28,7 @@ from app.db.enums import (
     SeasonDriverStatus,
     SessionType,
     SourceProvider,
-    TestingEventStatus,
+    TestingEventStatus as CompetitionTestingEventStatus,
 )
 from app.db.social import Group, GroupMembership
 from app.db.social.group_membership import GroupRole
@@ -880,7 +880,7 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
         circuit_id=circuit.id,
         name="Pre-Season Testing Bahrain",
         source_provider=SourceProvider.MANUAL,
-        status=TestingEventStatus.SCHEDULED,
+        status=CompetitionTestingEventStatus.SCHEDULED,
         scheduled_event_start=datetime(2026, 2, 11, 7, 0, tzinfo=timezone.utc),
         scheduled_event_end=datetime(2026, 2, 13, 17, 0, tzinfo=timezone.utc),
     )
@@ -961,14 +961,8 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
         scope=BetTemplateScope.EVENT,
         session_type=None,
     )
-    session_template = BetTemplate(
-        season_id=season.id,
-        name="Pretesting Session Template",
-        context_kind=BetContextKind.PRETESTING,
-        scope=BetTemplateScope.SESSION,
-        session_type=None,
-    )
-    db_session.add_all([event_template, session_template])
+
+    db_session.add(event_template)
     db_session.flush()
 
     db_session.add_all(
@@ -986,22 +980,22 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
                 display_order=1,
             ),
             BetTemplateItem(
-                template_id=session_template.id,
+                template_id=event_template.id,
                 bet_score_id=session_score.id,
                 required=True,
-                display_order=0,
+                display_order=2,
             ),
             BetTemplateItem(
-                template_id=session_template.id,
+                template_id=event_template.id,
                 bet_score_id=position_score.id,
                 required=True,
-                display_order=1,
+                display_order=3,
             ),
             BetTemplateItem(
-                template_id=session_template.id,
+                template_id=event_template.id,
                 bet_score_id=boolean_score.id,
                 required=True,
-                display_order=2,
+                display_order=4,
             ),
         ]
     )
@@ -1040,7 +1034,7 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
     assert payload["label"] == "Bahrain Testing"
     assert payload["status"] == "SCHEDULED"
 
-    assert len(payload["event_questions"]) == 2
+    assert len(payload["event_questions"]) == 5
 
     assert payload["event_questions"][0]["code"] == "MOST_KILOMETRAGE_DRIVER"
     assert payload["event_questions"][0]["base_points"] == 7.0
@@ -1055,39 +1049,54 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
         {"value": "FER", "label": "Ferrari", "meta": {"code": "FER"}},
         {"value": "RBR", "label": "Red Bull Racing", "meta": {"code": "RBR"}},
     ]
+    assert payload["event_questions"][2]["code"] == "DAY_WINNER_DRIVER"
+    assert payload["event_questions"][3]["code"] == "ALO_TEST_POSITION"
+    assert payload["event_questions"][3]["constraints_json"] == {
+        "allow_dnf": False,
+        "min": 1,
+        "max": 3,
+    }
+    assert "options" not in payload["event_questions"][3]
+    assert payload["event_questions"][4]["code"] == "RED_FLAG"
+    assert payload["event_questions"][4]["options"] == [
+        {"value": "true", "label": "Yes"},
+        {"value": "false", "label": "No"},
+    ]
 
     assert len(payload["sessions"]) == 2
     assert [session["session_order"] for session in payload["sessions"]] == [1, 2]
 
     day_1 = payload["sessions"][0]
     assert day_1["name"] == "Day 1"
-    assert len(day_1["questions"]) == 3
+    assert len(day_1["questions"]) == 5
 
-    assert day_1["questions"][0]["code"] == "DAY_WINNER_DRIVER"
-    assert day_1["questions"][0]["options"] == [
+    assert day_1["questions"][0]["code"] == "MOST_KILOMETRAGE_DRIVER"
+    assert day_1["questions"][1]["code"] == "TOP_TEAM_TESTING"
+    assert day_1["questions"][2]["code"] == "DAY_WINNER_DRIVER"
+    assert day_1["questions"][2]["options"] == [
         {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16}},
         {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4}},
         {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1}},
     ]
 
-    assert day_1["questions"][1]["code"] == "ALO_TEST_POSITION"
-    assert day_1["questions"][1]["constraints_json"] == {
+    assert day_1["questions"][3]["code"] == "ALO_TEST_POSITION"
+    assert day_1["questions"][3]["constraints_json"] == {
         "allow_dnf": False,
         "min": 1,
         "max": 3,
     }
-    assert "options" not in day_1["questions"][1]
+    assert "options" not in day_1["questions"][3]
 
-    assert day_1["questions"][2]["code"] == "RED_FLAG"
-    assert day_1["questions"][2]["options"] == [
+    assert day_1["questions"][4]["code"] == "RED_FLAG"
+    assert day_1["questions"][4]["options"] == [
         {"value": "true", "label": "Yes"},
         {"value": "false", "label": "No"},
     ]
 
     day_2 = payload["sessions"][1]
     assert day_2["name"] == "Day 2"
-    assert len(day_2["questions"]) == 3
-    assert day_2["questions"][0]["code"] == "DAY_WINNER_DRIVER"
+    assert len(day_2["questions"]) == 5
+    assert day_2["questions"][2]["code"] == "DAY_WINNER_DRIVER"
 
 
     @pytest.mark.manual

@@ -2,24 +2,29 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from app.db.betting import BetException, BetTemplateItem
-from app.db.competition import DriverEntry, EventSession, RaceEvent, TestingEvent, TestingEventSession
-from app.db.enums import BetValueType, SessionType
+from app.domain.bets.enums import BetTemplateScope, BetValueType
 from app.domain.bets.errors import (
     BetContextNotFoundForRaceEventError,
+    BetContextNotFoundForTestingEventError,
     RaceEventNotFoundForBetQuestionsError,
+    TestingEventNotFoundForBetQuestionsError,
 )
-
 from app.domain.bets.models import (
     BetQuestionOptionResult,
     BetQuestionResult,
-    RaceEventBetQuestionsSessionResult,
+    BetRaceEvent,
+    BetRaceEventSession,
+    BetRosterEntry,
+    BetTemplateDefinition,
+    BetTestingEvent,
+    BetTestingEventSession,
     RaceEventBetQuestionsResult,
-    TestingEventBetQuestionsSessionResult,
+    RaceEventBetQuestionsSessionResult,
     TestingEventBetQuestionsResult,
+    TestingEventBetQuestionsSessionResult,
 )
-
 from app.domain.bets.ports import BetQuestionsRepository
+
 
 class GetRaceEventBetQuestions:
     def __init__(self, repository: BetQuestionsRepository):
@@ -40,38 +45,38 @@ class GetRaceEventBetQuestions:
         templates = self._repository.list_gp_templates_for_season(season_id=race_event.season_id)
 
         event_template = None
-        session_templates: dict[SessionType, object] = {}
+        session_templates: dict[str, BetTemplateDefinition] = {}
         for template in templates:
-            if template.scope.value == "EVENT":
+            if template.scope == BetTemplateScope.EVENT:
                 event_template = template
             else:
                 session_templates[template.session_type] = template
 
         event_exceptions = {
             exception.bet_score_id: exception
-            for exception in bet_context.bet_exceptions
+            for exception in bet_context.exceptions
             if exception.event_session_id is None
         }
 
         session_exceptions = {
             (exception.event_session_id, exception.bet_score_id): exception
-            for exception in bet_context.bet_exceptions
+            for exception in bet_context.exceptions
             if exception.event_session_id is not None
         }
 
-        event_questions = []
+        event_questions: list[BetQuestionResult] = []
         if event_template is not None:
             event_questions = self._build_race_questions(
                 race_event=race_event,
                 event_session=None,
-                items=event_template.items,
+                template=event_template,
                 fallback_exceptions=event_exceptions,
                 specific_exceptions=None,
             )
 
-        sessions = []
+        sessions: list[RaceEventBetQuestionsSessionResult] = []
         for session in sorted(
-            race_event.event_sessions,
+            race_event.sessions,
             key=lambda s: (s.scheduled_start_datetime or s.start_datetime, s.id),
         ):
             template = session_templates.get(session.session_type)
@@ -87,7 +92,7 @@ class GetRaceEventBetQuestions:
             questions = self._build_race_questions(
                 race_event=race_event,
                 event_session=session,
-                items=template.items,
+                template=template,
                 fallback_exceptions=event_exceptions,
                 specific_exceptions=specific,
             )
@@ -107,7 +112,7 @@ class GetRaceEventBetQuestions:
 
         return RaceEventBetQuestionsResult(
             bet_context_public_id=bet_context.public_id,
-            kind=bet_context.kind,
+            kind=str(bet_context.kind),
             race_event_public_id=race_event.public_id,
             label=bet_context.label,
             event_questions=event_questions,
@@ -117,15 +122,15 @@ class GetRaceEventBetQuestions:
     def _build_race_questions(
         self,
         *,
-        race_event: RaceEvent,
-        event_session: EventSession | None,
-        items: list[BetTemplateItem],
-        fallback_exceptions: dict[int, BetException],
-        specific_exceptions: dict[int, BetException] | None,
+        race_event: BetRaceEvent,
+        event_session: BetRaceEventSession | None,
+        template: BetTemplateDefinition,
+        fallback_exceptions: dict[int, Any],
+        specific_exceptions: dict[int, Any] | None,
     ) -> list[BetQuestionResult]:
         questions: list[BetQuestionResult] = []
 
-        for item in sorted(items, key=lambda i: (i.display_order, i.id)):
+        for item in sorted(template.items, key=lambda i: (i.display_order, i.id)):
             bet_score = item.bet_score
 
             exception = None
@@ -175,67 +180,60 @@ class GetRaceEventBetQuestions:
     def _build_race_options(
         self,
         *,
-        race_event: RaceEvent,
-        event_session: EventSession | None,
+        race_event: BetRaceEvent,
+        event_session: BetRaceEventSession | None,
         value_type: BetValueType,
     ) -> list[BetQuestionOptionResult] | None:
         if value_type in {BetValueType.DRIVER, BetValueType.TEAM, BetValueType.ENGINE, BetValueType.POSITION}:
-            roster = self._resolve_race_roster(
-                race_event=race_event,
-                event_session=event_session,
-            )
-            driver_numbers_by_driver_id = {
-                season_driver.driver_id: season_driver.driver_number
-                for season_driver in race_event.season.season_drivers
-            }
+            roster = self._resolve_race_roster(race_event=race_event, event_session=event_session)
 
         if value_type == BetValueType.DRIVER:
             seen: set[str] = set()
             options: list[BetQuestionOptionResult] = []
             for entry in roster:
-                if entry.driver.code in seen:
+                if entry.driver_code in seen:
                     continue
-                seen.add(entry.driver.code)
+                seen.add(entry.driver_code)
                 options.append(
                     BetQuestionOptionResult(
-                        value=entry.driver.code,
-                        label=entry.driver.name,
+                        value=entry.driver_code,
+                        label=entry.driver_name,
                         meta={
-                            "code": entry.driver.code,
-                            "driver_number": driver_numbers_by_driver_id.get(entry.driver_id),
+                            "code": entry.driver_code,
+                            "driver_number": entry.driver_number,
                         },
                     )
                 )
             return options
 
         if value_type == BetValueType.TEAM:
-            seen = set()
-            options = []
+            seen: set[str] = set()
+            options: list[BetQuestionOptionResult] = []
             for entry in roster:
-                if entry.team.code in seen:
+                if entry.team_code in seen:
                     continue
-                seen.add(entry.team.code)
+                seen.add(entry.team_code)
                 options.append(
                     BetQuestionOptionResult(
-                        value=entry.team.code,
-                        label=entry.team.name,
-                        meta={"code": entry.team.code},
+                        value=entry.team_code,
+                        label=entry.team_name,
+                        meta={"code": entry.team_code},
                     )
                 )
             return options
 
         if value_type == BetValueType.ENGINE:
-            seen = set()
-            options = []
+            seen: set[str] = set()
+            options: list[BetQuestionOptionResult] = []
             for entry in roster:
-                if entry.engine.code in seen:
+                if entry.engine_code in seen:
                     continue
-                seen.add(entry.engine.code)
+                seen.add(entry.engine_code)
                 options.append(
                     BetQuestionOptionResult(
-                        value=entry.engine.code,
-                        label=entry.engine.name,
-                        meta={"code": entry.engine.code},
+                        value=entry.engine_code,
+                        label=entry.engine_name,
+                        meta={"code": entry.engine_code},
                     )
                 )
             return options
@@ -251,45 +249,40 @@ class GetRaceEventBetQuestions:
     def _build_race_constraints(
         self,
         *,
-        race_event: RaceEvent,
-        event_session: EventSession | None,
+        race_event: BetRaceEvent,
+        event_session: BetRaceEventSession | None,
         value_type: BetValueType,
         constraints_json: dict[str, Any] | None,
     ) -> dict[str, Any] | None:
         if value_type != BetValueType.POSITION:
             return constraints_json
 
-        roster = self._resolve_race_roster(
-            race_event=race_event,
-            event_session=event_session,
-        )
-        resolved_constraints = dict(constraints_json or {})
-        resolved_constraints["min"] = 1
-        resolved_constraints["max"] = len(roster)
-        resolved_constraints["allow_dnf"] = bool(resolved_constraints.get("allow_dnf", False))
-        return resolved_constraints
+        roster = self._resolve_race_roster(race_event=race_event, event_session=event_session)
+        resolved = dict(constraints_json or {})
+        resolved["min"] = 1
+        resolved["max"] = len(roster)
+        resolved["allow_dnf"] = bool(resolved.get("allow_dnf", False))
+        return resolved
 
     def _resolve_race_roster(
         self,
         *,
-        race_event: RaceEvent,
-        event_session: EventSession | None,
-    ) -> list[DriverEntry]:
+        race_event: BetRaceEvent,
+        event_session: BetRaceEventSession | None,
+    ) -> list[BetRosterEntry]:
         reference_datetime = self._resolve_race_reference_datetime(
             race_event=race_event,
             event_session=event_session,
         )
 
-        roster_by_seat: dict[tuple[int, int], DriverEntry] = {}
+        roster_by_seat: dict[tuple[int, int], BetRosterEntry] = {}
 
-        for entry in race_event.season.driver_entries:
-            if entry.race_event_id is not None or entry.event_session_id is not None:
-                continue
+        for entry in race_event.season_driver_entries:
             if not self._entry_is_active(entry, reference_datetime):
                 continue
             roster_by_seat[(entry.team_id, entry.seat_index)] = entry
 
-        for entry in race_event.driver_entries:
+        for entry in race_event.event_driver_entries:
             roster_by_seat[(entry.team_id, entry.seat_index)] = entry
 
         if event_session is not None:
@@ -298,20 +291,20 @@ class GetRaceEventBetQuestions:
 
         return sorted(
             roster_by_seat.values(),
-            key=lambda entry: (entry.team.code, entry.seat_index, entry.driver.code),
+            key=lambda entry: (entry.team_code, entry.seat_index, entry.driver_code),
         )
 
     def _resolve_race_reference_datetime(
         self,
         *,
-        race_event: RaceEvent,
-        event_session: EventSession | None,
+        race_event: BetRaceEvent,
+        event_session: BetRaceEventSession | None,
     ) -> datetime | None:
         if event_session is not None:
             return event_session.start_datetime
         return race_event.event_start or race_event.scheduled_event_start
 
-    def _entry_is_active(self, entry: DriverEntry, reference_datetime: datetime | None) -> bool:
+    def _entry_is_active(self, entry: BetRosterEntry, reference_datetime: datetime | None) -> bool:
         if reference_datetime is None:
             return True
         if entry.active_from is not None and reference_datetime < entry.active_from:
@@ -319,7 +312,7 @@ class GetRaceEventBetQuestions:
         if entry.active_to is not None and reference_datetime >= entry.active_to:
             return False
         return True
-    
+
 
 class GetTestingEventBetQuestions:
     def __init__(self, repository: BetQuestionsRepository):
@@ -340,35 +333,32 @@ class GetTestingEventBetQuestions:
         templates = self._repository.list_pretesting_templates_for_season(season_id=testing_event.season_id)
 
         event_template = None
-        session_template = None
         for template in templates:
-            if template.scope.value == "EVENT":
+            if template.scope == BetTemplateScope.EVENT:
                 event_template = template
-            else:
-                session_template = template
 
         event_exceptions = {
             exception.bet_score_id: exception
-            for exception in bet_context.bet_exceptions
+            for exception in bet_context.exceptions
             if exception.event_session_id is None
         }
 
-        event_questions = []
+        event_questions: list[BetQuestionResult] = []
         if event_template is not None:
             event_questions = self._build_testing_questions(
                 testing_event=testing_event,
                 testing_event_session=None,
-                items=event_template.items,
+                template=event_template,
                 fallback_exceptions=event_exceptions,
                 specific_exceptions=None,
             )
 
         sessions: list[TestingEventBetQuestionsSessionResult] = []
-        if session_template is not None:
+        if event_template is not None:
             session_questions = self._build_testing_questions(
                 testing_event=testing_event,
                 testing_event_session=None,
-                items=session_template.items,
+                template=event_template,
                 fallback_exceptions=event_exceptions,
                 specific_exceptions=None,
             )
@@ -389,7 +379,7 @@ class GetTestingEventBetQuestions:
 
         return TestingEventBetQuestionsResult(
             bet_context_public_id=bet_context.public_id,
-            kind=bet_context.kind,
+            kind=str(bet_context.kind),
             testing_event_public_id=testing_event.public_id,
             label=bet_context.label,
             status=testing_event.status,
@@ -400,15 +390,15 @@ class GetTestingEventBetQuestions:
     def _build_testing_questions(
         self,
         *,
-        testing_event: TestingEvent,
-        testing_event_session: TestingEventSession | None,
-        items: list[BetTemplateItem],
-        fallback_exceptions: dict[int, BetException],
-        specific_exceptions: dict[int, BetException] | None,
+        testing_event: BetTestingEvent,
+        testing_event_session: BetTestingEventSession | None,
+        template: BetTemplateDefinition,
+        fallback_exceptions: dict[int, Any],
+        specific_exceptions: dict[int, Any] | None,
     ) -> list[BetQuestionResult]:
         questions: list[BetQuestionResult] = []
 
-        for item in sorted(items, key=lambda i: (i.display_order, i.id)):
+        for item in sorted(template.items, key=lambda i: (i.display_order, i.id)):
             bet_score = item.bet_score
 
             exception = None
@@ -458,8 +448,8 @@ class GetTestingEventBetQuestions:
     def _build_testing_options(
         self,
         *,
-        testing_event: TestingEvent,
-        testing_event_session: TestingEventSession | None,
+        testing_event: BetTestingEvent,
+        testing_event_session: BetTestingEventSession | None,
         value_type: BetValueType,
     ) -> list[BetQuestionOptionResult] | None:
         if value_type in {BetValueType.DRIVER, BetValueType.TEAM, BetValueType.ENGINE, BetValueType.POSITION}:
@@ -467,58 +457,54 @@ class GetTestingEventBetQuestions:
                 testing_event=testing_event,
                 testing_event_session=testing_event_session,
             )
-            driver_numbers_by_driver_id = {
-                season_driver.driver_id: season_driver.driver_number
-                for season_driver in testing_event.season.season_drivers
-            }
 
         if value_type == BetValueType.DRIVER:
             seen: set[str] = set()
             options: list[BetQuestionOptionResult] = []
             for entry in roster:
-                if entry.driver.code in seen:
+                if entry.driver_code in seen:
                     continue
-                seen.add(entry.driver.code)
+                seen.add(entry.driver_code)
                 options.append(
                     BetQuestionOptionResult(
-                        value=entry.driver.code,
-                        label=entry.driver.name,
+                        value=entry.driver_code,
+                        label=entry.driver_name,
                         meta={
-                            "code": entry.driver.code,
-                            "driver_number": driver_numbers_by_driver_id.get(entry.driver_id),
+                            "code": entry.driver_code,
+                            "driver_number": entry.driver_number,
                         },
                     )
                 )
             return options
 
         if value_type == BetValueType.TEAM:
-            seen = set()
-            options = []
+            seen: set[str] = set()
+            options: list[BetQuestionOptionResult] = []
             for entry in roster:
-                if entry.team.code in seen:
+                if entry.team_code in seen:
                     continue
-                seen.add(entry.team.code)
+                seen.add(entry.team_code)
                 options.append(
                     BetQuestionOptionResult(
-                        value=entry.team.code,
-                        label=entry.team.name,
-                        meta={"code": entry.team.code},
+                        value=entry.team_code,
+                        label=entry.team_name,
+                        meta={"code": entry.team_code},
                     )
                 )
             return options
 
         if value_type == BetValueType.ENGINE:
-            seen = set()
-            options = []
+            seen: set[str] = set()
+            options: list[BetQuestionOptionResult] = []
             for entry in roster:
-                if entry.engine.code in seen:
+                if entry.engine_code in seen:
                     continue
-                seen.add(entry.engine.code)
+                seen.add(entry.engine_code)
                 options.append(
                     BetQuestionOptionResult(
-                        value=entry.engine.code,
-                        label=entry.engine.name,
-                        meta={"code": entry.engine.code},
+                        value=entry.engine_code,
+                        label=entry.engine_name,
+                        meta={"code": entry.engine_code},
                     )
                 )
             return options
@@ -534,8 +520,8 @@ class GetTestingEventBetQuestions:
     def _build_testing_constraints(
         self,
         *,
-        testing_event: TestingEvent,
-        testing_event_session: TestingEventSession | None,
+        testing_event: BetTestingEvent,
+        testing_event_session: BetTestingEventSession | None,
         value_type: BetValueType,
         constraints_json: dict[str, Any] | None,
     ) -> dict[str, Any] | None:
@@ -546,45 +532,49 @@ class GetTestingEventBetQuestions:
             testing_event=testing_event,
             testing_event_session=testing_event_session,
         )
-        resolved_constraints = dict(constraints_json or {})
-        resolved_constraints["min"] = 1
-        resolved_constraints["max"] = len(roster)
-        resolved_constraints["allow_dnf"] = bool(resolved_constraints.get("allow_dnf", False))
-        return resolved_constraints
+        resolved = dict(constraints_json or {})
+        resolved["min"] = 1
+        resolved["max"] = len(roster)
+        resolved["allow_dnf"] = bool(resolved.get("allow_dnf", False))
+        return resolved
 
     def _resolve_testing_roster(
         self,
         *,
-        testing_event: TestingEvent,
-        testing_event_session: TestingEventSession | None,
-    ) -> list[DriverEntry]:
+        testing_event: BetTestingEvent,
+        testing_event_session: BetTestingEventSession | None,
+    ) -> list[BetRosterEntry]:
         reference_datetime = self._resolve_testing_reference_datetime(
             testing_event=testing_event,
             testing_event_session=testing_event_session,
         )
 
-        roster_by_seat: dict[tuple[int, int], DriverEntry] = {}
-        for entry in testing_event.season.driver_entries:
-            if entry.race_event_id is not None or entry.event_session_id is not None:
-                continue
+        roster_by_seat: dict[tuple[int, int], BetRosterEntry] = {}
+        for entry in testing_event.season_driver_entries:
             if not self._entry_is_active(entry, reference_datetime):
                 continue
             roster_by_seat[(entry.team_id, entry.seat_index)] = entry
 
         return sorted(
             roster_by_seat.values(),
-            key=lambda entry: (entry.team.code, entry.seat_index, entry.driver.code),
+            key=lambda entry: (entry.team_code, entry.seat_index, entry.driver_code),
         )
 
     def _resolve_testing_reference_datetime(
         self,
         *,
-        testing_event: TestingEvent,
-        testing_event_session: TestingEventSession | None,
+        testing_event: BetTestingEvent,
+        testing_event_session: BetTestingEventSession | None,
     ) -> datetime | None:
         if testing_event_session is not None:
-            return (
-                testing_event_session.start_datetime
-                or testing_event_session.scheduled_start_datetime
-            )
+            return testing_event_session.start_datetime or testing_event_session.scheduled_start_datetime
         return testing_event.event_start or testing_event.scheduled_event_start
+
+    def _entry_is_active(self, entry: BetRosterEntry, reference_datetime: datetime | None) -> bool:
+        if reference_datetime is None:
+            return True
+        if entry.active_from is not None and reference_datetime < entry.active_from:
+            return False
+        if entry.active_to is not None and reference_datetime >= entry.active_to:
+            return False
+        return True

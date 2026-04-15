@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -67,7 +69,7 @@ class SqlAlchemyHomeRepository(HomeRepository):
                     event=HomeEvent(
                         public_id=event.public_id,
                         season_year=event.season.year,
-                        round_number=None,
+                        round_number=event.round_number,
                         name=event.name,
                         circuit_code=event.circuit.code,
                         circuit_name=event.circuit.name,

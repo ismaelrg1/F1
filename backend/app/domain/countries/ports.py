@@ -1,7 +1,7 @@
 from typing import Protocol
 
-from app.db.competition import Country
+from app.domain.countries.models import CountryResult
 
 class CountryRepository(Protocol):
-    def list_countries(self) -> list[Country]:
+    def list_countries(self) -> list[CountryResult]:
         ...
