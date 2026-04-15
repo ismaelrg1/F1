@@ -33,16 +33,16 @@ def get_home(
         next_event=HomeNextEventRead(
             public_id=next_event.public_id,
             event_kind=result.kind,
-            season_year=next_event.season.year,
-            round_number=getattr(next_event, "round_number", None),
+            season_year=next_event.season_year,
+            round_number=next_event.round_number,
             name=next_event.name,
-            circuit_code=next_event.circuit.code,
-            circuit_name=next_event.circuit.name,
-            country_name=next_event.circuit.country.name,
+            circuit_code=next_event.circuit_code,
+            circuit_name=next_event.circuit_name,
+            country_name=next_event.country_name,
             event_start=next_event.event_start,
             event_end=next_event.event_end,
             scheduled_event_start=next_event.scheduled_event_start,
             scheduled_event_end=next_event.scheduled_event_end,
-            status=next_event.status.value,
+            status=next_event.status,
         )
     )

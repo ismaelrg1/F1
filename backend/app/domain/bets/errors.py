@@ -8,3 +8,11 @@ class RaceEventNotFoundForBetQuestionsError(BetsError):
 
 class BetContextNotFoundForRaceEventError(BetsError):
     pass
+
+
+class TestingEventNotFoundForBetQuestionsError(BetsError):
+    pass
+
+
+class BetContextNotFoundForTestingEventError(BetsError):
+    pass

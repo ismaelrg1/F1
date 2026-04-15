@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from app.db.competition import RaceEvent, TestingEvent
 from app.domain.calendar.ports import CalendarRepository
 
-
-@dataclass(frozen=True)
-class CalendarEventResult:
-    kind: str
-    event: RaceEvent | TestingEvent
-    is_up_next: bool
+from app.domain.calendar.models import CalendarEventResult
 
 
 class GetCalendar:

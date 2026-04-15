@@ -1,34 +1,32 @@
+from dataclasses import dataclass
+
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel
+from app.db.enums import BetContextKind, RaceEventStatus, SessionType, TestingEventStatus
 
-from app.db.enums import BetContextKind, BetValueType, RaceEventStatus, SessionType, TestingEventStatus
-
-
-class BetQuestionOptionRead(BaseModel):
+@dataclass(frozen=True)
+class BetQuestionOptionResult:
     value: str
     label: str
     meta: dict[str, Any] | None = None
 
-    model_config = {
-        "ser_json_exclude_none": True,
-    }
 
-
-class BetQuestionRead(BaseModel):
+@dataclass(frozen=True)
+class BetQuestionResult:
     code: str
     label: str
-    value_type: BetValueType
+    value_type: str
     required: bool
     display_order: int
     base_points: float
     constraints_json: dict[str, Any] | None
-    options: list[BetQuestionOptionRead] | None
+    options: list[BetQuestionOptionResult] | None
 
 
-class RaceEventBetQuestionsSessionRead(BaseModel):
+@dataclass(frozen=True)
+class RaceEventBetQuestionsSessionResult:
     event_session_public_id: UUID
     session_type: SessionType
     start_datetime: datetime
@@ -36,19 +34,20 @@ class RaceEventBetQuestionsSessionRead(BaseModel):
     lock_cutoff: datetime
     scheduled_lock_cutoff: datetime | None
     status: RaceEventStatus
-    questions: list[BetQuestionRead]
+    questions: list[BetQuestionResult]
 
 
-class RaceEventBetQuestionsResponse(BaseModel):
+@dataclass(frozen=True)
+class RaceEventBetQuestionsResult:
     bet_context_public_id: UUID
     kind: BetContextKind
     race_event_public_id: UUID
     label: str
-    event_questions: list[BetQuestionRead]
-    sessions: list[RaceEventBetQuestionsSessionRead]
+    event_questions: list[BetQuestionResult]
+    sessions: list[RaceEventBetQuestionsSessionResult]
 
-
-class TestingEventBetQuestionsSessionRead(BaseModel):
+@dataclass(frozen=True)
+class TestingEventBetQuestionsSessionResult:
     testing_event_session_public_id: UUID
     session_order: int
     name: str
@@ -56,14 +55,16 @@ class TestingEventBetQuestionsSessionRead(BaseModel):
     end_datetime: datetime | None
     scheduled_start_datetime: datetime | None
     scheduled_end_datetime: datetime | None
-    questions: list[BetQuestionRead]
+    questions: list[BetQuestionResult]
 
 
-class TestingEventBetQuestionsResponse(BaseModel):
+@dataclass(frozen=True)
+class TestingEventBetQuestionsResult:
     bet_context_public_id: UUID
     kind: BetContextKind
     testing_event_public_id: UUID
     label: str
     status: TestingEventStatus
-    event_questions: list[BetQuestionRead]
-    sessions: list[TestingEventBetQuestionsSessionRead]
+    event_questions: list[BetQuestionResult]
+    sessions: list[TestingEventBetQuestionsSessionResult]
+
