@@ -1,12 +1,12 @@
 from typing import Protocol
 
-from app.db.competition import Circuit, Country
+from app.domain.admin.circuits.models import AdminCircuit, AdminCircuitCountry
 
 class AdminCircuitRepository(Protocol):
-    def get_by_code(self, code: str) -> Circuit | None:
+    def get_by_code(self, code: str) -> AdminCircuit | None:
         ...
 
-    def get_country_by_iso2(self, iso2: str) -> Country | None:
+    def get_country_by_iso2(self, iso2: str) -> AdminCircuitCountry | None:
         ...
 
     def create(
@@ -17,5 +17,5 @@ class AdminCircuitRepository(Protocol):
         country_id: int,
         map_asset_url: str | None,
         image_asset_url: str | None,
-    ) -> Circuit:
+    ) -> AdminCircuit:
         ...
