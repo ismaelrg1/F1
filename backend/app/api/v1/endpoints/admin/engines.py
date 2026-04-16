@@ -82,7 +82,7 @@ def create_season_engine(
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return SeasonEngineCreateResponse(
-        season_year=season_engine.season.year,
-        engine_code=season_engine.engine.code,
+        season_year=season_engine.season_year,
+        engine_code=season_engine.engine_code,
         is_active=season_engine.is_active,
     )

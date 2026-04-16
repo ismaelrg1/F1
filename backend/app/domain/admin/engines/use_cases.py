@@ -18,7 +18,10 @@ class CreateEngine:
         if existing is not None:
             raise EngineAlreadyExistsError(code=normalized_code)
 
-        return self._repository.create(code=normalized_code, name=name)
+        return self._repository.create(
+            code=normalized_code,
+            name=name.strip(),
+        )
 
 
 class CreateSeasonEngine:
@@ -35,7 +38,10 @@ class CreateSeasonEngine:
         if engine is None:
             raise EngineNotFoundForSeasonEngineError(engine_code=normalized_engine_code)
 
-        existing = self._repository.get_season_engine(season_id=season.id, engine_id=engine.id)
+        existing = self._repository.get_season_engine(
+            season_id=season.id,
+            engine_id=engine.id,
+        )
         if existing is not None:
             raise SeasonEngineAlreadyExistsError(
                 season_year=season.year,
