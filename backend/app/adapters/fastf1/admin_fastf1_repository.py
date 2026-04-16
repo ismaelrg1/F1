@@ -11,16 +11,22 @@ from sqlalchemy.orm import Session
 
 from app.db.competition import Country
 from app.db.enums import SourceProvider
+from app.domain.admin.fastf1.models import (
+    FastF1RaceEventPreview,
+    FastF1RaceSessionPreview,
+    FastF1TestingEventPreview,
+    FastF1TestingSessionPreview,
+)
 from app.domain.admin.fastf1.ports import AdminFastF1Repository
 
 
 class FastF1AdminRepository(AdminFastF1Repository):
     def __init__(self, session: Session):
         self._session = session
-    
-    def list_race_event_previews(self, year: int) -> list[dict[str, Any]]:
+
+    def list_race_event_previews(self, year: int) -> list[FastF1RaceEventPreview]:
         schedule = fastf1.get_event_schedule(year)
-        items: list[dict[str, Any]] = []
+        items: list[FastF1RaceEventPreview] = []
 
         for _, event in schedule.iterrows():
             event_format = str(event["EventFormat"])
@@ -37,7 +43,7 @@ class FastF1AdminRepository(AdminFastF1Repository):
                 location=str(event["Location"]),
             )
 
-            sessions: list[dict[str, Any]] = []
+            sessions: list[FastF1RaceSessionPreview] = []
             for index in self._get_session_indexes(event):
                 raw_session_name = event.get(f"Session{index}")
                 raw_session_date_utc = event.get(f"Session{index}DateUtc")
@@ -49,46 +55,46 @@ class FastF1AdminRepository(AdminFastF1Repository):
                     continue
 
                 session_name = None if session_name_missing else str(raw_session_name).strip()
+                session_type = self._map_session_type(session_name) if session_name else None
 
                 sessions.append(
-                    {
-                        "order": index,
-                        "fastf1_name": session_name,
-                        "session_type": self._map_session_type(session_name) if session_name else None,
-                        "source_provider": SourceProvider.FASTF1,
-                        "source_key": self._build_session_source_key(
+                    FastF1RaceSessionPreview(
+                        order=index,
+                        fastf1_name=session_name,
+                        session_type=session_type,
+                        source_provider=SourceProvider.FASTF1.value,
+                        source_key=self._build_session_source_key(
                             event_source_key,
-                            self._map_session_type(session_name),
+                            session_type,
                             index,
                         ),
-                        "scheduled_start_utc": scheduled_start_utc,
-                    }
+                        scheduled_start_utc=scheduled_start_utc,
+                    )
                 )
 
             items.append(
-                {
-                    "season_year": year,
-                    "round_number": int(event["RoundNumber"]),
-                    "country_name": country_name,
-                    "country_iso2_suggestion": country.iso2 if country else None,
-                    "event_name": str(event["EventName"]),
-                    "official_event_name": str(event["OfficialEventName"]),
-                    "location": str(event["Location"]),
-                    "event_format": event_format,
-                    "source_provider": SourceProvider.FASTF1,
-                    "source_key": event_source_key,
-                    "circuit_code_suggestion": self._slugify(str(event["Location"])),
-                    "scheduled_event_end_utc": self._to_datetime(event.get("EventDate")),
-                    "sessions": sessions,
-                }
+                FastF1RaceEventPreview(
+                    season_year=year,
+                    round_number=int(event["RoundNumber"]),
+                    country_name=country_name,
+                    country_iso2_suggestion=country.iso2 if country else None,
+                    event_name=str(event["EventName"]),
+                    official_event_name=str(event["OfficialEventName"]),
+                    location=str(event["Location"]),
+                    event_format=event_format,
+                    source_provider=SourceProvider.FASTF1.value,
+                    source_key=event_source_key,
+                    circuit_code_suggestion=self._slugify(str(event["Location"])),
+                    scheduled_event_end_utc=self._to_datetime(event.get("EventDate")),
+                    sessions=sessions,
+                )
             )
 
         return items
-    
 
-    def list_testing_event_previews(self, year: int) -> list[dict[str, Any]]:
+    def list_testing_event_previews(self, year: int) -> list[FastF1TestingEventPreview]:
         schedule = fastf1.get_event_schedule(year)
-        items: list[dict[str, Any]] = []
+        items: list[FastF1TestingEventPreview] = []
 
         for _, event in schedule.iterrows():
             event_format = str(event["EventFormat"])
@@ -105,7 +111,7 @@ class FastF1AdminRepository(AdminFastF1Repository):
                 location=str(event["Location"]),
             )
 
-            sessions: list[dict[str, Any]] = []
+            sessions: list[FastF1TestingSessionPreview] = []
             for index in self._get_session_indexes(event):
                 raw_session_name = event.get(f"Session{index}")
                 raw_session_date_utc = event.get(f"Session{index}DateUtc")
@@ -119,30 +125,30 @@ class FastF1AdminRepository(AdminFastF1Repository):
                 session_name = None if session_name_missing else str(raw_session_name).strip()
 
                 sessions.append(
-                    {
-                        "order": index,
-                        "fastf1_name": session_name,
-                        "source_provider": SourceProvider.FASTF1,
-                        "source_key": self._build_session_source_key(event_source_key, None, index),
-                        "scheduled_start_utc": scheduled_start_utc,
-                    }
+                    FastF1TestingSessionPreview(
+                        order=index,
+                        fastf1_name=session_name,
+                        source_provider=SourceProvider.FASTF1.value,
+                        source_key=self._build_session_source_key(event_source_key, None, index),
+                        scheduled_start_utc=scheduled_start_utc,
+                    )
                 )
 
             items.append(
-                {
-                    "season_year": year,
-                    "country_name": country_name,
-                    "country_iso2_suggestion": country.iso2 if country else None,
-                    "event_name": str(event["EventName"]),
-                    "official_event_name": str(event["OfficialEventName"]),
-                    "location": str(event["Location"]),
-                    "event_format": event_format,
-                    "source_provider": SourceProvider.FASTF1,
-                    "source_key": event_source_key,
-                    "circuit_code_suggestion": self._slugify(str(event["Location"])),
-                    "scheduled_event_end_utc": self._to_datetime(event.get("EventDate")),
-                    "sessions": sessions,
-                }
+                FastF1TestingEventPreview(
+                    season_year=year,
+                    country_name=country_name,
+                    country_iso2_suggestion=country.iso2 if country else None,
+                    event_name=str(event["EventName"]),
+                    official_event_name=str(event["OfficialEventName"]),
+                    location=str(event["Location"]),
+                    event_format=event_format,
+                    source_provider=SourceProvider.FASTF1.value,
+                    source_key=event_source_key,
+                    circuit_code_suggestion=self._slugify(str(event["Location"])),
+                    scheduled_event_end_utc=self._to_datetime(event.get("EventDate")),
+                    sessions=sessions,
+                )
             )
 
         return items
@@ -180,7 +186,7 @@ class FastF1AdminRepository(AdminFastF1Repository):
             "Race": "RACE",
         }
         return mapping.get(name)
-    
+
     @staticmethod
     def _is_missing(value: Any) -> bool:
         if value is None:
@@ -191,7 +197,7 @@ class FastF1AdminRepository(AdminFastF1Repository):
 
         normalized = str(value).strip().lower()
         return normalized in {"", "none", "nan", "nat"}
-    
+
     @staticmethod
     def _get_session_indexes(event) -> list[int]:
         indexes = []
