@@ -18,7 +18,10 @@ class CreateTeam:
         if existing is not None:
             raise TeamAlreadyExistsError(code=normalized_code)
 
-        return self._repository.create(code=normalized_code, name=name)
+        return self._repository.create(
+            code=normalized_code,
+            name=name.strip(),
+        )
 
 
 class CreateSeasonTeam:
@@ -35,7 +38,10 @@ class CreateSeasonTeam:
         if team is None:
             raise TeamNotFoundForSeasonTeamError(team_code=normalized_team_code)
 
-        existing = self._repository.get_season_team(season_id=season.id, team_id=team.id)
+        existing = self._repository.get_season_team(
+            season_id=season.id,
+            team_id=team.id,
+        )
         if existing is not None:
             raise SeasonTeamAlreadyExistsError(
                 season_year=season.year,

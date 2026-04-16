@@ -82,7 +82,7 @@ def create_season_team(
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return SeasonTeamCreateResponse(
-        season_year=season_team.season.year,
-        team_code=season_team.team.code,
+        season_year=season_team.season_year,
+        team_code=season_team.team_code,
         is_active=season_team.is_active,
     )
