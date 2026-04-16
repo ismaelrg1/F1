@@ -5,6 +5,7 @@ from app.domain.admin.testing_events.errors import (
     TestingEventAlreadyExistsError,
     TestingEventNotFoundError,
 )
+from app.domain.admin.testing_events.models import AdminTestingEventSessionWrite
 from app.domain.admin.testing_events.ports import AdminTestingEventRepository
 
 
@@ -18,15 +19,15 @@ class CreateTestingEvent:
         season_year: int,
         circuit_code: str,
         name: str,
-        source_provider,
+        source_provider: str,
         source_key: str | None,
         event_start,
         event_end,
         scheduled_event_start,
         scheduled_event_end,
-        status,
+        status: str | None,
         status_reason: str | None,
-        sessions: list[dict],
+        sessions: list[AdminTestingEventSessionWrite],
     ):
         season = self._repository.get_season_by_year(season_year)
         if season is None:
@@ -43,15 +44,14 @@ class CreateTestingEvent:
 
         seen_orders: set[int] = set()
         for session in sessions:
-            order = session["session_order"]
-            if order in seen_orders:
-                raise DuplicateTestingEventSessionOrderError(order)
-            seen_orders.add(order)
+            if session.session_order in seen_orders:
+                raise DuplicateTestingEventSessionOrderError(session.session_order)
+            seen_orders.add(session.session_order)
 
         return self._repository.create(
             season_id=season.id,
             circuit_id=circuit.id,
-            name=name,
+            name=name.strip(),
             source_provider=source_provider,
             source_key=source_key,
             event_start=event_start,
@@ -75,15 +75,15 @@ class UpdateTestingEvent:
         season_year: int,
         circuit_code: str,
         name: str,
-        source_provider,
+        source_provider: str,
         source_key: str | None,
         event_start,
         event_end,
         scheduled_event_start,
         scheduled_event_end,
-        status,
+        status: str | None,
         status_reason: str | None,
-        sessions: list[dict],
+        sessions: list[AdminTestingEventSessionWrite],
     ):
         testing_event = self._repository.get_by_id(testing_event_id)
         if testing_event is None:
@@ -104,16 +104,15 @@ class UpdateTestingEvent:
 
         seen_orders: set[int] = set()
         for session in sessions:
-            order = session["session_order"]
-            if order in seen_orders:
-                raise DuplicateTestingEventSessionOrderError(order)
-            seen_orders.add(order)
+            if session.session_order in seen_orders:
+                raise DuplicateTestingEventSessionOrderError(session.session_order)
+            seen_orders.add(session.session_order)
 
         return self._repository.update(
-            testing_event=testing_event,
+            testing_event_id=testing_event.id,
             season_id=season.id,
             circuit_id=circuit.id,
-            name=name,
+            name=name.strip(),
             source_provider=source_provider,
             source_key=source_key,
             event_start=event_start,
