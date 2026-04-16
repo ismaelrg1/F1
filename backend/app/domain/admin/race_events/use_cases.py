@@ -5,6 +5,7 @@ from app.domain.admin.race_events.errors import (
     RaceEventNotFoundError,
     SeasonNotFoundForRaceEventError,
 )
+from app.domain.admin.race_events.models import AdminRaceEventSessionWrite
 from app.domain.admin.race_events.ports import AdminRaceEventRepository
 
 
@@ -19,15 +20,15 @@ class CreateRaceEvent:
         round_number: int,
         circuit_code: str,
         name: str,
-        source_provider,
+        source_provider: str,
         source_key: str | None,
         event_start,
         event_end,
         scheduled_event_start,
         scheduled_event_end,
-        status,
+        status: str | None,
         status_reason: str | None,
-        sessions: list[dict],
+        sessions: list[AdminRaceEventSessionWrite],
     ):
         season = self._repository.get_season_by_year(season_year)
         if season is None:
@@ -50,16 +51,15 @@ class CreateRaceEvent:
 
         seen_session_types: set[str] = set()
         for session in sessions:
-            session_type = session["session_type"].value if hasattr(session["session_type"], "value") else str(session["session_type"])
-            if session_type in seen_session_types:
-                raise DuplicateRaceEventSessionTypeError(session_type=session_type)
-            seen_session_types.add(session_type)
+            if session.session_type in seen_session_types:
+                raise DuplicateRaceEventSessionTypeError(session_type=session.session_type)
+            seen_session_types.add(session.session_type)
 
         return self._repository.create(
             season_id=season.id,
             circuit_id=circuit.id,
             round_number=round_number,
-            name=name,
+            name=name.strip(),
             source_provider=source_provider,
             source_key=source_key,
             event_start=event_start,
@@ -84,15 +84,15 @@ class UpdateRaceEvent:
         round_number: int,
         circuit_code: str,
         name: str,
-        source_provider,
+        source_provider: str,
         source_key: str | None,
         event_start,
         event_end,
         scheduled_event_start,
         scheduled_event_end,
-        status,
+        status: str | None,
         status_reason: str | None,
-        sessions: list[dict],
+        sessions: list[AdminRaceEventSessionWrite],
     ):
         race_event = self._repository.get_by_id(race_event_id)
         if race_event is None:
@@ -119,17 +119,16 @@ class UpdateRaceEvent:
 
         seen_session_types: set[str] = set()
         for session in sessions:
-            session_type = session["session_type"].value if hasattr(session["session_type"], "value") else str(session["session_type"])
-            if session_type in seen_session_types:
-                raise DuplicateRaceEventSessionTypeError(session_type=session_type)
-            seen_session_types.add(session_type)
+            if session.session_type in seen_session_types:
+                raise DuplicateRaceEventSessionTypeError(session_type=session.session_type)
+            seen_session_types.add(session.session_type)
 
         return self._repository.update(
-            race_event=race_event,
+            race_event_id=race_event.id,
             season_id=season.id,
             circuit_id=circuit.id,
             round_number=round_number,
-            name=name,
+            name=name.strip(),
             source_provider=source_provider,
             source_key=source_key,
             event_start=event_start,
@@ -140,7 +139,8 @@ class UpdateRaceEvent:
             status_reason=status_reason,
             sessions=sessions,
         )
-    
+
+
 class ListRaceEvents:
     def __init__(self, repository: AdminRaceEventRepository):
         self._repository = repository

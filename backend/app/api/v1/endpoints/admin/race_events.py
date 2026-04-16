@@ -9,6 +9,7 @@ from app.api.error_translators import get_preferred_locale
 from app.core.permissions import COMPETITION_MANAGE
 
 from app.db.auth import User
+from app.db.enums import RaceEventStatus, SessionType, SourceProvider
 from app.db.session import get_db
 from app.domain.admin import (
     AdminError,
@@ -16,6 +17,7 @@ from app.domain.admin import (
     ListRaceEvents,
     UpdateRaceEvent,
 )
+from app.domain.admin.race_events.models import AdminRaceEventSessionWrite
 
 from app.models.race_events import (
     EventSessionCreateResponse,
@@ -49,34 +51,34 @@ def list_race_events(
         items=[
             AdminRaceEventRead(
                 id=race_event.id,
-                season_year=race_event.season.year,
+                season_year=race_event.season_year,
                 round_number=race_event.round_number,
-                circuit_code=race_event.circuit.code,
+                circuit_code=race_event.circuit_code,
                 name=race_event.name,
-                source_provider=race_event.source_provider,
+                source_provider=SourceProvider(race_event.source_provider),
                 source_key=race_event.source_key,
                 event_start=race_event.event_start,
                 event_end=race_event.event_end,
                 scheduled_event_start=race_event.scheduled_event_start,
                 scheduled_event_end=race_event.scheduled_event_end,
-                status=race_event.status,
+                status=RaceEventStatus(race_event.status),
                 status_reason=race_event.status_reason,
                 sessions=[
                     AdminRaceEventSessionRead(
                         id=session.id,
-                        session_type=session.session_type,
-                        source_provider=session.source_provider,
+                        session_type=SessionType(session.session_type),
+                        source_provider=SourceProvider(session.source_provider),
                         source_key=session.source_key,
                         start_datetime=session.start_datetime,
                         scheduled_start_datetime=session.scheduled_start_datetime,
                         lock_cutoff=session.lock_cutoff,
                         scheduled_lock_cutoff=session.scheduled_lock_cutoff,
-                        status=session.status,
+                        status=RaceEventStatus(session.status),
                         status_reason=session.status_reason,
                         results_published=session.results_published,
                         results_published_at=session.results_published_at,
                     )
-                    for session in sorted(race_event.event_sessions, key=lambda s: s.start_datetime)
+                    for session in race_event.sessions
                 ],
             )
             for race_event in race_events
@@ -108,49 +110,62 @@ def update_race_event(
             round_number=data.round_number,
             circuit_code=data.circuit_code,
             name=data.name,
-            source_provider=data.source_provider,
+            source_provider=data.source_provider.value,
             source_key=data.source_key,
             event_start=data.event_start,
             event_end=data.event_end,
             scheduled_event_start=data.scheduled_event_start,
             scheduled_event_end=data.scheduled_event_end,
-            status=data.status,
+            status=data.status.value if data.status is not None else None,
             status_reason=data.status_reason,
-            sessions=[session.model_dump() for session in data.sessions],
+            sessions=[
+                AdminRaceEventSessionWrite(
+                    session_type=session.session_type.value,
+                    source_provider=session.source_provider.value,
+                    source_key=session.source_key,
+                    start_datetime=session.start_datetime,
+                    scheduled_start_datetime=session.scheduled_start_datetime,
+                    lock_cutoff=session.lock_cutoff,
+                    scheduled_lock_cutoff=session.scheduled_lock_cutoff,
+                    status=session.status.value if session.status is not None else None,
+                    status_reason=session.status_reason,
+                )
+                for session in data.sessions
+            ],
         )
     except AdminError as exc:
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return RaceEventCreateResponse(
         public_id=race_event.public_id,
-        season_year=race_event.season.year,
+        season_year=race_event.season_year,
         round_number=race_event.round_number,
-        circuit_code=race_event.circuit.code,
+        circuit_code=race_event.circuit_code,
         name=race_event.name,
-        source_provider=race_event.source_provider,
+        source_provider=SourceProvider(race_event.source_provider),
         source_key=race_event.source_key,
         event_start=race_event.event_start,
         event_end=race_event.event_end,
         scheduled_event_start=race_event.scheduled_event_start,
         scheduled_event_end=race_event.scheduled_event_end,
-        status=race_event.status,
+        status=RaceEventStatus(race_event.status),
         status_reason=race_event.status_reason,
         sessions=[
             EventSessionCreateResponse(
                 public_id=session.public_id,
-                session_type=session.session_type,
-                source_provider=session.source_provider,
+                session_type=SessionType(session.session_type),
+                source_provider=SourceProvider(session.source_provider),
                 source_key=session.source_key,
                 start_datetime=session.start_datetime,
                 scheduled_start_datetime=session.scheduled_start_datetime,
                 lock_cutoff=session.lock_cutoff,
                 scheduled_lock_cutoff=session.scheduled_lock_cutoff,
-                status=session.status,
+                status=RaceEventStatus(session.status),
                 status_reason=session.status_reason,
                 results_published=session.results_published,
                 results_published_at=session.results_published_at,
             )
-            for session in sorted(race_event.event_sessions, key=lambda s: s.start_datetime)
+            for session in race_event.sessions
         ],
     )
 
@@ -177,48 +192,61 @@ def create_race_event(
             round_number=data.round_number,
             circuit_code=data.circuit_code,
             name=data.name,
-            source_provider=data.source_provider,
+            source_provider=data.source_provider.value,
             source_key=data.source_key,
             event_start=data.event_start,
             event_end=data.event_end,
             scheduled_event_start=data.scheduled_event_start,
             scheduled_event_end=data.scheduled_event_end,
-            status=data.status,
+            status=data.status.value if data.status is not None else None,
             status_reason=data.status_reason,
-            sessions=[session.model_dump() for session in data.sessions],
+            sessions=[
+                AdminRaceEventSessionWrite(
+                    session_type=session.session_type.value,
+                    source_provider=session.source_provider.value,
+                    source_key=session.source_key,
+                    start_datetime=session.start_datetime,
+                    scheduled_start_datetime=session.scheduled_start_datetime,
+                    lock_cutoff=session.lock_cutoff,
+                    scheduled_lock_cutoff=session.scheduled_lock_cutoff,
+                    status=session.status.value if session.status is not None else None,
+                    status_reason=session.status_reason,
+                )
+                for session in data.sessions
+            ],
         )
     except AdminError as exc:
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return RaceEventCreateResponse(
         public_id=race_event.public_id,
-        season_year=race_event.season.year,
+        season_year=race_event.season_year,
         round_number=race_event.round_number,
-        circuit_code=race_event.circuit.code,
+        circuit_code=race_event.circuit_code,
         name=race_event.name,
-        source_provider=race_event.source_provider,
+        source_provider=SourceProvider(race_event.source_provider),
         source_key=race_event.source_key,
         event_start=race_event.event_start,
         event_end=race_event.event_end,
         scheduled_event_start=race_event.scheduled_event_start,
         scheduled_event_end=race_event.scheduled_event_end,
-        status=race_event.status,
+        status=RaceEventStatus(race_event.status),
         status_reason=race_event.status_reason,
         sessions=[
             EventSessionCreateResponse(
                 public_id=session.public_id,
-                session_type=session.session_type,
-                source_provider=session.source_provider,
+                session_type=SessionType(session.session_type),
+                source_provider=SourceProvider(session.source_provider),
                 source_key=session.source_key,
                 start_datetime=session.start_datetime,
                 scheduled_start_datetime=session.scheduled_start_datetime,
                 lock_cutoff=session.lock_cutoff,
                 scheduled_lock_cutoff=session.scheduled_lock_cutoff,
-                status=session.status,
+                status=RaceEventStatus(session.status),
                 status_reason=session.status_reason,
                 results_published=session.results_published,
                 results_published_at=session.results_published_at,
             )
-            for session in sorted(race_event.event_sessions, key=lambda s: s.start_datetime)
+            for session in race_event.sessions
         ],
     )

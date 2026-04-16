@@ -1,22 +1,27 @@
 from typing import Protocol
 
-from app.db.competition import Circuit, RaceEvent, Season
+from app.domain.admin.race_events.models import (
+    AdminRaceEvent,
+    AdminRaceEventCircuit,
+    AdminRaceEventSeason,
+    AdminRaceEventSessionWrite,
+)
 
 
 class AdminRaceEventRepository(Protocol):
-    def get_by_id(self, race_event_id: int) -> RaceEvent | None:
+    def get_by_id(self, race_event_id: int) -> AdminRaceEvent | None:
         ...
 
-    def get_season_by_year(self, year: int) -> Season | None:
+    def get_season_by_year(self, year: int) -> AdminRaceEventSeason | None:
         ...
 
-    def get_circuit_by_code(self, code: str) -> Circuit | None:
+    def get_circuit_by_code(self, code: str) -> AdminRaceEventCircuit | None:
         ...
 
-    def get_by_season_and_round(self, *, season_id: int, round_number: int) -> RaceEvent | None:
+    def get_by_season_and_round(self, *, season_id: int, round_number: int) -> AdminRaceEvent | None:
         ...
 
-    def list_race_events(self, *, season_year: int | None = None) -> list[RaceEvent]:
+    def list_race_events(self, *, season_year: int | None = None) -> list[AdminRaceEvent]:
         ...
 
     def create(
@@ -26,34 +31,34 @@ class AdminRaceEventRepository(Protocol):
         circuit_id: int,
         round_number: int,
         name: str,
-        source_provider,
+        source_provider: str,
         source_key: str | None,
         event_start,
         event_end,
         scheduled_event_start,
         scheduled_event_end,
-        status,
+        status: str | None,
         status_reason: str | None,
-        sessions: list[dict],
-    ) -> RaceEvent:
+        sessions: list[AdminRaceEventSessionWrite],
+    ) -> AdminRaceEvent:
         ...
 
     def update(
         self,
         *,
-        race_event: RaceEvent,
+        race_event_id: int,
         season_id: int,
         circuit_id: int,
         round_number: int,
         name: str,
-        source_provider,
+        source_provider: str,
         source_key: str | None,
         event_start,
         event_end,
         scheduled_event_start,
         scheduled_event_end,
-        status,
+        status: str | None,
         status_reason: str | None,
-        sessions: list[dict],
-    ) -> RaceEvent:
+        sessions: list[AdminRaceEventSessionWrite],
+    ) -> AdminRaceEvent:
         ...
