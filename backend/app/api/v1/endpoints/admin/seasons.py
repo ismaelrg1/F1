@@ -20,18 +20,16 @@ from app.models.seasons import SeasonCreateRequest, SeasonCreateResponse
 router = APIRouter()
 
 @router.post(
-        "/seasons",
-        response_model=SeasonCreateResponse,
-        status_code=status.HTTP_201_CREATED
+    "/seasons",
+    response_model=SeasonCreateResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 def create_season(
     data: SeasonCreateRequest,
     request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(require_permissions_all(COMPETITION_MANAGE))
-
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
 ) -> SeasonCreateResponse:
-    
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
     repository = SqlAlchemyAdminSeasonRepository(db)
@@ -45,4 +43,8 @@ def create_season(
     except AdminError as exc:
         raise _translate_admin_error(exc, locale=locale) from exc
 
-    return SeasonCreateResponse.model_validate(season)
+    return SeasonCreateResponse(
+        id=season.id,
+        year=season.year,
+        is_active=season.is_active,
+    )
