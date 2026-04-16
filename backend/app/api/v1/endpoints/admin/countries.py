@@ -50,7 +50,12 @@ def create_country(
     except AdminError as exc:
         raise _translate_admin_error(exc, locale=locale) from exc
 
-    return CountryCreateResponse.model_validate(country)
+    return CountryCreateResponse(
+        id=country.id,
+        iso2=country.iso2,
+        name=country.name,
+        flag_asset_url=country.flag_asset_url,
+    )
 
 
 @router.get(
@@ -68,5 +73,13 @@ def list_countries(
     countries = use_case.execute()
 
     return CountryListResponse(
-        items=[CountryRead.model_validate(country) for country in countries]
+        items=[
+            CountryRead(
+                id=country.id,
+                iso2=country.iso2,
+                name=country.name,
+                flag_asset_url=country.flag_asset_url,
+            )
+            for country in countries
+        ]
     )

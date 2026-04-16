@@ -45,12 +45,12 @@ def create_circuit(
         )
     except AdminError as exc:
         raise _translate_admin_error(exc, locale=locale) from exc
-    
+
     return CircuitCreateResponse(
         id=circuit.id,
         code=circuit.code,
         name=circuit.name,
-        country_iso2=circuit.country.iso2,
+        country_iso2=circuit.country_iso2,
         map_asset_url=circuit.map_asset_url,
         image_asset_url=circuit.image_asset_url,
     )
