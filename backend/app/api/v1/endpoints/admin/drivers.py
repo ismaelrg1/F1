@@ -9,6 +9,7 @@ from app.api.error_translators import get_preferred_locale
 from app.core.permissions import COMPETITION_MANAGE
 
 from app.db.auth import User
+from app.db.enums import SeasonDriverStatus
 from app.db.session import get_db
 from app.domain.admin import (
     AdminError,
@@ -76,13 +77,13 @@ def create_season_driver(
         season_driver = use_case.execute(
             season_year=data.season_year,
             driver_code=data.driver_code,
-            status=data.status,
+            status=data.status.value,
         )
     except AdminError as exc:
         raise _translate_admin_error(exc, locale=locale) from exc
 
     return SeasonDriverCreateResponse(
-        season_year=season_driver.season.year,
-        driver_code=season_driver.driver.code,
-        status=season_driver.status,
+        season_year=season_driver.season_year,
+        driver_code=season_driver.driver_code,
+        status=SeasonDriverStatus(season_driver.status),
     )

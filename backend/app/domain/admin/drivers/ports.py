@@ -1,20 +1,24 @@
 from typing import Protocol
 
-from app.db.competition import Driver, Season, SeasonDriver
+from app.domain.admin.drivers.models import (
+    AdminDriver,
+    AdminDriverSeason,
+    AdminSeasonDriver,
+)
 
 
 class AdminDriverRepository(Protocol):
-    def get_by_code(self, code: str) -> Driver | None:
+    def get_by_code(self, code: str) -> AdminDriver | None:
         ...
 
-    def create(self, *, code: str, name: str) -> Driver:
+    def create(self, *, code: str, name: str) -> AdminDriver:
         ...
 
-    def get_season_by_year(self, year: int) -> Season | None:
+    def get_season_by_year(self, year: int) -> AdminDriverSeason | None:
         ...
 
-    def get_season_driver(self, *, season_id: int, driver_id: int) -> SeasonDriver | None:
+    def get_season_driver(self, *, season_id: int, driver_id: int) -> AdminSeasonDriver | None:
         ...
 
-    def create_season_driver(self, *, season_id: int, driver_id: int, status) -> SeasonDriver:
+    def create_season_driver(self, *, season_id: int, driver_id: int, status) -> AdminSeasonDriver:
         ...
