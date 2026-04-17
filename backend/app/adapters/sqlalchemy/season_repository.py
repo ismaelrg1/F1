@@ -10,6 +10,7 @@ from app.db.competition import(
     SeasonTeam, 
     TeamF1,
 )
+from app.domain.seasons.models import SeasonRoster, SeasonRosterEntry, SeasonSummary
 from app.domain.seasons.ports import SeasonRepository
 
 
@@ -17,22 +18,28 @@ class SqlAlchemySeasonRepository(SeasonRepository):
     def __init__(self, session: Session):
         self._session = session
 
-    def list_seasons(self):
+    def list_seasons(self) -> list[SeasonSummary]:
         stmt = select(Season).order_by(Season.year.desc())
-        return list(self._session.execute(stmt).scalars().all())
+        return [
+            self._map_season(season)
+            for season in self._session.execute(stmt).scalars().all()
+        ]
     
-    def get_by_year(self, year: int):
+    def get_by_year(self, year: int) -> SeasonSummary | None:
         stmt = select(Season).where(Season.year == year)
-        return self._session.execute(stmt).scalar_one_or_none()
+        season = self._session.execute(stmt).scalar_one_or_none()
+        return None if season is None else self._map_season(season)
 
-    def get_active_season(self):
+    def get_active_season(self) -> SeasonSummary | None:
         stmt = select(Season).where(Season.is_active.is_(True))
-        return self._session.execute(stmt).scalar_one_or_none()
+        season = self._session.execute(stmt).scalar_one_or_none()
+        return None if season is None else self._map_season(season)
 
-    def get_season(self, season_id: int):
-        return self._session.get(Season, season_id)
+    def get_season(self, season_id: int) -> SeasonSummary | None:
+        season = self._session.get(Season, season_id)
+        return None if season is None else self._map_season(season)
 
-    def get_season_roster(self, season_id: int):
+    def get_season_roster(self, season_id: int) -> SeasonRoster | None:
         stmt = (
             select(Season)
             .where(Season.id == season_id)
@@ -49,4 +56,26 @@ class SqlAlchemySeasonRepository(SeasonRepository):
         drivers: list[Driver] = [item.driver for item in season.season_drivers if item.driver]
         teams: list[TeamF1] = [item.team for item in season.season_teams if item.team]
         engines: list[Engine] = [item.engine for item in season.season_engines if item.engine]
-        return {"drivers": drivers, "teams": teams, "engines": engines}
+        return SeasonRoster(
+            season_id=season.id,
+            drivers=[
+                SeasonRosterEntry(code=driver.code, name=driver.name)
+                for driver in drivers
+            ],
+            teams=[
+                SeasonRosterEntry(code=team.code, name=team.name)
+                for team in teams
+            ],
+            engines=[
+                SeasonRosterEntry(code=engine.code, name=engine.name)
+                for engine in engines
+            ],
+        )
+
+    @staticmethod
+    def _map_season(season: Season) -> SeasonSummary:
+        return SeasonSummary(
+            id=season.id,
+            year=season.year,
+            is_active=season.is_active,
+        )

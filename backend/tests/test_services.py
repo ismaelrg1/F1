@@ -322,4 +322,7 @@ def test_season_use_cases_list_and_resolve_active_season() -> None:
     active = GetActiveSeason(repository).execute()
 
     assert [season.year for season in seasons] == [2026, 2025]
-    assert active is season_2026
+    assert active is not None
+    assert active.id == season_2026.id
+    assert active.year == season_2026.year
+    assert active.is_active is season_2026.is_active
