@@ -1,6 +1,7 @@
 from app.api.i18n.messages.access import MESSAGES_ACCESS
 from app.api.i18n.messages.admin import MESSAGES_ADMIN
 from app.api.i18n.messages.auth import MESSAGES_AUTH
+from app.api.i18n.messages.bets import MESSAGES_BETS
 from app.api.i18n.messages.errors import MESSAGES_ERRORS
 
 DEFAULT_LOCALE = "en"
@@ -10,12 +11,14 @@ MESSAGES = {
         **MESSAGES_ACCESS["en"],
         **MESSAGES_AUTH["en"],
         **MESSAGES_ADMIN["en"],
+        **MESSAGES_BETS["en"],
         **MESSAGES_ERRORS["en"],
     },
     "es": {
         **MESSAGES_ACCESS["es"],
         **MESSAGES_AUTH["es"],
         **MESSAGES_ADMIN["es"],
+        **MESSAGES_BETS["es"],
         **MESSAGES_ERRORS["es"],
     },
 }

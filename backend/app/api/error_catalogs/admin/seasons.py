@@ -5,6 +5,7 @@ from app.api.error_catalogs.base import ErrorCatalogEntry
 from app.domain.admin.seasons.errors import (
     ActiveSeasonAlreadyExistsError,
     SeasonAlreadyExistsError,
+    SeasonNotFoundError
 )
 
 ADMIN_SEASON_ERROR_MAP = {
@@ -15,5 +16,9 @@ ADMIN_SEASON_ERROR_MAP = {
     ActiveSeasonAlreadyExistsError: ErrorCatalogEntry(
         status_code=status.HTTP_409_CONFLICT,
         error_code="admin.active_season_already_exists",
+    ),
+    SeasonNotFoundError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="admin.season_not_found",
     ),
 }

@@ -15,6 +15,7 @@ from app.models.seasons import (
     SeasonYearsResponse,
     SeasonCreateRequest,
     SeasonCreateResponse,
+    SeasonUpdateIsActiveRequest,
 )
 from app.models.countries import ( 
     CountryCreateRequest, 
@@ -54,6 +55,7 @@ __all__ = [
         "SeasonYearsResponse",
         "SeasonCreateRequest",
         "SeasonCreateResponse",
+        "SeasonUpdateIsActiveRequest",
 
         "CountryCreateRequest",
         "CountryCreateResponse",

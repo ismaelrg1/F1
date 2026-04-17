@@ -35,3 +35,20 @@ class ActiveSeasonAlreadyExistsError(AdminError):
         return {
             "active_year": self.active_year,
         }
+
+class SeasonNotFoundError(AdminError):
+    def __init__(self, *, season_id: int):
+        self.season_id = season_id
+        super().__init__()
+
+    @property
+    def context(self) -> dict:
+        return {
+            "season_id": self.season_id,
+        }
+
+    @property
+    def public_params(self) -> dict:
+        return {
+            "season_id": self.season_id,
+        }

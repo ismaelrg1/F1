@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, status, Query
 from sqlalchemy.orm import Session
 
 from app.adapters.sqlalchemy import (
@@ -14,6 +14,7 @@ from app.domain.admin import (
     AdminError,
     CreateSeason,
     ListSeasons,
+    UpdateSeasonIsActive,
 )
 
 from app.models.seasons import ( 
@@ -21,6 +22,7 @@ from app.models.seasons import (
     SeasonCreateResponse,
     SeasonListResponse,
     SeasonRead,
+    SeasonUpdateIsActiveRequest
 )
 
 router = APIRouter()
@@ -56,18 +58,19 @@ def create_season(
     )
 
 @router.get(
-    "seasons",
+    "/seasons",
     response_model=SeasonListResponse,
     status_code=status.HTTP_200_OK,
 )
 def get_seasons(
     db: Session = Depends(get_db),
-    user: User = Depends(require_permissions_all(COMPETITION_MANAGE))
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
+    is_active: bool | None = Query(default=None),
 ) -> SeasonListResponse:
     repository = SqlAlchemyAdminSeasonRepository(db)
     use_case = ListSeasons(repository)
 
-    seasons = use_case.execute()
+    seasons = use_case.execute(is_active=is_active)
 
     return SeasonListResponse(
         items=[
@@ -78,4 +81,36 @@ def get_seasons(
             )
             for season in seasons
         ]
+    )
+
+
+@router.patch(
+    "/seasons/{season_id}",
+    response_model=SeasonCreateResponse,
+    status_code=status.HTTP_200_OK,
+)
+def update_season_is_active(
+    season_id: int,
+    data: SeasonUpdateIsActiveRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
+) -> SeasonCreateResponse:
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
+    repository = SqlAlchemyAdminSeasonRepository(db)
+    use_case = UpdateSeasonIsActive(repository)
+
+    try:
+        season = use_case.execute(
+            season_id=season_id,
+            is_active=data.is_active,
+        )
+    except AdminError as exc:
+        raise _translate_admin_error(exc, locale=locale) from exc
+
+    return SeasonCreateResponse(
+        id=season.id,
+        year=season.year,
+        is_active=season.is_active,
     )

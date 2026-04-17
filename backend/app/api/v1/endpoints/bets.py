@@ -1,19 +1,16 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.adapters.sqlalchemy import SqlAlchemyBetQuestionsRepository
-from app.api.deps import require_group_member
+from app.api.deps import require_group_member, _translate_bets_error
+from app.api.error_translators import get_preferred_locale
 from app.db.auth import User
 from app.db.session import get_db
 from app.db.social import Group
-from app.domain.bets.errors import (
-    BetContextNotFoundForRaceEventError,
-    RaceEventNotFoundForBetQuestionsError,
-    BetContextNotFoundForTestingEventError,
-    TestingEventNotFoundForBetQuestionsError,
-)
+
+from app.domain.bets import BetsError
 from app.domain.bets.use_cases import GetRaceEventBetQuestions, GetTestingEventBetQuestions
 from app.models.bets import (
     BetQuestionRead,
@@ -34,10 +31,12 @@ router = APIRouter()
 )
 def get_race_event_questions(
     race_event_public_id: UUID,
+    request: Request,
     db: Session = Depends(get_db),
     user_group: tuple[User, Group] = Depends(require_group_member),
 ) -> RaceEventBetQuestionsResponse:
     _, group = user_group
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
     repository = SqlAlchemyBetQuestionsRepository(db)
     use_case = GetRaceEventBetQuestions(repository)
@@ -47,16 +46,8 @@ def get_race_event_questions(
             race_event_public_id=race_event_public_id,
             group_id=group.id,
         )
-    except RaceEventNotFoundForBetQuestionsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Race event not found",
-        ) from exc
-    except BetContextNotFoundForRaceEventError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Bet context not found for this group and race event",
-        ) from exc
+    except BetsError as exc:
+        raise _translate_bets_error(exc, locale=locale) from exc
 
     return RaceEventBetQuestionsResponse(
         bet_context_public_id=result.bet_context_public_id,
@@ -129,10 +120,13 @@ def get_race_event_questions(
 )
 def get_testing_event_questions(
     testing_event_public_id: UUID,
+    request: Request,
     db: Session = Depends(get_db),
     user_group: tuple[User, Group] = Depends(require_group_member),
 ) -> TestingEventBetQuestionsResponse:
     _, group = user_group
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
 
     repository = SqlAlchemyBetQuestionsRepository(db)
     use_case = GetTestingEventBetQuestions(repository)
@@ -142,16 +136,8 @@ def get_testing_event_questions(
             testing_event_public_id=testing_event_public_id,
             group_id=group.id,
         )
-    except TestingEventNotFoundForBetQuestionsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Testing event not found",
-        ) from exc
-    except BetContextNotFoundForTestingEventError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Bet context not found for this group and testing event",
-        ) from exc
+    except BetsError as exc:
+        raise _translate_bets_error(exc, locale=locale) from exc
 
     return TestingEventBetQuestionsResponse(
         bet_context_public_id=result.bet_context_public_id,

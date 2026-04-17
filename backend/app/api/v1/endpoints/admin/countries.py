@@ -63,7 +63,6 @@ def create_country(
     response_model=CountryListResponse,
 )
 def list_countries(
-    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_permissions_all(COMPETITION_MANAGE)),
 ) -> CountryListResponse:

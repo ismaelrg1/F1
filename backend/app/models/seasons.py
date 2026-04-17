@@ -27,3 +27,6 @@ class SeasonCreateResponse(BaseModel):
     id: int
     year: int
     is_active: bool
+
+class SeasonUpdateIsActiveRequest(BaseModel):
+    is_active: bool

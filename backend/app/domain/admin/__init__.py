@@ -4,7 +4,9 @@ from app.domain.admin.seasons import (
     ActiveSeasonAlreadyExistsError,
     CreateSeason,
     SeasonAlreadyExistsError,
+    SeasonNotFoundError,
     ListSeasons,
+    UpdateSeasonIsActive,
 )
 from app.domain.admin.circuits import (
     CircuitAlreadyExistsError,
@@ -79,6 +81,9 @@ __all__ = [
     "ActiveSeasonAlreadyExistsError",
     "CreateSeason",
     "SeasonAlreadyExistsError",
+    "SeasonNotFoundError",
+    "ListSeasons",
+    "UpdateSeasonIsActive",
 
     "CircuitAlreadyExistsError",
     "CountryNotFoundForCircuitError",

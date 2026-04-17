@@ -1,6 +1,7 @@
 from app.domain.admin.seasons.errors import (
     ActiveSeasonAlreadyExistsError,
     SeasonAlreadyExistsError,
+    SeasonNotFoundError,
 )
 from app.domain.admin.seasons.models import AdminSeason
 from app.domain.admin.seasons.ports import AdminSeasonRepository
@@ -27,6 +28,23 @@ class ListSeasons:
     def __init__(self, repository: AdminSeasonRepository):
         self._repository = repository
 
-    def execute(self) -> list[AdminSeason]:
-        return self._repository.list_seasons()
+    def execute(self, is_active: bool | None = None) -> list[AdminSeason]:
+        return self._repository.list_seasons(is_active=is_active)
+    
+class UpdateSeasonIsActive:
+    def __init__(self, repository: AdminSeasonRepository):
+        self._repository = repository
+
+    def execute(self, *, season_id: int, is_active: bool) -> AdminSeason | None:
+        season = self._repository.get_by_id(season_id)
+        if season is None:
+            raise SeasonNotFoundError(season_id=season_id)
+        
+        if is_active:
+            self._repository.deactivate_other_seasons(except_season_id=season_id)
+        
+        return self._repository.update_is_active(
+            season_id=season_id,
+            is_active=is_active,
+        )
 
