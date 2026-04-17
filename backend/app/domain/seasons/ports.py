@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from app.domain.seasons.models import SeasonRoster, SeasonSummary
+from app.domain.seasons.models import SeasonSummary
 
 
 class SeasonRepository(Protocol):
@@ -12,7 +12,3 @@ class SeasonRepository(Protocol):
 
     def get_season(self, season_id: int) -> SeasonSummary | None:
         ...
-
-    def get_season_roster(self, season_id: int) -> SeasonRoster | None:
-        ...
-

@@ -4,7 +4,7 @@ from app.domain.admin.seasons.errors import (
 )
 from app.domain.admin.seasons.models import AdminSeason
 from app.domain.admin.seasons.ports import AdminSeasonRepository
-from app.domain.admin.seasons.use_cases import CreateSeason
+from app.domain.admin.seasons.use_cases import CreateSeason, ListSeasons
 
 __all__ = [
     "ActiveSeasonAlreadyExistsError",
@@ -15,4 +15,5 @@ __all__ = [
     "AdminSeasonRepository",
     
     "CreateSeason",
+    "ListSeasons",
 ]

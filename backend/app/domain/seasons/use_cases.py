@@ -1,4 +1,4 @@
-from app.domain.seasons.models import SeasonRoster, SeasonSummary
+from app.domain.seasons.models import SeasonSummary
 from app.domain.seasons.ports import SeasonRepository
 
 
@@ -24,11 +24,3 @@ class GetSeason:
 
     def execute(self, season_id: int) -> SeasonSummary | None:
         return self._repository.get_season(season_id)
-
-
-class GetSeasonRoster:
-    def __init__(self, repository: SeasonRepository):
-        self._repository = repository
-
-    def execute(self, season_id: int) -> SeasonRoster | None:
-        return self._repository.get_season_roster(season_id)

@@ -30,6 +30,11 @@ class SqlAlchemyAdminSeasonRepository(AdminSeasonRepository):
         self._session.commit()
         self._session.refresh(season)
         return self._map_season(season)
+    
+    def list_seasons(self) -> list[AdminSeason]:
+        stmt = select(Season).order_by(Season.year.desc())
+        seasons = self._session.execute(stmt).scalars().all()
+        return [self._map_season(season) for season in seasons]
 
     @staticmethod
     def _map_season(season: Season) -> AdminSeason:

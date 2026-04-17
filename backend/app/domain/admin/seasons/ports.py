@@ -12,3 +12,6 @@ class AdminSeasonRepository(Protocol):
 
     def create(self, *, year: int, is_active: bool) -> AdminSeason:
         ...
+    
+    def list_seasons(self) -> list[AdminSeason]:
+        ...

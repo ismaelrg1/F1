@@ -1,6 +1,14 @@
 from pydantic import BaseModel, Field
 
 
+class SeasonYearRead(BaseModel):
+    year: int
+
+
+class SeasonYearsResponse(BaseModel):
+    items: list[SeasonYearRead]
+
+
 class SeasonRead(BaseModel):
     id: int
     year: int

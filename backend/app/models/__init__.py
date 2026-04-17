@@ -11,6 +11,8 @@ from app.models.auth import (
 from app.models.seasons import (
     SeasonListResponse,
     SeasonRead,
+    SeasonYearRead,
+    SeasonYearsResponse,
     SeasonCreateRequest,
     SeasonCreateResponse,
 )
@@ -40,7 +42,6 @@ from app.models.calendar import (
 __all__ = [
         "LoginGoogleRequest",
         "LoginLocalRequest",
-        "LoginRequest",
         "LoginResponse",
         "RegisterGoogleRequest",
         "RegisterLocalRequest",
@@ -49,8 +50,10 @@ __all__ = [
 
         "SeasonListResponse",
         "SeasonRead",
-        "SeasonRosterEntry",
-        "SeasonRosterResponse",
+        "SeasonYearRead",
+        "SeasonYearsResponse",
+        "SeasonCreateRequest",
+        "SeasonCreateResponse",
 
         "CountryCreateRequest",
         "CountryCreateResponse",

@@ -4,6 +4,7 @@ from app.domain.admin.seasons import (
     ActiveSeasonAlreadyExistsError,
     CreateSeason,
     SeasonAlreadyExistsError,
+    ListSeasons,
 )
 from app.domain.admin.circuits import (
     CircuitAlreadyExistsError,

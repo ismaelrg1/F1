@@ -13,9 +13,15 @@ from app.db.session import get_db
 from app.domain.admin import (
     AdminError,
     CreateSeason,
+    ListSeasons,
 )
 
-from app.models.seasons import SeasonCreateRequest, SeasonCreateResponse
+from app.models.seasons import ( 
+    SeasonCreateRequest, 
+    SeasonCreateResponse,
+    SeasonListResponse,
+    SeasonRead,
+)
 
 router = APIRouter()
 
@@ -51,8 +57,25 @@ def create_season(
 
 @router.get(
     "seasons",
-    response_model=SeasonCreateResponse,
-    status_code=status.HTTP_201_CREATED,
+    response_model=SeasonListResponse,
+    status_code=status.HTTP_200_OK,
 )
-def get_seasons():
-    ...
+def get_seasons(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_permissions_all(COMPETITION_MANAGE))
+) -> SeasonListResponse:
+    repository = SqlAlchemyAdminSeasonRepository(db)
+    use_case = ListSeasons(repository)
+
+    seasons = use_case.execute()
+
+    return SeasonListResponse(
+        items=[
+            SeasonRead(
+                id=season.id,
+                year=season.year,
+                is_active=season.is_active,
+            )
+            for season in seasons
+        ]
+    )
