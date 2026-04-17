@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 class SeasonRead(BaseModel):
@@ -9,18 +9,6 @@ class SeasonRead(BaseModel):
 
 class SeasonListResponse(BaseModel):
     items: list[SeasonRead]
-
-
-class SeasonRosterEntry(BaseModel):
-    code: str
-    name: str
-
-
-class SeasonRosterResponse(BaseModel):
-    season_id: int
-    drivers: list[SeasonRosterEntry]
-    teams: list[SeasonRosterEntry]
-    engines: list[SeasonRosterEntry]
 
 
 class SeasonCreateRequest(BaseModel):

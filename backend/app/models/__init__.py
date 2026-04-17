@@ -1,7 +1,6 @@
 from app.models.auth import (
     LoginGoogleRequest,
     LoginLocalRequest,
-    LoginRequest,
     LoginResponse,
     RegisterGoogleRequest,
     RegisterLocalRequest,
@@ -12,14 +11,14 @@ from app.models.auth import (
 from app.models.seasons import (
     SeasonListResponse,
     SeasonRead,
-    SeasonRosterEntry,
-    SeasonRosterResponse,
+    SeasonCreateRequest,
+    SeasonCreateResponse,
 )
 from app.models.countries import ( 
     CountryCreateRequest, 
     CountryCreateResponse,
     CountryListResponse,
-    CountryRead
+    CountryRead,
 )
 
 from app.models.admin_fastf1 import (

@@ -48,3 +48,11 @@ def create_season(
         year=season.year,
         is_active=season.is_active,
     )
+
+@router.get(
+    "seasons",
+    response_model=SeasonCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def get_seasons():
+    ...

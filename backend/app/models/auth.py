@@ -10,11 +10,6 @@ class UserSummary(BaseModel):
     email: str
 
 
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-
 class LoginLocalRequest(BaseModel):
     username: str
     password: str
