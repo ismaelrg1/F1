@@ -4,8 +4,6 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class UserSummary(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: int
     public_id: UUID
     username: str

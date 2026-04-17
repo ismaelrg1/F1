@@ -2,8 +2,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class SeasonRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: int
     year: int
     is_active: bool
@@ -30,8 +28,6 @@ class SeasonCreateRequest(BaseModel):
     is_active: bool = False
 
 class SeasonCreateResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: int
     year: int
     is_active: bool

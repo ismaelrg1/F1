@@ -1,4 +1,4 @@
-from typing import Protocol, Any
+from typing import Protocol
 
 from app.domain.admin.fastf1.models import (
     FastF1RaceEventPreview,

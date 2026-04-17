@@ -7,8 +7,6 @@ class CountryCreateRequest(BaseModel):
 
 
 class CountryCreateResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: int
     iso2: str
     name: str
@@ -16,8 +14,6 @@ class CountryCreateResponse(BaseModel):
 
 
 class CountryRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: int
     iso2: str
     name: str

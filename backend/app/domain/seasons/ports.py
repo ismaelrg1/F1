@@ -15,3 +15,4 @@ class SeasonRepository(Protocol):
 
     def get_season_roster(self, season_id: int) -> SeasonRoster | None:
         ...
+

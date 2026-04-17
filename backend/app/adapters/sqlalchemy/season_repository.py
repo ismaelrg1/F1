@@ -25,11 +25,6 @@ class SqlAlchemySeasonRepository(SeasonRepository):
             for season in self._session.execute(stmt).scalars().all()
         ]
     
-    def get_by_year(self, year: int) -> SeasonSummary | None:
-        stmt = select(Season).where(Season.year == year)
-        season = self._session.execute(stmt).scalar_one_or_none()
-        return None if season is None else self._map_season(season)
-
     def get_active_season(self) -> SeasonSummary | None:
         stmt = select(Season).where(Season.is_active.is_(True))
         season = self._session.execute(stmt).scalar_one_or_none()
