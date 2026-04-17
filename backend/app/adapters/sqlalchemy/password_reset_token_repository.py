@@ -5,10 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.db.auth import PasswordResetToken
 
-from app.domain.auth.ports import (
-    PasswordResetTokenRepository,
-    PasswordResetTokenRecord
-)
+from app.domain.auth.models import PasswordResetTokenRecord
+
+from app.domain.auth.ports import PasswordResetTokenRepository
 
 class SqlAlchemyPasswordResetTokenRepository(PasswordResetTokenRepository):
     def __init__(self, session: Session):
@@ -24,16 +23,7 @@ class SqlAlchemyPasswordResetTokenRepository(PasswordResetTokenRepository):
             .order_by(PasswordResetToken.created_at.desc())
         )
         row = self._session.execute(stmt).scalar_one_or_none()
-        if row is None:
-            return None
-        return PasswordResetTokenRecord(
-            user_id=row.user_id,
-            token_hash=row.token_hash,
-            expires_at=row.expires_at,
-            used_at=row.used_at,
-            invalidated_at=row.invalidated_at,
-            created_at=row.created_at,
-        )
+        return None if row is None else self._map_token_record(row)
 
     def invalidate_active_for_user(self, user_id: int, *, invalidated_at: datetime) -> None:
         stmt = (
@@ -57,16 +47,8 @@ class SqlAlchemyPasswordResetTokenRepository(PasswordResetTokenRepository):
     def get_by_token_hash(self, token_hash: str) -> PasswordResetTokenRecord | None:
         stmt = select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
         row = self._session.execute(stmt).scalar_one_or_none()
-        if row is None:
-            return None
-        return PasswordResetTokenRecord(
-            user_id=row.user_id,
-            token_hash=row.token_hash,
-            expires_at=row.expires_at,
-            used_at=row.used_at,
-            invalidated_at=row.invalidated_at,
-            created_at=row.created_at,
-        )
+        return None if row is None else self._map_token_record(row)
+
 
     def mark_as_used(self, token_hash: str, *, used_at: datetime) -> None:
         stmt = (
@@ -75,3 +57,14 @@ class SqlAlchemyPasswordResetTokenRepository(PasswordResetTokenRepository):
             .values(used_at=used_at)
         )
         self._session.execute(stmt)
+
+    @staticmethod
+    def _map_token_record(row: PasswordResetToken) -> PasswordResetTokenRecord:
+        return PasswordResetTokenRecord(
+            user_id=row.user_id,
+            token_hash=row.token_hash,
+            expires_at=row.expires_at,
+            used_at=row.used_at,
+            invalidated_at=row.invalidated_at,
+            created_at=row.created_at,
+        )

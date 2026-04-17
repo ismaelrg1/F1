@@ -57,7 +57,8 @@ class SqlAlchemyAdminCircuitRepository(AdminCircuitRepository):
         created = self._session.execute(stmt).scalar_one()
         return self._map_circuit(created)
     
-    def _map_circuit(self, circuit: Circuit) -> AdminCircuit:
+    @staticmethod
+    def _map_circuit(circuit: Circuit) -> AdminCircuit:
         return AdminCircuit(
             id=circuit.id,
             code=circuit.code,

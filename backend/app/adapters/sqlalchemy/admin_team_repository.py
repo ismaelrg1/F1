@@ -92,7 +92,8 @@ class SqlAlchemyAdminTeamRepository(AdminTeamRepository):
         created = self._session.execute(stmt).scalar_one()
         return self._map_season_team(created)
 
-    def _map_season_team(self, season_team: SeasonTeam) -> AdminSeasonTeam:
+    @staticmethod
+    def _map_season_team(season_team: SeasonTeam) -> AdminSeasonTeam:
         return AdminSeasonTeam(
             season_year=season_team.season.year,
             team_code=season_team.team.code,

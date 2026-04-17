@@ -93,7 +93,8 @@ class SqlAlchemyAdminDriverRepository(AdminDriverRepository):
         created = self._session.execute(stmt).scalar_one()
         return self._map_season_driver(created)
 
-    def _map_season_driver(self, season_driver: SeasonDriver) -> AdminSeasonDriver:
+    @staticmethod
+    def _map_season_driver(season_driver: SeasonDriver) -> AdminSeasonDriver:
         return AdminSeasonDriver(
             season_year=season_driver.season.year,
             driver_code=season_driver.driver.code,

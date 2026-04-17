@@ -34,25 +34,7 @@ class SqlAlchemyHomeRepository(HomeRepository):
             if event.status not in {TestingEventStatus.SCHEDULED, TestingEventStatus.POSTPONED}:
                 continue
 
-            candidates.append(
-                HomeEventResult(
-                    kind="TESTING",
-                    event=HomeEvent(
-                        public_id=event.public_id,
-                        season_year=event.season.year,
-                        round_number=None,
-                        name=event.name,
-                        circuit_code=event.circuit.code,
-                        circuit_name=event.circuit.name,
-                        country_name=event.circuit.country.name,
-                        event_start=event.event_start,
-                        event_end=event.event_end,
-                        scheduled_event_start=event.scheduled_event_start,
-                        scheduled_event_end=event.scheduled_event_end,
-                        status=event.status.value,
-                    ),
-                )
-            )
+            candidates.append(self._map_testing_event(event))
 
         for event in race_events:
             event_datetime = event.event_start or event.scheduled_event_start
@@ -63,25 +45,7 @@ class SqlAlchemyHomeRepository(HomeRepository):
             if event.status not in {RaceEventStatus.SCHEDULED, RaceEventStatus.POSTPONED}:
                 continue
 
-            candidates.append(
-                HomeEventResult(
-                    kind="RACE",
-                    event=HomeEvent(
-                        public_id=event.public_id,
-                        season_year=event.season.year,
-                        round_number=event.round_number,
-                        name=event.name,
-                        circuit_code=event.circuit.code,
-                        circuit_name=event.circuit.name,
-                        country_name=event.circuit.country.name,
-                        event_start=event.event_start,
-                        event_end=event.event_end,
-                        scheduled_event_start=event.scheduled_event_start,
-                        scheduled_event_end=event.scheduled_event_end,
-                        status=event.status.value,
-                    ),
-                )
-            )
+            candidates.append(self._map_race_event(event))
 
         if not candidates:
             return None
@@ -114,4 +78,44 @@ class SqlAlchemyHomeRepository(HomeRepository):
                 joinedload(RaceEvent.season),
                 joinedload(RaceEvent.circuit).joinedload(Circuit.country),
             )
+        )
+    
+    @staticmethod
+    def _map_testing_event(event: TestingEvent) -> HomeEventResult:
+        return HomeEventResult(
+            kind="TESTING",
+            event=HomeEvent(
+                public_id=event.public_id,
+                season_year=event.season.year,
+                round_number=None,
+                name=event.name,
+                circuit_code=event.circuit.code,
+                circuit_name=event.circuit.name,
+                country_name=event.circuit.country.name,
+                event_start=event.event_start,
+                event_end=event.event_end,
+                scheduled_event_start=event.scheduled_event_start,
+                scheduled_event_end=event.scheduled_event_end,
+                status=event.status.value,
+            ),
+        )
+
+    @staticmethod
+    def _map_race_event(event: RaceEvent) -> HomeEventResult:
+        return HomeEventResult(
+            kind="RACE",
+            event=HomeEvent(
+                public_id=event.public_id,
+                season_year=event.season.year,
+                round_number=event.round_number,
+                name=event.name,
+                circuit_code=event.circuit.code,
+                circuit_name=event.circuit.name,
+                country_name=event.circuit.country.name,
+                event_start=event.event_start,
+                event_end=event.event_end,
+                scheduled_event_start=event.scheduled_event_start,
+                scheduled_event_end=event.scheduled_event_end,
+                status=event.status.value,
+            ),
         )

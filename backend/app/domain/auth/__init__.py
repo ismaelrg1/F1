@@ -16,10 +16,13 @@ from app.domain.auth.errors import (
     PasswordResetTooManyRequestsError,
     InvalidPasswordResetTokenError,
 )
-from app.domain.auth.models import AuthenticatedLoginUser
+from app.domain.auth.models import (
+    AuthenticatedLoginUser,
+    GoogleIdentity,
+    PasswordResetTokenRecord,
+)
 from app.domain.auth.ports import (
     AuthRepository, 
-    GoogleIdentity, 
     GoogleIdentityVerifier, 
     PasswordHasher,
     EmailSender,
@@ -55,9 +58,10 @@ __all__ = [
     "InvalidPasswordResetTokenError",
 
     "AuthenticatedLoginUser",
+    "GoogleIdentity",
+    "PasswordResetTokenRecord",
 
     "AuthRepository",
-    "GoogleIdentity",
     "GoogleIdentityVerifier",
     "PasswordHasher",
     "EmailSender",

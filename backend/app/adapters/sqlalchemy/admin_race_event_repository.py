@@ -187,7 +187,8 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
         updated = self._session.execute(stmt).scalar_one()
         return self._map_race_event(updated)
 
-    def _build_event_session(self, session: AdminRaceEventSessionWrite) -> EventSession:
+    @staticmethod
+    def _build_event_session(session: AdminRaceEventSessionWrite) -> EventSession:
         event_session = EventSession(
             session_type=SessionType(session.session_type),
             source_provider=SourceProvider(session.source_provider),
@@ -202,7 +203,8 @@ class SqlAlchemyAdminRaceEventRepository(AdminRaceEventRepository):
             event_session.status = RaceEventStatus(session.status)
         return event_session
 
-    def _map_race_event(self, race_event: RaceEvent) -> AdminRaceEvent:
+    @staticmethod
+    def _map_race_event(race_event: RaceEvent) -> AdminRaceEvent:
         return AdminRaceEvent(
             id=race_event.id,
             public_id=race_event.public_id,

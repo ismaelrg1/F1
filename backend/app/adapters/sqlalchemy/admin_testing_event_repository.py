@@ -205,7 +205,8 @@ class SqlAlchemyAdminTestingEventRepository(AdminTestingEventRepository):
         updated = self._session.execute(stmt).scalar_one()
         return self._map_testing_event(updated)
 
-    def _map_testing_event(self, testing_event: TestingEvent) -> AdminTestingEvent:
+    @staticmethod
+    def _map_testing_event(testing_event: TestingEvent) -> AdminTestingEvent:
         return AdminTestingEvent(
             id=testing_event.id,
             public_id=testing_event.public_id,

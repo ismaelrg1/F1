@@ -31,7 +31,8 @@ class SqlAlchemyAdminSeasonRepository(AdminSeasonRepository):
         self._session.refresh(season)
         return self._map_season(season)
 
-    def _map_season(self, season: Season) -> AdminSeason:
+    @staticmethod
+    def _map_season(season: Season) -> AdminSeason:
         return AdminSeason(
             id=season.id,
             year=season.year,

@@ -28,7 +28,8 @@ class SqlAlchemyAdminCountryRepository(AdminCountryRepository):
         self._session.refresh(country)
         return self._map_country(country)
     
-    def _map_country(self, country: Country) -> AdminCountry:
+    @staticmethod
+    def _map_country(country: Country) -> AdminCountry:
         return AdminCountry(
             id=country.id,
             iso2=country.iso2,

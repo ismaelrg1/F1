@@ -92,7 +92,8 @@ class SqlAlchemyAdminEngineRepository(AdminEngineRepository):
         created = self._session.execute(stmt).scalar_one()
         return self._map_season_engine(created)
 
-    def _map_season_engine(self, season_engine: SeasonEngine) -> AdminSeasonEngine:
+    @staticmethod
+    def _map_season_engine(season_engine: SeasonEngine) -> AdminSeasonEngine:
         return AdminSeasonEngine(
             season_year=season_engine.season.year,
             engine_code=season_engine.engine.code,

@@ -206,7 +206,8 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
         templates = self._session.execute(stmt).scalars().unique().all()
         return [self._map_template(template) for template in templates]
 
-    def _map_driver_entry(self, entry: DriverEntry, driver_numbers: dict[int, int | None]) -> BetRosterEntry:
+    @staticmethod
+    def _map_driver_entry(entry: DriverEntry, driver_numbers: dict[int, int | None]) -> BetRosterEntry:
         return BetRosterEntry(
             driver_id=entry.driver_id,
             driver_code=entry.driver.code,
@@ -223,7 +224,8 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
             active_to=entry.active_to,
         )
 
-    def _map_bet_context(self, context: BetContext | None) -> BetContextDefinition | None:
+    @staticmethod
+    def _map_bet_context(context: BetContext | None) -> BetContextDefinition | None:
         if context is None:
             return None
 
@@ -243,7 +245,8 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
             ),
         )
 
-    def _map_template(self, template: BetTemplate) -> BetTemplateDefinition:
+    @staticmethod
+    def _map_template(template: BetTemplate) -> BetTemplateDefinition:
         return BetTemplateDefinition(
             scope=BetTemplateScope(template.scope.value),
             session_type=template.session_type.value if template.session_type is not None else None,

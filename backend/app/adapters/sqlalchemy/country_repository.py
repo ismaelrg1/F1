@@ -12,11 +12,15 @@ class SqlAlchemyCountryRepository(CountryRepository):
     def list_countries(self) -> list[CountryResult]:
         stmt = select(Country).order_by(Country.name.asc())
         return [
-            CountryResult(
-                id=country.id,
-                iso2=country.iso2,
-                name=country.name,
-                flag_asset_url=country.flag_asset_url,
-            )
+            self._map_country(country)
             for country in self._session.execute(stmt).scalars().all()
         ]
+
+    @staticmethod
+    def _map_country(country: Country) -> CountryResult:
+        return CountryResult(
+            id=country.id,
+            iso2=country.iso2,
+            name=country.name,
+            flag_asset_url=country.flag_asset_url,
+        )

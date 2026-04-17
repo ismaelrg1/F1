@@ -32,79 +32,8 @@ class SqlAlchemyCalendarRepository(CalendarRepository):
         ).scalars().unique().all()
 
         items: list[CalendarEvent] = []
-
-        for event in testing_events:
-            items.append(
-                CalendarEvent(
-                    id=event.id,
-                    public_id=event.public_id,
-                    kind="TESTING",
-                    season_year=event.season.year,
-                    round_number=None,
-                    name=event.name,
-                    circuit_code=event.circuit.code,
-                    circuit_name=event.circuit.name,
-                    country_name=event.circuit.country.name,
-                    event_start=event.event_start,
-                    event_end=event.event_end,
-                    scheduled_event_start=event.scheduled_event_start,
-                    scheduled_event_end=event.scheduled_event_end,
-                    status=event.status.value,
-                    status_reason=event.status_reason,
-                    testing_sessions=tuple(
-                        CalendarTestingSession(
-                            public_id=session.public_id,
-                            session_order=session.session_order,
-                            name=session.name,
-                            start_datetime=session.start_datetime,
-                            end_datetime=session.end_datetime,
-                            scheduled_start_datetime=session.scheduled_start_datetime,
-                            scheduled_end_datetime=session.scheduled_end_datetime,
-                        )
-                        for session in sorted(event.sessions, key=lambda s: s.session_order)
-                    ),
-                    race_sessions=(),
-                )
-            )
-
-        for event in race_events:
-            items.append(
-                CalendarEvent(
-                    id=event.id,
-                    public_id=event.public_id,
-                    kind="RACE",
-                    season_year=event.season.year,
-                    round_number=event.round_number,
-                    name=event.name,
-                    circuit_code=event.circuit.code,
-                    circuit_name=event.circuit.name,
-                    country_name=event.circuit.country.name,
-                    event_start=event.event_start,
-                    event_end=event.event_end,
-                    scheduled_event_start=event.scheduled_event_start,
-                    scheduled_event_end=event.scheduled_event_end,
-                    status=event.status.value,
-                    status_reason=event.status_reason,
-                    testing_sessions=(),
-                    race_sessions=tuple(
-                        CalendarRaceSession(
-                            public_id=session.public_id,
-                            session_type=session.session_type.value,
-                            start_datetime=session.start_datetime,
-                            scheduled_start_datetime=session.scheduled_start_datetime,
-                            lock_cutoff=session.lock_cutoff,
-                            scheduled_lock_cutoff=session.scheduled_lock_cutoff,
-                            status=session.status.value,
-                            status_reason=session.status_reason,
-                        )
-                        for session in sorted(
-                            event.event_sessions,
-                            key=lambda s: (s.scheduled_start_datetime or s.start_datetime, s.id),
-                        )
-                    ),
-                )
-            )
-
+        items.extend(self._map_testing_event(event) for event in testing_events)
+        items.extend(self._map_race_event(event) for event in race_events)
         return items
 
     def _testing_stmt(self, *, season_year: int | None):
@@ -140,3 +69,82 @@ class SqlAlchemyCalendarRepository(CalendarRepository):
             stmt = stmt.join(RaceEvent.season).where(Season.is_active.is_(True))
 
         return stmt
+    
+    
+    @staticmethod
+    def _map_testing_event(event: TestingEvent) -> CalendarEvent:
+        return CalendarEvent(
+            id=event.id,
+            public_id=event.public_id,
+            kind="TESTING",
+            season_year=event.season.year,
+            round_number=None,
+            name=event.name,
+            circuit_code=event.circuit.code,
+            circuit_name=event.circuit.name,
+            country_name=event.circuit.country.name,
+            event_start=event.event_start,
+            event_end=event.event_end,
+            scheduled_event_start=event.scheduled_event_start,
+            scheduled_event_end=event.scheduled_event_end,
+            status=event.status.value,
+            status_reason=event.status_reason,
+            testing_sessions=tuple(
+                SqlAlchemyCalendarRepository._map_testing_session(session)
+                for session in sorted(event.sessions, key=lambda s: s.session_order)
+            ),
+            race_sessions=(),
+        )
+
+    @staticmethod
+    def _map_race_event(event: RaceEvent) -> CalendarEvent:
+        return CalendarEvent(
+            id=event.id,
+            public_id=event.public_id,
+            kind="RACE",
+            season_year=event.season.year,
+            round_number=event.round_number,
+            name=event.name,
+            circuit_code=event.circuit.code,
+            circuit_name=event.circuit.name,
+            country_name=event.circuit.country.name,
+            event_start=event.event_start,
+            event_end=event.event_end,
+            scheduled_event_start=event.scheduled_event_start,
+            scheduled_event_end=event.scheduled_event_end,
+            status=event.status.value,
+            status_reason=event.status_reason,
+            testing_sessions=(),
+            race_sessions=tuple(
+                SqlAlchemyCalendarRepository._map_race_session(session)
+                for session in sorted(
+                    event.event_sessions,
+                    key=lambda s: (s.scheduled_start_datetime or s.start_datetime, s.id),
+                )
+            ),
+        )
+
+    @staticmethod
+    def _map_testing_session(session) -> CalendarTestingSession:
+        return CalendarTestingSession(
+            public_id=session.public_id,
+            session_order=session.session_order,
+            name=session.name,
+            start_datetime=session.start_datetime,
+            end_datetime=session.end_datetime,
+            scheduled_start_datetime=session.scheduled_start_datetime,
+            scheduled_end_datetime=session.scheduled_end_datetime,
+        )
+
+    @staticmethod
+    def _map_race_session(session) -> CalendarRaceSession:
+        return CalendarRaceSession(
+            public_id=session.public_id,
+            session_type=session.session_type.value,
+            start_datetime=session.start_datetime,
+            scheduled_start_datetime=session.scheduled_start_datetime,
+            lock_cutoff=session.lock_cutoff,
+            scheduled_lock_cutoff=session.scheduled_lock_cutoff,
+            status=session.status.value,
+            status_reason=session.status_reason,
+        )
