@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from app.db.betting import BetContext, BetTemplate, BetTemplateItem
+from app.db.betting import BetContext, BetTemplate, BetTemplateItem, Bet, BetPick
 from app.db.competition import (
     DriverEntry,
     EventSession,
@@ -15,6 +15,7 @@ from app.db.competition import (
 from app.db.enums import BetContextKind
 from app.domain.bets.enums import BetTemplateScope, BetValueType
 from app.domain.bets.models import (
+    BetAnswerResult,
     BetContextDefinition,
     BetExceptionDefinition,
     BetRaceEvent,
@@ -26,6 +27,7 @@ from app.domain.bets.models import (
     BetTemplateItemDefinition,
     BetTestingEvent,
     BetTestingEventSession,
+    UserBetDefinition,
 )
 from app.domain.bets.ports import BetQuestionsRepository
 
@@ -263,6 +265,42 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
         )
         templates = self._session.execute(stmt).scalars().unique().all()
         return [self._map_template(template) for template in templates]
+    
+    def list_user_bets_for_context(
+        self,
+        *,
+        user_id: int,
+        bet_context_id: int,
+    ) -> list[UserBetDefinition]:
+        stmt = (
+            select(Bet)
+            .where(
+                Bet.user_id == user_id,
+                Bet.bet_context_id == bet_context_id,
+            )
+            .options(
+                selectinload(Bet.bet_picks).joinedload(BetPick.bet_score),
+            )
+        )
+        bets = self._session.execute(stmt).scalars().unique().all()
+
+        return [
+            UserBetDefinition(
+                event_session_id=bet.event_session_id,
+                testing_event_session_id=getattr(bet, "testing_event_session_id", None),
+                submitted_at=bet.submitted_at,
+                last_modified_at=bet.last_modified_at,
+                locked_at=bet.locked_at,
+                picks=tuple(
+                    BetAnswerResult(
+                        bet_score_code=pick.bet_score.code,
+                        value=pick.value,
+                    )
+                    for pick in sorted(bet.bet_picks, key=lambda p: (p.bet_score.code, p.id))
+                ),
+            )
+            for bet in bets
+        ]
 
     @staticmethod
     def _map_driver_entry(entry: DriverEntry, driver_numbers: dict[int, int | None]) -> BetRosterEntry:
@@ -288,6 +326,7 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
             return None
 
         return BetContextDefinition(
+            id=context.id,
             public_id=context.public_id,
             kind=context.kind.value,
             label=context.label,

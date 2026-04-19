@@ -7,6 +7,7 @@ from app.domain.bets.models import (
     BetSeason,
     BetTemplateDefinition,
     BetTestingEvent,
+    UserBetDefinition,
 )
 
 
@@ -36,4 +37,7 @@ class BetQuestionsRepository(Protocol):
         ...
 
     def list_season_templates_for_season(self, *, season_id: int) -> list[BetTemplateDefinition]:
+        ...
+
+    def list_user_bets_for_context(self, *, user_id: int, bet_context_id: int) -> list[UserBetDefinition]:
         ...

@@ -63,6 +63,7 @@ class BetExceptionDefinition:
 
 @dataclass(frozen=True)
 class BetContextDefinition:
+    id: int
     public_id: UUID
     kind: BetContextKind
     label: str
@@ -191,3 +192,42 @@ class SeasonBetQuestionsResult:
     season_year: int
     label: str
     questions: list[BetQuestionResult]
+
+
+@dataclass(frozen=True)
+class BetAnswerResult:
+    bet_score_code: str
+    value: str
+
+
+@dataclass(frozen=True)
+class UserBetDefinition:
+    event_session_id: int | None
+    testing_event_session_id: int | None
+    submitted_at: datetime | None
+    last_modified_at: datetime
+    locked_at: datetime | None
+    picks: tuple[BetAnswerResult, ...]
+
+
+@dataclass(frozen=True)
+class RaceEventBetAnswersSessionResult:
+    event_session_public_id: UUID
+    session_type: str
+    submitted_at: datetime | None
+    last_modified_at: datetime | None
+    locked_at: datetime | None
+    answers: list[BetAnswerResult]
+
+
+@dataclass(frozen=True)
+class RaceEventBetAnswersResult:
+    bet_context_public_id: UUID
+    kind: str
+    race_event_public_id: UUID
+    label: str
+    submitted_at: datetime | None
+    last_modified_at: datetime | None
+    locked_at: datetime | None
+    event_answers: list[BetAnswerResult]
+    sessions: list[RaceEventBetAnswersSessionResult]

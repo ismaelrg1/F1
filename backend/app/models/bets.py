@@ -74,3 +74,28 @@ class SeasonBetQuestionsResponse(BaseModel):
     season_year: int
     label: str
     questions: list[BetQuestionRead]
+
+class BetAnswerRead(BaseModel):
+    bet_score_code: str
+    value: str
+
+
+class RaceEventBetAnswersSessionResponse(BaseModel):
+    event_session_public_id: UUID
+    session_type: SessionType
+    submitted_at: datetime | None
+    last_modified_at: datetime | None
+    locked_at: datetime | None
+    answers: list[BetAnswerRead]
+
+
+class RaceEventBetAnswersResponse(BaseModel):
+    bet_context_public_id: UUID
+    kind: BetContextKind
+    race_event_public_id: UUID
+    label: str
+    submitted_at: datetime | None
+    last_modified_at: datetime | None
+    locked_at: datetime | None
+    event_answers: list[BetAnswerRead]
+    sessions: list[RaceEventBetAnswersSessionResponse]

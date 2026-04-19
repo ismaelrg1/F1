@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import User
-from app.db.betting import BetContext, BetException, BetScore, BetTemplate, BetTemplateItem
+from app.db.betting import BetContext, BetException, BetScore, BetTemplate, BetTemplateItem, Bet, BetPick
 from app.db.competition import (
     Circuit,
     Country,
@@ -1814,3 +1814,205 @@ def test_preview_season_bet_questions_payload_prints_result(client, db_session) 
     assert by_code["SEASON_SURPRISE"]["constraints_json"] == {"max_length": 20}
 
     print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
+
+def test_get_race_event_bet_answers_returns_event_and_session_answers(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+
+    season = Season(year=2026, is_active=True)
+    country = Country(iso2="BH", name="Bahrain", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code="bahrain",
+        name="Bahrain International Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=1,
+        name="Bahrain Grand Prix",
+        source_provider=SourceProvider.MANUAL,
+        status=RaceEventStatus.SCHEDULED,
+        scheduled_event_start=datetime(2026, 3, 6, 8, 0, tzinfo=timezone.utc),
+        scheduled_event_end=datetime(2026, 3, 8, 18, 0, tzinfo=timezone.utc),
+    )
+    race_event.event_sessions = [
+        EventSession(
+            session_type=SessionType.FP1,
+            source_provider=SourceProvider.MANUAL,
+            status=RaceEventStatus.SCHEDULED,
+            start_datetime=datetime(2026, 3, 6, 11, 30, tzinfo=timezone.utc),
+            scheduled_start_datetime=datetime(2026, 3, 6, 11, 30, tzinfo=timezone.utc),
+            lock_cutoff=datetime(2026, 3, 6, 11, 25, tzinfo=timezone.utc),
+            scheduled_lock_cutoff=datetime(2026, 3, 6, 11, 25, tzinfo=timezone.utc),
+        ),
+        EventSession(
+            session_type=SessionType.RACE,
+            source_provider=SourceProvider.MANUAL,
+            status=RaceEventStatus.SCHEDULED,
+            start_datetime=datetime(2026, 3, 8, 16, 0, tzinfo=timezone.utc),
+            scheduled_start_datetime=datetime(2026, 3, 8, 16, 0, tzinfo=timezone.utc),
+            lock_cutoff=datetime(2026, 3, 8, 15, 55, tzinfo=timezone.utc),
+            scheduled_lock_cutoff=datetime(2026, 3, 8, 15, 55, tzinfo=timezone.utc),
+        ),
+    ]
+    db_session.add(race_event)
+    db_session.flush()
+
+    fp1_session = next(session for session in race_event.event_sessions if session.session_type == SessionType.FP1)
+    race_session = next(session for session in race_event.event_sessions if session.session_type == SessionType.RACE)
+
+    bet_context = BetContext(
+        kind=BetContextKind.GP,
+        season_id=season.id,
+        race_event_id=race_event.id,
+        testing_event_id=None,
+        label="Bahrain GP",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    safety_car_score = BetScore(
+        code="SAFETY_CAR",
+        label="Safety Car",
+        base_points=3,
+        value_type=BetValueType.BOOLEAN,
+        constraints_json=None,
+    )
+    fp1_fastest_score = BetScore(
+        code="FP1_FASTEST",
+        label="FP1 Fastest Driver",
+        base_points=5,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    race_winner_score = BetScore(
+        code="RACE_WINNER",
+        label="Race Winner",
+        base_points=10,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([safety_car_score, fp1_fastest_score, race_winner_score])
+    db_session.flush()
+
+    event_bet = Bet(
+        user_id=user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=datetime(2026, 3, 5, 10, 0, tzinfo=timezone.utc),
+        locked_at=None,
+    )
+    fp1_bet = Bet(
+        user_id=user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=fp1_session.id,
+        testing_event_session_id=None,
+        submitted_at=None,
+        locked_at=None,
+    )
+    race_bet = Bet(
+        user_id=user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=race_session.id,
+        testing_event_session_id=None,
+        submitted_at=datetime(2026, 3, 8, 15, 30, tzinfo=timezone.utc),
+        locked_at=datetime(2026, 3, 8, 15, 55, tzinfo=timezone.utc),
+    )
+    db_session.add_all([event_bet, fp1_bet, race_bet])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetPick(
+                bet_id=event_bet.id,
+                bet_score_id=safety_car_score.id,
+                value="true",
+            ),
+            BetPick(
+                bet_id=fp1_bet.id,
+                bet_score_id=fp1_fastest_score.id,
+                value="VER",
+            ),
+            BetPick(
+                bet_id=race_bet.id,
+                bet_score_id=race_winner_score.id,
+                value="NOR",
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/race-events/{race_event.public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["bet_context_public_id"] == str(bet_context.public_id)
+    assert payload["kind"] == "GP"
+    assert payload["race_event_public_id"] == str(race_event.public_id)
+    assert payload["label"] == "Bahrain GP"
+    assert payload["submitted_at"] == "2026-03-05T10:00:00Z"
+
+    assert payload["event_answers"] == [
+        {
+            "bet_score_code": "SAFETY_CAR",
+            "value": "true",
+        }
+    ]
+
+    assert len(payload["sessions"]) == 2
+    assert [session["session_type"] for session in payload["sessions"]] == ["FP1", "RACE"]
+
+    fp1_payload = payload["sessions"][0]
+    assert fp1_payload["event_session_public_id"] == str(fp1_session.public_id)
+    assert "submitted_at" not in fp1_payload
+    assert fp1_payload["answers"] == [
+        {
+            "bet_score_code": "FP1_FASTEST",
+            "value": "VER",
+        }
+    ]
+
+    race_payload = payload["sessions"][1]
+    assert race_payload["event_session_public_id"] == str(race_session.public_id)
+    assert race_payload["submitted_at"] == "2026-03-08T15:30:00Z"
+    assert race_payload["locked_at"] == "2026-03-08T15:55:00Z"
+    assert race_payload["answers"] == [
+        {
+            "bet_score_code": "RACE_WINNER",
+            "value": "NOR",
+        }
+    ]

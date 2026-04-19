@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional, List
 from datetime import datetime
 
 if TYPE_CHECKING:
-    from app.db.competition import EventSession
+    from app.db.competition import EventSession, TestingEventSession
     from app.db.auth import User
     from app.db.betting import BetContext, BetPick
 
@@ -15,50 +15,98 @@ from app.db.base import Base
 
 class Bet(Base):
     __tablename__ = "bets"
-    __table_args__ = ( 
-        
-        # Un usuario solo puede tener 1 apuesta por contexto y sesión
-        # para GP/session
+    __table_args__ = (
+        # Un usuario solo puede tener 1 apuesta por contexto y sesión GP.
         Index(
-            "uq_bets_user_ctx_session_notnull",
-            "user_id", "bet_context_id", "event_session_id",
+            "uq_bets_user_ctx_gp_session",
+            "user_id",
+            "bet_context_id",
+            "event_session_id",
             unique=True,
-            postgresql_where=text("event_session_id IS NOT NULL"),
-        ),
-        # para testing/season (sin sesión)
-        Index(
-            "uq_bets_user_ctx_session_null",
-            "user_id", "bet_context_id",
-            unique=True,
-            postgresql_where=text("event_session_id IS NULL"),
+            postgresql_where=text(
+                "event_session_id IS NOT NULL AND testing_event_session_id IS NULL"
+            ),
         ),
 
+        # Un usuario solo puede tener 1 apuesta por contexto y sesión de testing.
+        Index(
+            "uq_bets_user_ctx_testing_session",
+            "user_id",
+            "bet_context_id",
+            "testing_event_session_id",
+            unique=True,
+            postgresql_where=text(
+                "testing_event_session_id IS NOT NULL AND event_session_id IS NULL"
+            ),
+        ),
+
+        # Un usuario solo puede tener 1 apuesta global por contexto sin sesión.
+        # Sirve para season, testing global o preguntas globales de GP.
+        Index(
+            "uq_bets_user_ctx_no_session",
+            "user_id",
+            "bet_context_id",
+            unique=True,
+            postgresql_where=text(
+                "event_session_id IS NULL AND testing_event_session_id IS NULL"
+            ),
+        ),
+
+        # Nunca puede apuntar a una sesión GP y a una sesión de testing a la vez.
+        CheckConstraint(
+            "NOT (event_session_id IS NOT NULL AND testing_event_session_id IS NOT NULL)",
+            name="ck_bets_not_both_session_ids",
+        ),
+
+        # Si existe locked_at y submitted_at, locked_at debe ser posterior o igual.
         CheckConstraint(
             "locked_at IS NULL OR submitted_at IS NULL OR locked_at >= submitted_at",
             name="ck_bets_locked_after_submit",
         ),
 
+        # Índice para ranking/envío de apuestas por sesión GP.
         Index(
-            "ix_bets_ctx_session_ranking",
+            "ix_bets_ctx_gp_session_ranking",
             "bet_context_id",
             "event_session_id",
             "last_modified_at",
             "id",
-            postgresql_where=text("submitted_at IS NOT NULL"),
+            postgresql_where=text(
+                "submitted_at IS NOT NULL AND event_session_id IS NOT NULL"
+            ),
         ),
 
+        # Índice para ranking/envío de apuestas por sesión de testing.
+        Index(
+            "ix_bets_ctx_testing_session_ranking",
+            "bet_context_id",
+            "testing_event_session_id",
+            "last_modified_at",
+            "id",
+            postgresql_where=text(
+                "submitted_at IS NOT NULL AND testing_event_session_id IS NOT NULL"
+            ),
+        ),
+
+        # Índice para apuestas globales sin sesión.
         Index(
             "ix_bets_context_ranking",
             "bet_context_id",
             "last_modified_at",
             "id",
-            postgresql_where=text("submitted_at IS NOT NULL"),
+            postgresql_where=text(
+                "submitted_at IS NOT NULL "
+                "AND event_session_id IS NULL "
+                "AND testing_event_session_id IS NULL"
+            ),
         ),
 
+        # Lookup habitual por usuario + contexto.
         Index("ix_bets_user_context", "user_id", "bet_context_id"),
 
-        {"schema": "betting"}, 
-    ) 
+        {"schema": "betting"},
+    )
+
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
@@ -74,6 +122,11 @@ class Bet(Base):
 
     event_session_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("competition.event_sessions.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+
+    testing_event_session_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("competition.testing_event_sessions.id", ondelete="RESTRICT"),
         nullable=True,
     )
 
@@ -114,6 +167,11 @@ class Bet(Base):
         "BetPick",
         back_populates="bet",
         cascade="all, delete-orphan",
+    )
+
+    testing_event_session: Mapped[Optional["TestingEventSession"]] = relationship(
+        "TestingEventSession",
+        back_populates="bets",
     )
 
 

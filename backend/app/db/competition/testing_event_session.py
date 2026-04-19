@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 from uuid import UUID, uuid4
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, Enum, text
@@ -12,6 +12,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.db.competition import TestingEvent
+    from app.db.betting import Bet
 
 from app.db.enums import SourceProvider
 
@@ -92,3 +93,8 @@ class TestingEventSession(Base):
         "TestingEvent",
         back_populates="sessions",
     )
+
+    bets: Mapped[List["Bet"]] = relationship(
+    "Bet",
+    back_populates="testing_event_session",
+)

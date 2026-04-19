@@ -9,6 +9,7 @@ from app.domain.bets.errors import (
     TestingEventNotFoundForBetQuestionsError,
 )
 from app.domain.bets.models import (
+    BetAnswerResult,
     BetContextDefinition,
     BetExceptionDefinition,
     BetQuestionOptionResult,
@@ -21,13 +22,22 @@ from app.domain.bets.models import (
     BetTemplateItemDefinition,
     BetTestingEvent,
     BetTestingEventSession,
+    RaceEventBetAnswersResult,
+    RaceEventBetAnswersSessionResult,
     RaceEventBetQuestionsResult,
     RaceEventBetQuestionsSessionResult,
     TestingEventBetQuestionsResult,
     TestingEventBetQuestionsSessionResult,
+    UserBetDefinition,
 )
 from app.domain.bets.ports import BetQuestionsRepository
-from app.domain.bets.use_cases import GetRaceEventBetQuestions, GetTestingEventBetQuestions, GetSeasonBetQuestions
+from app.domain.bets.use_cases import (
+    GetRaceEventBetAnswers,
+    GetRaceEventBetQuestions, 
+    GetTestingEventBetQuestions, 
+    GetSeasonBetQuestions,
+
+)
 
 __all__ = [
     "BetContextDefinition",
@@ -60,4 +70,10 @@ __all__ = [
     "BetContextNotFoundForSeasonError",
     "SeasonNotFoundForBetQuestionsError",
     "GetSeasonBetQuestions",
+
+    "BetAnswerResult",
+    "GetRaceEventBetAnswers",
+    "RaceEventBetAnswersResult",
+    "RaceEventBetAnswersSessionResult",
+    "UserBetDefinition",
 ]
