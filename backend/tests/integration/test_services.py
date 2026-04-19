@@ -2,8 +2,8 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.adapters.sqlalchemy.auth_repository import SqlAlchemyAuthRepository
-from app.adapters.sqlalchemy.season_repository import SqlAlchemySeasonRepository
+from app.adapters.sqlalchemy.auth.auth_repository import SqlAlchemyAuthRepository
+from app.adapters.sqlalchemy.public.season_repository import SqlAlchemySeasonRepository
 from app.domain.auth import (
     GoogleIdentity,
     LoginGoogleUser,
