@@ -4,7 +4,7 @@ from app.domain.seasons.models import SeasonSummary
 
 
 class SeasonRepository(Protocol):
-    def list_seasons(self) -> list[SeasonSummary]:
+    def list_seasons(self, *, is_active: bool | None = None) -> list[SeasonSummary]:
         ...
 
     def get_active_season(self) -> SeasonSummary | None:

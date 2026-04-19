@@ -35,6 +35,7 @@ htmlcov/
 schemaspy-out/
 tbls-doc/
 backend/openapi/openapi.json
+graph_db/
 
 # Editors / OS
 .vscode/

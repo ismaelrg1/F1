@@ -6,8 +6,8 @@ class ListSeasons:
     def __init__(self, repository: SeasonRepository):
         self._repository = repository
 
-    def execute(self) -> list[SeasonSummary]:
-        return self._repository.list_seasons()
+    def execute(self, *, is_active: bool | None = None) -> list[SeasonSummary]:
+        return self._repository.list_seasons(is_active=is_active)
 
 
 class GetActiveSeason:

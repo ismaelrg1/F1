@@ -10,8 +10,14 @@ class SqlAlchemySeasonRepository(SeasonRepository):
     def __init__(self, session: Session):
         self._session = session
 
-    def list_seasons(self) -> list[SeasonSummary]:
-        stmt = select(Season).order_by(Season.year.desc())
+    def list_seasons(self, *, is_active: bool | None = None) -> list[SeasonSummary]:
+        stmt = select(Season)
+        
+        if is_active is not None:
+            stmt = stmt.where(Season.is_active.is_(is_active))
+        
+        stmt = stmt.order_by(Season.year.desc())
+        
         return [
             self._map_season(season)
             for season in self._session.execute(stmt).scalars().all()

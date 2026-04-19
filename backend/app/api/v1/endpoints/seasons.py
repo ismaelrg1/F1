@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.adapters.sqlalchemy import SqlAlchemySeasonRepository
@@ -16,12 +16,13 @@ router = APIRouter()
     response_model=SeasonYearsResponse,
 )
 def get_seasons(
+    is_active: bool | None = Query(default=None),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> SeasonYearsResponse:
     repository = SqlAlchemySeasonRepository(db)
     use_case = ListSeasons(repository)
-    seasons = use_case.execute()
+    seasons = use_case.execute(is_active=is_active)
 
     return SeasonYearsResponse(
         items=[SeasonYearRead(year=season.year) for season in seasons]
