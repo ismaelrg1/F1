@@ -67,3 +67,10 @@ class TestingEventBetQuestionsResponse(BaseModel):
     status: TestingEventStatus
     event_questions: list[BetQuestionRead]
     sessions: list[TestingEventBetQuestionsSessionRead]
+
+class SeasonBetQuestionsResponse(BaseModel):
+    bet_context_public_id: UUID
+    kind: BetContextKind
+    season_year: int
+    label: str
+    questions: list[BetQuestionRead]

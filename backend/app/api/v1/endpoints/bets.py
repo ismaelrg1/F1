@@ -11,12 +11,13 @@ from app.db.session import get_db
 from app.db.social import Group
 
 from app.domain.bets import BetsError
-from app.domain.bets.use_cases import GetRaceEventBetQuestions, GetTestingEventBetQuestions
+from app.domain.bets.use_cases import GetRaceEventBetQuestions, GetTestingEventBetQuestions, GetSeasonBetQuestions
 from app.models.bets import (
     BetQuestionRead,
     BetQuestionOptionRead,
     RaceEventBetQuestionsResponse,
     RaceEventBetQuestionsSessionRead,
+    SeasonBetQuestionsResponse,
     TestingEventBetQuestionsResponse,
     TestingEventBetQuestionsSessionRead,
 )
@@ -200,5 +201,60 @@ def get_testing_event_questions(
                 ],
             )
             for session in result.sessions
+        ],
+    )
+
+
+@router.get(
+    "/seasons/{season_year}/questions",
+    response_model=SeasonBetQuestionsResponse,
+    response_model_exclude_none=True,
+)
+def get_season_questions(
+    season_year: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    user_group: tuple[User, Group] = Depends(require_group_member),
+) -> SeasonBetQuestionsResponse:
+    _, group = user_group
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
+    repository = SqlAlchemyBetQuestionsRepository(db)
+    use_case = GetSeasonBetQuestions(repository)
+
+    try:
+        result = use_case.execute(
+            season_year=season_year,
+            group_id=group.id,
+        )
+    except BetsError as exc:
+        raise _translate_bets_error(exc, locale=locale) from exc
+
+    return SeasonBetQuestionsResponse(
+        bet_context_public_id=result.bet_context_public_id,
+        kind=result.kind,
+        season_year=result.season_year,
+        label=result.label,
+        questions=[
+            BetQuestionRead(
+                code=question.code,
+                label=question.label,
+                value_type=question.value_type,
+                required=question.required,
+                display_order=question.display_order,
+                base_points=question.base_points,
+                constraints_json=question.constraints_json,
+                options=(
+                    [
+                        BetQuestionOptionRead(value=option.value, label=option.label)
+                        if option.meta is None
+                        else BetQuestionOptionRead(value=option.value, label=option.label, meta=option.meta)
+                        for option in question.options
+                    ]
+                    if question.options is not None
+                    else None
+                ),
+            )
+            for question in result.questions
         ],
     )

@@ -21,6 +21,7 @@ from app.domain.bets.models import (
     BetRaceEventSession,
     BetRosterEntry,
     BetScoreDefinition,
+    BetSeason,
     BetTemplateDefinition,
     BetTemplateItemDefinition,
     BetTestingEvent,
@@ -151,6 +152,63 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
                 for session in event.sessions
             ),
         )
+    
+    def get_season_by_year(self, year: int) -> BetSeason | None:
+        stmt = (
+            select(Season)
+            .where(Season.year == year)
+            .options(
+                selectinload(Season.driver_entries).joinedload(DriverEntry.driver),
+                selectinload(Season.driver_entries).joinedload(DriverEntry.team),
+                selectinload(Season.driver_entries).joinedload(DriverEntry.engine),
+                selectinload(Season.season_drivers).joinedload(SeasonDriver.driver),
+            )
+        )
+        season = self._session.execute(stmt).scalar_one_or_none()
+        if season is None:
+            return None
+
+        driver_numbers = {
+            season_driver.driver_id: season_driver.driver_number
+            for season_driver in season.season_drivers
+        }
+
+        return BetSeason(
+            id=season.id,
+            year=season.year,
+            season_driver_entries=tuple(
+                self._map_driver_entry(entry, driver_numbers)
+                for entry in season.driver_entries
+                if entry.race_event_id is None and entry.event_session_id is None
+            ),
+        )
+
+    def get_season_bet_context(self, *, group_id: int, season_id: int) -> BetContextDefinition | None:
+        stmt = (
+            select(BetContext)
+            .where(
+                BetContext.group_id == group_id,
+                BetContext.season_id == season_id,
+                BetContext.kind == BetContextKind.SEASON,
+            )
+            .options(selectinload(BetContext.bet_exceptions))
+        )
+        context = self._session.execute(stmt).scalar_one_or_none()
+        return self._map_bet_context(context)
+
+    def list_season_templates_for_season(self, *, season_id: int) -> list[BetTemplateDefinition]:
+        stmt = (
+            select(BetTemplate)
+            .where(
+                BetTemplate.season_id == season_id,
+                BetTemplate.context_kind == BetContextKind.SEASON,
+            )
+            .options(
+                selectinload(BetTemplate.items).joinedload(BetTemplateItem.bet_score),
+            )
+        )
+        templates = self._session.execute(stmt).scalars().unique().all()
+        return [self._map_template(template) for template in templates]
 
     def get_gp_bet_context(self, *, group_id: int, race_event_id: int) -> BetContextDefinition | None:
         stmt = (

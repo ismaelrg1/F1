@@ -16,3 +16,9 @@ class TestingEventNotFoundForBetQuestionsError(BetsError):
 
 class BetContextNotFoundForTestingEventError(BetsError):
     pass
+
+class SeasonNotFoundForBetQuestionsError(BetsError):
+    pass
+
+class BetContextNotFoundForSeasonError(BetsError):
+    pass

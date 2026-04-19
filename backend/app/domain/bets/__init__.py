@@ -1,9 +1,11 @@
 from app.domain.bets.enums import BetContextKind, BetTemplateScope, BetValueType
 from app.domain.bets.errors import (
     BetContextNotFoundForRaceEventError,
+    BetContextNotFoundForSeasonError,
     BetContextNotFoundForTestingEventError,
     BetsError,
     RaceEventNotFoundForBetQuestionsError,
+    SeasonNotFoundForBetQuestionsError,
     TestingEventNotFoundForBetQuestionsError,
 )
 from app.domain.bets.models import (
@@ -25,7 +27,7 @@ from app.domain.bets.models import (
     TestingEventBetQuestionsSessionResult,
 )
 from app.domain.bets.ports import BetQuestionsRepository
-from app.domain.bets.use_cases import GetRaceEventBetQuestions, GetTestingEventBetQuestions
+from app.domain.bets.use_cases import GetRaceEventBetQuestions, GetTestingEventBetQuestions, GetSeasonBetQuestions
 
 __all__ = [
     "BetContextDefinition",
@@ -55,4 +57,7 @@ __all__ = [
     "TestingEventBetQuestionsResult",
     "TestingEventBetQuestionsSessionResult",
     "TestingEventNotFoundForBetQuestionsError",
+    "BetContextNotFoundForSeasonError",
+    "SeasonNotFoundForBetQuestionsError",
+    "GetSeasonBetQuestions",
 ]

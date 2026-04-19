@@ -5,9 +5,11 @@ from uuid import UUID
 from app.domain.bets.enums import BetTemplateScope, BetValueType
 from app.domain.bets.errors import (
     BetContextNotFoundForRaceEventError,
+    BetContextNotFoundForSeasonError,
     BetContextNotFoundForTestingEventError,
     RaceEventNotFoundForBetQuestionsError,
     TestingEventNotFoundForBetQuestionsError,
+    SeasonNotFoundForBetQuestionsError,
 )
 from app.domain.bets.models import (
     BetQuestionOptionResult,
@@ -15,11 +17,13 @@ from app.domain.bets.models import (
     BetRaceEvent,
     BetRaceEventSession,
     BetRosterEntry,
+    BetSeason,
     BetTemplateDefinition,
     BetTestingEvent,
     BetTestingEventSession,
     RaceEventBetQuestionsResult,
     RaceEventBetQuestionsSessionResult,
+    SeasonBetQuestionsResult,
     TestingEventBetQuestionsResult,
     TestingEventBetQuestionsSessionResult,
 )
@@ -578,3 +582,191 @@ class GetTestingEventBetQuestions:
         if entry.active_to is not None and reference_datetime >= entry.active_to:
             return False
         return True
+
+
+
+class GetSeasonBetQuestions:
+    def __init__(self, repository: BetQuestionsRepository):
+        self._repository = repository
+
+    def execute(self, *, season_year: int, group_id: int) -> SeasonBetQuestionsResult:
+        season = self._repository.get_season_by_year(season_year)
+        if season is None:
+            raise SeasonNotFoundForBetQuestionsError()
+
+        bet_context = self._repository.get_season_bet_context(
+            group_id=group_id,
+            season_id=season.id,
+        )
+        if bet_context is None:
+            raise BetContextNotFoundForSeasonError()
+
+        templates = self._repository.list_season_templates_for_season(season_id=season.id)
+
+        event_template = None
+        for template in templates:
+            if template.scope == BetTemplateScope.EVENT:
+                event_template = template
+                break
+
+        event_exceptions = {
+            exception.bet_score_id: exception
+            for exception in bet_context.exceptions
+            if exception.event_session_id is None
+        }
+
+        questions: list[BetQuestionResult] = []
+        if event_template is not None:
+            questions = self._build_season_questions(
+                season=season,
+                template=event_template,
+                fallback_exceptions=event_exceptions,
+            )
+
+        return SeasonBetQuestionsResult(
+            bet_context_public_id=bet_context.public_id,
+            kind=str(bet_context.kind),
+            season_year=season.year,
+            label=bet_context.label,
+            questions=questions,
+        )
+
+    def _build_season_questions(
+        self,
+        *,
+        season: BetSeason,
+        template: BetTemplateDefinition,
+        fallback_exceptions: dict[int, Any],
+    ) -> list[BetQuestionResult]:
+        questions: list[BetQuestionResult] = []
+
+        for item in sorted(template.items, key=lambda i: (i.display_order, i.id)):
+            bet_score = item.bet_score
+            exception = fallback_exceptions.get(bet_score.id)
+
+            if exception is not None and exception.is_disabled is True:
+                continue
+
+            base_points = bet_score.base_points
+            constraints_json = bet_score.constraints_json
+
+            if exception is not None and exception.override_points is not None:
+                base_points = exception.override_points
+
+            if exception is not None and exception.override_constraints_json is not None:
+                constraints_json = exception.override_constraints_json
+
+            constraints_json = self._build_season_constraints(
+                season=season,
+                value_type=bet_score.value_type,
+                constraints_json=constraints_json,
+            )
+
+            questions.append(
+                BetQuestionResult(
+                    code=bet_score.code,
+                    label=bet_score.label,
+                    value_type=bet_score.value_type.value,
+                    required=item.required,
+                    display_order=item.display_order,
+                    base_points=base_points,
+                    constraints_json=constraints_json,
+                    options=self._build_season_options(
+                        season=season,
+                        value_type=bet_score.value_type,
+                    ),
+                )
+            )
+
+        return questions
+
+    def _build_season_options(
+        self,
+        *,
+        season: BetSeason,
+        value_type: BetValueType,
+    ) -> list[BetQuestionOptionResult] | None:
+        if value_type in {BetValueType.DRIVER, BetValueType.TEAM, BetValueType.ENGINE, BetValueType.POSITION}:
+            roster = self._resolve_season_roster(season=season)
+
+        if value_type == BetValueType.DRIVER:
+            seen: set[str] = set()
+            options: list[BetQuestionOptionResult] = []
+            for entry in roster:
+                if entry.driver_code in seen:
+                    continue
+                seen.add(entry.driver_code)
+                options.append(
+                    BetQuestionOptionResult(
+                        value=entry.driver_code,
+                        label=entry.driver_name,
+                        meta={
+                            "code": entry.driver_code,
+                            "driver_number": entry.driver_number,
+                        },
+                    )
+                )
+            return options
+
+        if value_type == BetValueType.TEAM:
+            seen: set[str] = set()
+            options: list[BetQuestionOptionResult] = []
+            for entry in roster:
+                if entry.team_code in seen:
+                    continue
+                seen.add(entry.team_code)
+                options.append(
+                    BetQuestionOptionResult(
+                        value=entry.team_code,
+                        label=entry.team_name,
+                        meta={"code": entry.team_code},
+                    )
+                )
+            return options
+
+        if value_type == BetValueType.ENGINE:
+            seen: set[str] = set()
+            options: list[BetQuestionOptionResult] = []
+            for entry in roster:
+                if entry.engine_code in seen:
+                    continue
+                seen.add(entry.engine_code)
+                options.append(
+                    BetQuestionOptionResult(
+                        value=entry.engine_code,
+                        label=entry.engine_name,
+                        meta={"code": entry.engine_code},
+                    )
+                )
+            return options
+
+        if value_type == BetValueType.BOOLEAN:
+            return [
+                BetQuestionOptionResult(value="true", label="Yes"),
+                BetQuestionOptionResult(value="false", label="No"),
+            ]
+
+        return None
+
+    def _build_season_constraints(
+        self,
+        *,
+        season: BetSeason,
+        value_type: BetValueType,
+        constraints_json: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if value_type != BetValueType.POSITION:
+            return constraints_json
+
+        roster = self._resolve_season_roster(season=season)
+        resolved = dict(constraints_json or {})
+        resolved["min"] = 1
+        resolved["max"] = len(roster)
+        resolved["allow_dnf"] = bool(resolved.get("allow_dnf", False))
+        return resolved
+
+    def _resolve_season_roster(self, *, season: BetSeason) -> list[BetRosterEntry]:
+        return sorted(
+            season.season_driver_entries,
+            key=lambda entry: (entry.team_code, entry.seat_index, entry.driver_code),
+        )

@@ -1099,35 +1099,718 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
     assert day_2["questions"][2]["code"] == "DAY_WINNER_DRIVER"
 
 
-    @pytest.mark.manual
-    def test_preview_testing_event_bet_questions_payload_prints_result(client, db_session) -> None:
-        # reutiliza exactamente el mismo setup del test anterior
-        # o extrae el setup a una helper para no duplicar
+@pytest.mark.manual
+def test_preview_testing_event_bet_questions_payload_prints_result(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username="testing_bets_manual",
+        email="testing_bets_manual@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
 
-        user = _create_user(
-            db_session,
-            username="testing_bets_manual",
-            email="testing_bets_manual@example.com",
-            password="secret123",
+    season = Season(year=2026, is_active=True)
+    country = Country(iso2="BH", name="Bahrain", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code="bahrain",
+        name="Bahrain International Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    red_bull = TeamF1(code="RBR", name="Red Bull Racing")
+    ferrari = TeamF1(code="FER", name="Ferrari")
+    honda = Engine(code="HONDA", name="Honda")
+    ferrari_engine = Engine(code="FERRARI", name="Ferrari Power Unit")
+    verstappen = Driver(code="VER", name="Max Verstappen")
+    leclerc = Driver(code="LEC", name="Charles Leclerc")
+    norris = Driver(code="NOR", name="Lando Norris")
+    db_session.add_all(
+        [red_bull, ferrari, honda, ferrari_engine, verstappen, leclerc, norris]
+    )
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            SeasonDriver(
+                season_id=season.id,
+                driver_id=verstappen.id,
+                driver_number=1,
+                status=SeasonDriverStatus.PRIMARY,
+            ),
+            SeasonDriver(
+                season_id=season.id,
+                driver_id=leclerc.id,
+                driver_number=16,
+                status=SeasonDriverStatus.PRIMARY,
+            ),
+            SeasonDriver(
+                season_id=season.id,
+                driver_id=norris.id,
+                driver_number=4,
+                status=SeasonDriverStatus.PRIMARY,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            DriverEntry(
+                season_id=season.id,
+                driver_id=verstappen.id,
+                team_id=red_bull.id,
+                engine_id=honda.id,
+                seat_index=1,
+                active_from=None,
+                active_to=None,
+                race_event_id=None,
+                event_session_id=None,
+            ),
+            DriverEntry(
+                season_id=season.id,
+                driver_id=leclerc.id,
+                team_id=ferrari.id,
+                engine_id=ferrari_engine.id,
+                seat_index=1,
+                active_from=None,
+                active_to=None,
+                race_event_id=None,
+                event_session_id=None,
+            ),
+            DriverEntry(
+                season_id=season.id,
+                driver_id=norris.id,
+                team_id=ferrari.id,
+                engine_id=ferrari_engine.id,
+                seat_index=2,
+                active_from=None,
+                active_to=None,
+                race_event_id=None,
+                event_session_id=None,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    testing_event = CompetitionTestingEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        name="Pre-Season Testing Bahrain",
+        source_provider=SourceProvider.MANUAL,
+        status=CompetitionTestingEventStatus.SCHEDULED,
+        scheduled_event_start=datetime(2026, 2, 11, 7, 0, tzinfo=timezone.utc),
+        scheduled_event_end=datetime(2026, 2, 13, 17, 0, tzinfo=timezone.utc),
+    )
+    testing_event.sessions = [
+        CompetitionTestingEventSession(
+            session_order=1,
+            name="Day 1",
+            source_provider=SourceProvider.MANUAL,
+            scheduled_start_datetime=datetime(2026, 2, 11, 7, 0, tzinfo=timezone.utc),
+            scheduled_end_datetime=datetime(2026, 2, 11, 17, 0, tzinfo=timezone.utc),
+        ),
+        CompetitionTestingEventSession(
+            session_order=2,
+            name="Day 2",
+            source_provider=SourceProvider.MANUAL,
+            scheduled_start_datetime=datetime(2026, 2, 12, 7, 0, tzinfo=timezone.utc),
+            scheduled_end_datetime=datetime(2026, 2, 12, 17, 0, tzinfo=timezone.utc),
+        ),
+    ]
+    db_session.add(testing_event)
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.PRETESTING,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=testing_event.id,
+        label="Bahrain Testing",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    event_score = BetScore(
+        code="MOST_KILOMETRAGE_DRIVER",
+        label="Driver with most mileage",
+        base_points=5,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    session_score = BetScore(
+        code="DAY_WINNER_DRIVER",
+        label="Driver topping the day",
+        base_points=3,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    position_score = BetScore(
+        code="ALO_TEST_POSITION",
+        label="Fernando Alonso final testing position",
+        base_points=2,
+        value_type=BetValueType.POSITION,
+        constraints_json={"allow_dnf": False},
+    )
+    team_score = BetScore(
+        code="TOP_TEAM_TESTING",
+        label="Top team in testing",
+        base_points=2,
+        value_type=BetValueType.TEAM,
+        constraints_json=None,
+    )
+    boolean_score = BetScore(
+        code="RED_FLAG",
+        label="Will there be a red flag?",
+        base_points=1,
+        value_type=BetValueType.BOOLEAN,
+        constraints_json=None,
+    )
+    engine_score = BetScore(
+        code="BEST_ENGINE",
+        label="Best engine in testing",
+        base_points=2,
+        value_type=BetValueType.ENGINE,
+        constraints_json=None,
+    )
+    db_session.add_all(
+        [event_score, session_score, position_score, team_score, boolean_score, engine_score]
+    )
+    db_session.flush()
+
+    event_template = BetTemplate(
+        season_id=season.id,
+        name="Pretesting Event Template",
+        context_kind=BetContextKind.PRETESTING,
+        scope=BetTemplateScope.EVENT,
+        session_type=None,
+    )
+    db_session.add(event_template)
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetTemplateItem(
+                template_id=event_template.id,
+                bet_score_id=event_score.id,
+                required=True,
+                display_order=0,
+            ),
+            BetTemplateItem(
+                template_id=event_template.id,
+                bet_score_id=team_score.id,
+                required=True,
+                display_order=1,
+            ),
+            BetTemplateItem(
+                template_id=event_template.id,
+                bet_score_id=session_score.id,
+                required=True,
+                display_order=2,
+            ),
+            BetTemplateItem(
+                template_id=event_template.id,
+                bet_score_id=position_score.id,
+                required=True,
+                display_order=3,
+            ),
+            BetTemplateItem(
+                template_id=event_template.id,
+                bet_score_id=boolean_score.id,
+                required=True,
+                display_order=4,
+            ),
+            BetTemplateItem(
+                template_id=event_template.id,
+                bet_score_id=engine_score.id,
+                required=False,
+                display_order=5,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    db_session.add(
+        BetException(
+            bet_context_id=bet_context.id,
+            event_session_id=None,
+            bet_score_id=event_score.id,
+            override_points=7,
+            is_disabled=None,
+            override_constraints_json=None,
+            note="Boost event score",
         )
-        group = _create_group_with_membership(
-            db_session,
-            user_id=user.id,
-            name=f"group_{uuid4().hex[:8]}",
-        )
+    )
+    db_session.flush()
 
-        # aquí meterías el mismo setup de season/country/circuit/roster/testing_event/bet_context/templates...
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
 
-        login_response = client.post(
-            "/api/v1/auth/login/local",
-            json={"username": user.username, "password": "secret123"},
-        )
-        assert login_response.status_code == 200
+    response = client.get(
+        f"/api/v1/bets/testing-events/{testing_event.public_id}/questions",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+    assert response.status_code == 200
 
-        response = client.get(
-            f"/api/v1/bets/testing-events/{testing_event.public_id}/questions",
-            headers={"X-Group-Id": str(group.public_id)},
-        )
-        assert response.status_code == 200
+    print(json.dumps(response.json(), indent=2, ensure_ascii=False))
 
-        print(json.dumps(response.json(), indent=2, ensure_ascii=False))
+
+def test_get_season_bet_questions_returns_questions(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+
+    season = Season(year=2026, is_active=True)
+    db_session.add(season)
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.SEASON,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=None,
+        label="Season 2026",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    boolean_score = BetScore(
+        code="WILL_VER_WIN_TITLE",
+        label="Will Verstappen win the title?",
+        base_points=5,
+        value_type=BetValueType.BOOLEAN,
+        constraints_json=None,
+    )
+    string_score = BetScore(
+        code="SEASON_SURPRISE",
+        label="Biggest surprise of the season",
+        base_points=3,
+        value_type=BetValueType.STRING,
+        constraints_json={"max_length": 40},
+    )
+    disabled_score = BetScore(
+        code="DISABLED_QUESTION",
+        label="Disabled question",
+        base_points=2,
+        value_type=BetValueType.STRING,
+        constraints_json=None,
+    )
+    db_session.add_all([boolean_score, string_score, disabled_score])
+    db_session.flush()
+
+    season_template = BetTemplate(
+        season_id=season.id,
+        name="Season Template",
+        context_kind=BetContextKind.SEASON,
+        scope=BetTemplateScope.EVENT,
+        session_type=None,
+    )
+    db_session.add(season_template)
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetTemplateItem(
+                template_id=season_template.id,
+                bet_score_id=boolean_score.id,
+                required=True,
+                display_order=0,
+            ),
+            BetTemplateItem(
+                template_id=season_template.id,
+                bet_score_id=string_score.id,
+                required=False,
+                display_order=1,
+            ),
+            BetTemplateItem(
+                template_id=season_template.id,
+                bet_score_id=disabled_score.id,
+                required=True,
+                display_order=2,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetException(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                bet_score_id=boolean_score.id,
+                override_points=8,
+                is_disabled=None,
+                override_constraints_json=None,
+                note="Boost title question",
+            ),
+            BetException(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                bet_score_id=string_score.id,
+                override_points=None,
+                is_disabled=None,
+                override_constraints_json={"max_length": 20},
+                note="Tighter text constraint",
+            ),
+            BetException(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                bet_score_id=disabled_score.id,
+                override_points=None,
+                is_disabled=True,
+                override_constraints_json=None,
+                note="Disabled for this group",
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/seasons/{season.year}/questions",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["bet_context_public_id"] == str(bet_context.public_id)
+    assert payload["kind"] == "SEASON"
+    assert payload["season_year"] == 2026
+    assert payload["label"] == "Season 2026"
+
+    assert len(payload["questions"]) == 2
+
+    first_question = payload["questions"][0]
+    assert first_question["code"] == "WILL_VER_WIN_TITLE"
+    assert first_question["base_points"] == 8.0
+    assert first_question["options"] == [
+        {"value": "true", "label": "Yes"},
+        {"value": "false", "label": "No"},
+    ]
+
+    second_question = payload["questions"][1]
+    assert second_question["code"] == "SEASON_SURPRISE"
+    assert second_question["required"] is False
+    assert second_question["constraints_json"] == {"max_length": 20}
+    assert "options" not in second_question
+
+    returned_codes = [question["code"] for question in payload["questions"]]
+    assert "DISABLED_QUESTION" not in returned_codes
+
+
+
+@pytest.mark.manual
+def test_preview_season_bet_questions_payload_prints_result(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username="season_bets_manual",
+        email="season_bets_manual@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+
+    season = Season(year=2026, is_active=True)
+    db_session.add(season)
+    db_session.flush()
+
+    red_bull = TeamF1(code="RBR", name="Red Bull Racing")
+    ferrari = TeamF1(code="FER", name="Ferrari")
+    honda = Engine(code="HONDA", name="Honda")
+    ferrari_engine = Engine(code="FERRARI", name="Ferrari Power Unit")
+    verstappen = Driver(code="VER", name="Max Verstappen")
+    leclerc = Driver(code="LEC", name="Charles Leclerc")
+    norris = Driver(code="NOR", name="Lando Norris")
+    db_session.add_all(
+        [red_bull, ferrari, honda, ferrari_engine, verstappen, leclerc, norris]
+    )
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            SeasonDriver(
+                season_id=season.id,
+                driver_id=verstappen.id,
+                driver_number=1,
+                status=SeasonDriverStatus.PRIMARY,
+            ),
+            SeasonDriver(
+                season_id=season.id,
+                driver_id=leclerc.id,
+                driver_number=16,
+                status=SeasonDriverStatus.PRIMARY,
+            ),
+            SeasonDriver(
+                season_id=season.id,
+                driver_id=norris.id,
+                driver_number=4,
+                status=SeasonDriverStatus.PRIMARY,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            DriverEntry(
+                season_id=season.id,
+                driver_id=verstappen.id,
+                team_id=red_bull.id,
+                engine_id=honda.id,
+                seat_index=1,
+                active_from=None,
+                active_to=None,
+                race_event_id=None,
+                event_session_id=None,
+            ),
+            DriverEntry(
+                season_id=season.id,
+                driver_id=leclerc.id,
+                team_id=ferrari.id,
+                engine_id=ferrari_engine.id,
+                seat_index=1,
+                active_from=None,
+                active_to=None,
+                race_event_id=None,
+                event_session_id=None,
+            ),
+            DriverEntry(
+                season_id=season.id,
+                driver_id=norris.id,
+                team_id=ferrari.id,
+                engine_id=ferrari_engine.id,
+                seat_index=2,
+                active_from=None,
+                active_to=None,
+                race_event_id=None,
+                event_session_id=None,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.SEASON,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=None,
+        label="Season 2026",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    boolean_score = BetScore(
+        code="WILL_VER_WIN_TITLE",
+        label="Will Verstappen win the title?",
+        base_points=5,
+        value_type=BetValueType.BOOLEAN,
+        constraints_json=None,
+    )
+    string_score = BetScore(
+        code="SEASON_SURPRISE",
+        label="Biggest surprise of the season",
+        base_points=3,
+        value_type=BetValueType.STRING,
+        constraints_json={"max_length": 40},
+    )
+    team_score = BetScore(
+        code="BEST_TEAM",
+        label="Best team of the season",
+        base_points=4,
+        value_type=BetValueType.TEAM,
+        constraints_json=None,
+    )
+    position_score = BetScore(
+        code="ALONSO_FINAL_POSITION",
+        label="Final Alonso championship position",
+        base_points=4,
+        value_type=BetValueType.POSITION,
+        constraints_json={"allow_dnf": False},
+    )
+    driver_score = BetScore(
+        code="BEST_DRIVER",
+        label="Best driver of the season",
+        base_points=6,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    engine_score = BetScore(
+        code="BEST_ENGINE",
+        label="Best engine of the season",
+        base_points=2,
+        value_type=BetValueType.ENGINE,
+        constraints_json=None,
+    )
+    db_session.add_all(
+        [boolean_score, string_score, team_score, position_score, driver_score, engine_score]
+    )
+    db_session.flush()
+
+    season_template = BetTemplate(
+        season_id=season.id,
+        name="Season Template",
+        context_kind=BetContextKind.SEASON,
+        scope=BetTemplateScope.EVENT,
+        session_type=None,
+    )
+    db_session.add(season_template)
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetTemplateItem(
+                template_id=season_template.id,
+                bet_score_id=boolean_score.id,
+                required=True,
+                display_order=0,
+            ),
+            BetTemplateItem(
+                template_id=season_template.id,
+                bet_score_id=string_score.id,
+                required=False,
+                display_order=1,
+            ),
+            BetTemplateItem(
+                template_id=season_template.id,
+                bet_score_id=team_score.id,
+                required=True,
+                display_order=2,
+            ),
+            BetTemplateItem(
+                template_id=season_template.id,
+                bet_score_id=position_score.id,
+                required=True,
+                display_order=3,
+            ),
+            BetTemplateItem(
+                template_id=season_template.id,
+                bet_score_id=driver_score.id,
+                required=True,
+                display_order=4,
+            ),
+            BetTemplateItem(
+                template_id=season_template.id,
+                bet_score_id=engine_score.id,
+                required=False,
+                display_order=5,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetException(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                bet_score_id=boolean_score.id,
+                override_points=8,
+                is_disabled=None,
+                override_constraints_json=None,
+                note="Boost title question",
+            ),
+            BetException(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                bet_score_id=string_score.id,
+                override_points=None,
+                is_disabled=None,
+                override_constraints_json={"max_length": 20},
+                note="Tighter text constraint",
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/seasons/{season.year}/questions",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["kind"] == "SEASON"
+    assert payload["season_year"] == 2026
+    assert len(payload["questions"]) == 6
+
+    by_code = {question["code"]: question for question in payload["questions"]}
+
+    assert by_code["WILL_VER_WIN_TITLE"]["options"] == [
+        {"value": "true", "label": "Yes"},
+        {"value": "false", "label": "No"},
+    ]
+    assert by_code["WILL_VER_WIN_TITLE"]["base_points"] == 8.0
+
+    assert by_code["BEST_DRIVER"]["options"] == [
+        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16}},
+        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1}},
+    ]
+
+    assert by_code["BEST_TEAM"]["options"] == [
+        {"value": "FER", "label": "Ferrari", "meta": {"code": "FER"}},
+        {"value": "RBR", "label": "Red Bull Racing", "meta": {"code": "RBR"}},
+    ]
+
+    assert by_code["BEST_ENGINE"]["options"] == [
+        {"value": "FERRARI", "label": "Ferrari Power Unit", "meta": {"code": "FERRARI"}},
+        {"value": "HONDA", "label": "Honda", "meta": {"code": "HONDA"}},
+    ]
+
+    assert "options" not in by_code["ALONSO_FINAL_POSITION"]
+    assert by_code["ALONSO_FINAL_POSITION"]["constraints_json"] == {
+        "allow_dnf": False,
+        "min": 1,
+        "max": 3,
+    }
+
+    assert "options" not in by_code["SEASON_SURPRISE"]
+    assert by_code["SEASON_SURPRISE"]["constraints_json"] == {"max_length": 20}
+
+    print(json.dumps(payload, indent=2, ensure_ascii=False))

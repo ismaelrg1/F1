@@ -134,6 +134,11 @@ class BetTestingEvent:
     season_driver_entries: tuple[BetRosterEntry, ...]
     sessions: tuple[BetTestingEventSession, ...]
 
+@dataclass(frozen=True)
+class BetSeason:
+    id: int
+    year: int
+    season_driver_entries: tuple[BetRosterEntry, ...]
 
 @dataclass(frozen=True)
 class RaceEventBetQuestionsSessionResult:
@@ -178,3 +183,11 @@ class TestingEventBetQuestionsResult:
     status: str
     event_questions: list[BetQuestionResult]
     sessions: list[TestingEventBetQuestionsSessionResult]
+
+@dataclass(frozen=True)
+class SeasonBetQuestionsResult:
+    bet_context_public_id: UUID
+    kind: str
+    season_year: int
+    label: str
+    questions: list[BetQuestionResult]

@@ -3,8 +3,10 @@ from fastapi import status
 from app.api.error_catalogs.base import ErrorCatalogEntry
 from app.domain.bets.errors import (
     BetContextNotFoundForRaceEventError,
+    BetContextNotFoundForSeasonError,
     BetContextNotFoundForTestingEventError,
     RaceEventNotFoundForBetQuestionsError,
+    SeasonNotFoundForBetQuestionsError,
     TestingEventNotFoundForBetQuestionsError,
 )
 
@@ -24,5 +26,13 @@ BETS_ERROR_MAP = {
     BetContextNotFoundForTestingEventError: ErrorCatalogEntry(
         status_code=status.HTTP_404_NOT_FOUND,
         error_code="bets.bet_context_not_found_for_testing_event",
+    ),
+    SeasonNotFoundForBetQuestionsError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="bets.season_not_found",
+    ),
+    BetContextNotFoundForSeasonError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="bets.bet_context_not_found_for_season",
     ),
 }
