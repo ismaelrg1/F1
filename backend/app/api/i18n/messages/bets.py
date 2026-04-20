@@ -12,6 +12,8 @@ MESSAGES_BETS = {
         "bets.answer_question_not_found": "One or more answers do not belong to this bet scope",
         "bets.already_submitted": "This bet has already been submitted",
         "bets.answers_not_open": "Bet answers are not open yet",
+        "bets.required_answer_missing": "One or more required answers are missing",
+        "bets.modification_limit_reached": "The modification limit has been reached",
     },
     "es": {
         "bets.race_event_not_found": "No se ha encontrado el evento de carrera",
@@ -26,5 +28,7 @@ MESSAGES_BETS = {
         "bets.answer_question_not_found": "Una o más respuestas no pertenecen a este formulario de apuesta",
         "bets.already_submitted": "Esta apuesta ya ha sido enviada",
         "bets.answers_not_open": "Las respuestas todavía no están abiertas",
+        "bets.required_answer_missing": "Faltan una o más respuestas obligatorias",
+        "bets.modification_limit_reached": "Se ha alcanzado el límite de modificaciones",
     },
 }

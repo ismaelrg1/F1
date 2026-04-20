@@ -5,7 +5,17 @@ from uuid import uuid4
 
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import User
-from app.db.betting import BetContext, BetException, BetScore, BetTemplate, BetTemplateItem, Bet, BetPick
+from app.db.betting import (
+    Bet,
+    BetContext,
+    BetEditPermission,
+    BetException,
+    BetPick,
+    BetScore,
+    BetSubmissionRevision,
+    BetTemplate,
+    BetTemplateItem,
+)
 from app.db.competition import (
     Circuit,
     Country,
@@ -2689,6 +2699,700 @@ def test_patch_race_event_bet_answers_returns_409_when_bet_is_already_submitted(
 
     assert response.status_code == 409
     assert response.json()["detail"]["error"]["code"] == "bets.already_submitted"
+
+
+def _create_submit_race_event_answers_fixture(db_session, *, user_id: int, group_id: int):
+    now = datetime.now(timezone.utc)
+    suffix = uuid4().hex[:8].upper()
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+    season_year = None
+    for candidate_year in range(1950, 2101):
+        if db_session.query(Season).filter(Season.year == candidate_year).first() is None:
+            season_year = candidate_year
+            break
+    assert season_year is not None
+
+    country_iso2 = None
+    for first in alphabet:
+        for second in alphabet:
+            candidate_iso2 = f"{first}{second}"
+            if db_session.query(Country).filter(Country.iso2 == candidate_iso2).first() is None:
+                country_iso2 = candidate_iso2
+                break
+        if country_iso2 is not None:
+            break
+    assert country_iso2 is not None
+
+    season = Season(year=season_year, is_active=False)
+    country = Country(
+        iso2=country_iso2,
+        name=f"Submit Country {suffix}",
+        flag_asset_url=None,
+    )
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code=f"submit_{suffix.lower()}",
+        name="Submit Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=1,
+        name="Submit Grand Prix",
+        source_provider=SourceProvider.MANUAL,
+        status=RaceEventStatus.SCHEDULED,
+        scheduled_event_start=now + timedelta(days=3),
+        scheduled_event_end=now + timedelta(days=5),
+        betting_open_at=now - timedelta(hours=1),
+        lock_cutoff=now + timedelta(days=2),
+        scheduled_lock_cutoff=now + timedelta(days=2),
+    )
+    race_event.event_sessions = [
+        EventSession(
+            session_type=SessionType.FP1,
+            source_provider=SourceProvider.MANUAL,
+            status=RaceEventStatus.SCHEDULED,
+            start_datetime=now + timedelta(days=1),
+            scheduled_start_datetime=now + timedelta(days=1),
+            betting_open_at=now - timedelta(hours=1),
+            lock_cutoff=now + timedelta(hours=12),
+            scheduled_lock_cutoff=now + timedelta(hours=12),
+        )
+    ]
+    db_session.add(race_event)
+    db_session.flush()
+
+    fp1_session = race_event.event_sessions[0]
+
+    bet_context = BetContext(
+        kind=BetContextKind.GP,
+        season_id=season.id,
+        race_event_id=race_event.id,
+        testing_event_id=None,
+        label="Submit GP",
+        results_published=False,
+        results_published_at=None,
+        group_id=group_id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    safety_car_score = BetScore(
+        code=f"SUBMIT_SAFETY_CAR_{suffix}",
+        label="Safety Car",
+        base_points=3,
+        value_type=BetValueType.BOOLEAN,
+        constraints_json=None,
+    )
+    pole_score = BetScore(
+        code=f"SUBMIT_POLE_{suffix}",
+        label="Pole sitter",
+        base_points=5,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    fp1_score = BetScore(
+        code=f"SUBMIT_FP1_FASTEST_{suffix}",
+        label="FP1 fastest",
+        base_points=4,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([safety_car_score, pole_score, fp1_score])
+    db_session.flush()
+
+    event_template = BetTemplate(
+        season_id=season.id,
+        name="Submit GP Event Template",
+        context_kind=BetContextKind.GP,
+        scope=BetTemplateScope.EVENT,
+        session_type=None,
+    )
+    fp1_template = BetTemplate(
+        season_id=season.id,
+        name="Submit GP FP1 Template",
+        context_kind=BetContextKind.GP,
+        scope=BetTemplateScope.SESSION,
+        session_type=SessionType.FP1,
+    )
+    db_session.add_all([event_template, fp1_template])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetTemplateItem(
+                template_id=event_template.id,
+                bet_score_id=safety_car_score.id,
+                required=True,
+                display_order=0,
+            ),
+            BetTemplateItem(
+                template_id=event_template.id,
+                bet_score_id=pole_score.id,
+                required=True,
+                display_order=1,
+            ),
+            BetTemplateItem(
+                template_id=fp1_template.id,
+                bet_score_id=fp1_score.id,
+                required=True,
+                display_order=0,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    return {
+        "race_event": race_event,
+        "fp1_session": fp1_session,
+        "bet_context": bet_context,
+        "safety_car_score": safety_car_score,
+        "pole_score": pole_score,
+        "fp1_score": fp1_score,
+    }
+
+
+def test_submit_race_event_bet_answers_creates_first_submission(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_submit_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["safety_car_score"].code,
+                    "value": "true",
+                },
+                {
+                    "bet_score_code": data["pole_score"].code,
+                    "value": "VER",
+                },
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    answers_by_code = {
+        answer["bet_score_code"]: answer["value"]
+        for answer in payload["event_answers"]
+    }
+
+    assert payload["bet_context_public_id"] == str(data["bet_context"].public_id)
+    assert payload["kind"] == "GP"
+    assert payload["race_event_public_id"] == str(data["race_event"].public_id)
+    assert payload["submitted_at"] is not None
+    assert payload["last_modified_at"] is not None
+    assert answers_by_code == {
+        data["safety_car_score"].code: "true",
+        data["pole_score"].code: "VER",
+    }
+
+    db_session.expire_all()
+    saved_bet = next(
+        bet
+        for bet in data["bet_context"].bets
+        if bet.user_id == user.id and bet.event_session_id is None
+    )
+    assert saved_bet.submitted_at is not None
+    assert saved_bet.last_modified_at is not None
+    assert saved_bet.locked_at is None
+    assert saved_bet.submit_order_int is None
+    assert len(saved_bet.submission_revisions) == 1
+    assert saved_bet.submission_revisions[0].revision_number == 1
+
+
+def test_submit_race_event_bet_answers_merges_existing_draft(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_submit_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    draft_bet = Bet(
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=None,
+        locked_at=None,
+    )
+    db_session.add(draft_bet)
+    db_session.flush()
+    db_session.add(
+        BetPick(
+            bet_id=draft_bet.id,
+            bet_score_id=data["safety_car_score"].id,
+            value="false",
+        )
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["pole_score"].code,
+                    "value": "LEC",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    answers_by_code = {
+        answer["bet_score_code"]: answer["value"]
+        for answer in payload["event_answers"]
+    }
+
+    assert payload["submitted_at"] is not None
+    assert answers_by_code == {
+        data["safety_car_score"].code: "false",
+        data["pole_score"].code: "LEC",
+    }
+
+    db_session.expire_all()
+    saved_bet = next(
+        bet
+        for bet in data["bet_context"].bets
+        if bet.user_id == user.id and bet.event_session_id is None
+    )
+    assert saved_bet.submitted_at is not None
+    assert len(saved_bet.submission_revisions) == 1
+
+
+def test_submit_race_event_session_bet_answers_creates_session_submission(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_submit_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"session_id": str(data["fp1_session"].public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["fp1_score"].code,
+                    "value": "VER",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["event_answers"] == []
+    assert len(payload["sessions"]) == 1
+    assert payload["sessions"][0]["event_session_public_id"] == str(data["fp1_session"].public_id)
+    assert payload["sessions"][0]["submitted_at"] is not None
+    assert payload["sessions"][0]["last_modified_at"] is not None
+    assert payload["sessions"][0]["answers"] == [
+        {
+            "bet_score_code": data["fp1_score"].code,
+            "value": "VER",
+        }
+    ]
+
+    db_session.expire_all()
+    saved_bet = next(
+        bet
+        for bet in data["bet_context"].bets
+        if bet.user_id == user.id and bet.event_session_id == data["fp1_session"].id
+    )
+    assert saved_bet.submitted_at is not None
+    assert len(saved_bet.submission_revisions) == 1
+
+
+def test_submit_race_event_bet_answers_updates_existing_submission(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_submit_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    first_submitted_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+    submitted_bet = Bet(
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=first_submitted_at,
+        last_modified_at=first_submitted_at,
+        locked_at=None,
+    )
+    db_session.add(submitted_bet)
+    db_session.flush()
+    db_session.add_all(
+        [
+            BetPick(
+                bet_id=submitted_bet.id,
+                bet_score_id=data["safety_car_score"].id,
+                value="true",
+            ),
+            BetPick(
+                bet_id=submitted_bet.id,
+                bet_score_id=data["pole_score"].id,
+                value="VER",
+            ),
+            BetSubmissionRevision(
+                bet_id=submitted_bet.id,
+                revision_number=1,
+                submitted_at=first_submitted_at,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["pole_score"].code,
+                    "value": "LEC",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    answers_by_code = {
+        answer["bet_score_code"]: answer["value"]
+        for answer in payload["event_answers"]
+    }
+
+    assert payload["submitted_at"] is not None
+    assert answers_by_code[data["pole_score"].code] == "LEC"
+
+    db_session.expire_all()
+    saved_bet = next(
+        bet
+        for bet in data["bet_context"].bets
+        if bet.user_id == user.id and bet.event_session_id is None
+    )
+    assert saved_bet.submitted_at == first_submitted_at
+    assert saved_bet.last_modified_at > first_submitted_at
+    assert len(saved_bet.submission_revisions) == 2
+    assert sorted(revision.revision_number for revision in saved_bet.submission_revisions) == [1, 2]
+
+
+def test_submit_race_event_bet_answers_returns_400_when_required_answer_is_missing(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_submit_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["safety_car_score"].code,
+                    "value": "true",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"]["code"] == "bets.required_answer_missing"
+
+
+def test_submit_race_event_bet_answers_allows_modification_with_active_permission(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_submit_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    first_submitted_at = datetime.now(timezone.utc) - timedelta(minutes=20)
+    data["race_event"].lock_cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+    submitted_bet = Bet(
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=first_submitted_at,
+        last_modified_at=first_submitted_at,
+        locked_at=None,
+    )
+    db_session.add(submitted_bet)
+    db_session.flush()
+    db_session.add_all(
+        [
+            BetPick(
+                bet_id=submitted_bet.id,
+                bet_score_id=data["safety_car_score"].id,
+                value="true",
+            ),
+            BetPick(
+                bet_id=submitted_bet.id,
+                bet_score_id=data["pole_score"].id,
+                value="VER",
+            ),
+            BetSubmissionRevision(
+                bet_id=submitted_bet.id,
+                revision_number=1,
+                submitted_at=first_submitted_at,
+            ),
+            BetEditPermission(
+                bet_context_id=data["bet_context"].id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                applies_to_all=True,
+                starts_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+                ends_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+                max_modifications=1,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["pole_score"].code,
+                    "value": "LEC",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    answers_by_code = {
+        answer["bet_score_code"]: answer["value"]
+        for answer in payload["event_answers"]
+    }
+    assert answers_by_code[data["pole_score"].code] == "LEC"
+
+    db_session.expire_all()
+    saved_bet = next(
+        bet
+        for bet in data["bet_context"].bets
+        if bet.user_id == user.id and bet.event_session_id is None
+    )
+    assert len(saved_bet.submission_revisions) == 2
+
+
+def test_submit_race_event_bet_answers_returns_409_when_modification_limit_is_reached(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_submit_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    first_submitted_at = datetime.now(timezone.utc) - timedelta(minutes=20)
+    second_submitted_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+    data["race_event"].lock_cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+    submitted_bet = Bet(
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=first_submitted_at,
+        last_modified_at=second_submitted_at,
+        locked_at=None,
+    )
+    db_session.add(submitted_bet)
+    db_session.flush()
+    db_session.add_all(
+        [
+            BetPick(
+                bet_id=submitted_bet.id,
+                bet_score_id=data["safety_car_score"].id,
+                value="true",
+            ),
+            BetPick(
+                bet_id=submitted_bet.id,
+                bet_score_id=data["pole_score"].id,
+                value="VER",
+            ),
+            BetSubmissionRevision(
+                bet_id=submitted_bet.id,
+                revision_number=1,
+                submitted_at=first_submitted_at,
+            ),
+            BetSubmissionRevision(
+                bet_id=submitted_bet.id,
+                revision_number=2,
+                submitted_at=second_submitted_at,
+            ),
+            BetEditPermission(
+                bet_context_id=data["bet_context"].id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                applies_to_all=True,
+                starts_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+                ends_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+                max_modifications=1,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["pole_score"].code,
+                    "value": "LEC",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error"]["code"] == "bets.modification_limit_reached"
 
 
 def _create_patch_testing_event_answers_fixture(db_session, *, user_id: int, group_id: int):

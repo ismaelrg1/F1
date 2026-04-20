@@ -10,6 +10,7 @@ from app.domain.bets.models import (
     BetTestingEvent,
     UserBetDefinition,
     BetAnswerInput,
+    BetEditPermissionDefinition,
 )
 
 
@@ -56,5 +57,27 @@ class BetQuestionsRepository(Protocol):
         testing_event_session_id: int | None,
         answers: list[BetAnswerInput],
         modified_at: datetime,
+    ) -> None:
+        ...
+
+    def list_active_edit_permissions_for_scope(
+        self,
+        *,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+        now: datetime,
+    ) -> list[BetEditPermissionDefinition]:
+        ...
+
+    def upsert_user_bet_submission(
+        self,
+        *,
+        user_id: int,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+        answers: list[BetAnswerInput],
+        submitted_at: datetime,
     ) -> None:
         ...

@@ -135,6 +135,7 @@ class UserBetDefinition:
     last_modified_at: datetime
     locked_at: datetime | None
     picks: tuple[BetAnswerResult, ...]
+    revision_count: int
 
 @dataclass(frozen=True)
 class BetQuestionOptionResult:
@@ -158,3 +159,12 @@ class BetAnswerResult:
     bet_score_code: str
     value: str
 
+@dataclass(frozen=True)
+class BetEditPermissionDefinition:
+    applies_to_all: bool
+    group_id: int | None
+    user_id: int | None
+    team_id: int | None
+    starts_at: datetime
+    ends_at: datetime
+    max_modifications: int | None

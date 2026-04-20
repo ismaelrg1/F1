@@ -1,6 +1,7 @@
 from app.domain.bets.shared.models import (
     BetAnswerResult,
     BetContextDefinition,
+    BetEditPermissionDefinition,
     BetExceptionDefinition,
     BetQuestionOptionResult,
     BetQuestionResult,
@@ -34,6 +35,7 @@ from app.domain.bets.answers.models import (
 __all__ = [
     "BetAnswerResult",
     "BetContextDefinition",
+    "BetEditPermissionDefinition",
     "BetExceptionDefinition",
     "BetQuestionOptionResult",
     "BetQuestionResult",

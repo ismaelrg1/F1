@@ -17,6 +17,7 @@ from app.domain.bets.use_cases import (
     GetRaceEventBetQuestions,
     GetRaceEventSessionBetAnswers,
     PatchRaceEventBetAnswers,
+    SubmitRaceEventBetAnswers,
 )
 from app.models.bets import (
     BetAnswerRead,
@@ -219,6 +220,79 @@ def patch_race_event_answers(
             event_session_public_id=session_id,
             group_id=group.id,
             user_id=user.id,
+            answers=[
+                BetAnswerInput(
+                    bet_score_code=answer.bet_score_code,
+                    value=answer.value,
+                )
+                for answer in payload.answers
+            ],
+        )
+        db.commit()
+    except BetsError as exc:
+        db.rollback()
+        raise _translate_bets_error(exc, locale=locale) from exc
+
+    return RaceEventBetAnswersResponse(
+        bet_context_public_id=result.bet_context_public_id,
+        kind=result.kind,
+        race_event_public_id=result.race_event_public_id,
+        label=result.label,
+        submitted_at=result.submitted_at,
+        last_modified_at=result.last_modified_at,
+        locked_at=result.locked_at,
+        event_answers=[
+            BetAnswerRead(
+                bet_score_code=answer.bet_score_code,
+                value=answer.value,
+            )
+            for answer in result.event_answers
+        ],
+        sessions=[
+            RaceEventBetAnswersSessionResponse(
+                event_session_public_id=session.event_session_public_id,
+                session_type=session.session_type,
+                submitted_at=session.submitted_at,
+                last_modified_at=session.last_modified_at,
+                locked_at=session.locked_at,
+                answers=[
+                    BetAnswerRead(
+                        bet_score_code=answer.bet_score_code,
+                        value=answer.value,
+                    )
+                    for answer in session.answers
+                ],
+            )
+            for session in result.sessions
+        ],
+    )
+
+@router.post(
+    "/race-events/{race_event_public_id}/answers",
+    response_model=RaceEventBetAnswersResponse,
+    response_model_exclude_none=True,
+)
+def submit_race_event_answers(
+    race_event_public_id: UUID,
+    payload: BetAnswersPatchRequest,
+    request: Request,
+    session_id: UUID | None = Query(default=None),
+    db: Session = Depends(get_db),
+    user_group: tuple[User, Group] = Depends(require_group_member),
+) -> RaceEventBetAnswersResponse:
+    user, group = user_group
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
+    repository = SqlAlchemyBetQuestionsRepository(db)
+    use_case = SubmitRaceEventBetAnswers(repository)
+
+    try:
+        result = use_case.execute(
+            race_event_public_id=race_event_public_id,
+            event_session_public_id=session_id,
+            group_id=group.id,
+            user_id=user.id,
+            team_ids=set(),
             answers=[
                 BetAnswerInput(
                     bet_score_code=answer.bet_score_code,

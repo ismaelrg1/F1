@@ -46,3 +46,10 @@ class BetAnswerQuestionNotFoundError(BetsError):
 
 class BetAlreadySubmittedError(BetsError):
     pass
+
+class BetRequiredAnswerMissingError(BetsError):
+    pass
+
+
+class BetModificationLimitReachedError(BetsError):
+    pass

@@ -14,6 +14,8 @@ from app.domain.bets.errors import (
     BetAnswerQuestionNotFoundError,
     BetAlreadySubmittedError,
     BetAnswersNotOpenError,
+    BetModificationLimitReachedError,
+    BetRequiredAnswerMissingError,
 )
 
 BETS_ERROR_MAP = {
@@ -64,5 +66,13 @@ BETS_ERROR_MAP = {
     BetAnswersNotOpenError: ErrorCatalogEntry(
         status_code=status.HTTP_409_CONFLICT,
         error_code="bets.answers_not_open",
+    ),
+    BetRequiredAnswerMissingError: ErrorCatalogEntry(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        error_code="bets.required_answer_missing",
+    ),
+    BetModificationLimitReachedError: ErrorCatalogEntry(
+        status_code=status.HTTP_409_CONFLICT,
+        error_code="bets.modification_limit_reached",
     ),
 }
