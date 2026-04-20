@@ -141,6 +141,9 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
             status=event.status.value,
             event_start=event.event_start,
             scheduled_event_start=event.scheduled_event_start,
+            betting_open_at=event.betting_open_at,
+            lock_cutoff=event.lock_cutoff,
+            scheduled_lock_cutoff=event.scheduled_lock_cutoff,
             season_driver_entries=tuple(
                 self._map_driver_entry(entry, driver_numbers)
                 for entry in event.season.driver_entries
@@ -156,6 +159,9 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
                     end_datetime=session.end_datetime,
                     scheduled_start_datetime=session.scheduled_start_datetime,
                     scheduled_end_datetime=session.scheduled_end_datetime,
+                    betting_open_at=session.betting_open_at,
+                    lock_cutoff=session.lock_cutoff,
+                    scheduled_lock_cutoff=session.scheduled_lock_cutoff,
                 )
                 for session in event.sessions
             ),

@@ -99,6 +99,9 @@ class BetTestingEventSession:
     end_datetime: datetime | None
     scheduled_start_datetime: datetime | None
     scheduled_end_datetime: datetime | None
+    betting_open_at: datetime | None
+    lock_cutoff: datetime | None
+    scheduled_lock_cutoff: datetime | None
 
 
 @dataclass(frozen=True)
@@ -109,6 +112,9 @@ class BetTestingEvent:
     status: str
     event_start: datetime | None
     scheduled_event_start: datetime | None
+    betting_open_at: datetime | None
+    lock_cutoff: datetime | None
+    scheduled_lock_cutoff: datetime | None
     season_driver_entries: tuple[BetRosterEntry, ...]
     sessions: tuple[BetTestingEventSession, ...]
 
@@ -148,3 +154,4 @@ class BetQuestionResult:
 class BetAnswerResult:
     bet_score_code: str
     value: str
+
