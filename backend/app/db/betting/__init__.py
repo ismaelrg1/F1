@@ -8,3 +8,4 @@ from .bet_exception import BetException # noqa
 from .bet_context import BetContext # noqa
 from .bet_edit_permission import BetEditPermission # noqa
 from .bet_submission_revision import BetSubmissionRevision # noqa
+from .bet_results_visibility_policy import BetResultsVisibilityPolicy # noqa

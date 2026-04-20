@@ -98,3 +98,27 @@ class PowerUpTargetMode(str, enum.Enum):
 class SourceProvider(str, enum.Enum):
     MANUAL = "MANUAL"
     FASTF1 = "FASTF1"
+
+
+class BetResultsVisibilityMode(str, enum.Enum):
+    SUBMIT_REQUIRED = "SUBMIT_REQUIRED"
+    ALWAYS_VISIBLE = "ALWAYS_VISIBLE"
+    AFTER_LOCK = "AFTER_LOCK"
+    AFTER_RESULTS_PUBLISHED = "AFTER_RESULTS_PUBLISHED"
+
+    # SUBMIT_REQUIRED:
+    #     si está abierto, solo ves otros si has enviado ese scope.
+    #     si está cerrado, ves todos.
+    # El usuario solo puede ver apuestas de otros si ya hizo submit de ese mismo scope, o si ya cerró, o si los resultados fueron publicados.
+
+    # ALWAYS_VISIBLE:
+    #     ves apuestas enviadas aunque no hayas enviado.
+    # El usuario puede ver apuestas enviadas de otros aunque él no haya enviado. 
+
+    # AFTER_LOCK:
+    #     solo ves cuando cierre.
+    # El usuario solo puede ver apuestas de otros cuando el evento/sesión/season ya está cerrado.
+
+    # AFTER_RESULTS_PUBLISHED:
+    #     solo ves cuando admin publique resultados oficiales.
+    # El usuario solo puede ver cuando el admin ha publicado resultados oficiales.

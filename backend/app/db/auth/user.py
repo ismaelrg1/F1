@@ -14,7 +14,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.db.audit import AuditLog
     from app.db.auth import Role, PasswordResetToken
-    from app.db.betting import Bet, BetPick, BetEditPermission
+    from app.db.betting import Bet, BetPick, BetEditPermission, BetResultsVisibilityPolicy
     from app.db.powerups import PowerUpAssignment, PowerUpUse, PowerUpUseTarget
     from app.db.scoring import ResultPublication, Score, ScoreSeasonAggregate, ScoreSession
     from app.db.social import GroupMembership, TeamMembership
@@ -144,5 +144,10 @@ class User(Base):
     created_bet_edit_permissions: Mapped[list["BetEditPermission"]] = relationship(
         "BetEditPermission",
         foreign_keys="BetEditPermission.created_by_user_id",
+        back_populates="created_by_user",
+    )
+
+    created_bet_results_visibility_policies: Mapped[list["BetResultsVisibilityPolicy"]] = relationship(
+        "BetResultsVisibilityPolicy",
         back_populates="created_by_user",
     )
