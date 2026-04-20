@@ -14,7 +14,7 @@ from app.db.base import Base
 from app.db.enums import BetContextKind
 
 if TYPE_CHECKING:
-    from app.db.betting import Bet, BetException
+    from app.db.betting import Bet, BetException, BetEditPermission
     from app.db.competition import Season, RaceEvent, TestingEvent
     from app.db.scoring import Score, ScoreSession, OfficialResult, ResultPublication, ScoringRule, TeamEventAggregate
     from app.db.social import Group
@@ -229,3 +229,8 @@ class BetContext(Base):
         cascade="all, delete-orphan",
     )
 
+    edit_permissions: Mapped[list["BetEditPermission"]] = relationship(
+        "BetEditPermission",
+        back_populates="bet_context",
+        cascade="all, delete-orphan",
+    )

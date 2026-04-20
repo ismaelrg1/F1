@@ -13,7 +13,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.db.competition import RaceEvent, DriverEntry
-    from app.db.betting import Bet, BetException
+    from app.db.betting import Bet, BetException, BetEditPermission
     from app.db.scoring import ScoreSession, OfficialResult, ResultPublication, ScoringRule
     from app.db.powerups import PowerUpUse, PowerUpRestriction
 
@@ -169,5 +169,10 @@ class EventSession(Base):
 
     powerup_restrictions: Mapped[list["PowerUpRestriction"]] = relationship(
         "PowerUpRestriction",
+        back_populates="event_session",
+    )
+
+    bet_edit_permissions: Mapped[List["BetEditPermission"]] = relationship(
+        "BetEditPermission",
         back_populates="event_session",
     )

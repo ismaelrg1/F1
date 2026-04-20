@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.db.social import TeamMembership, Group
     from app.db.scoring import TeamSeasonAggregate, TeamEventAggregate
     from app.db.powerups import PowerUpUseTarget
+    from app.db.betting import BetEditPermission
 
 class Team(Base):
     __tablename__ = "teams"
@@ -79,4 +80,9 @@ class Team(Base):
         "PowerUpUseTarget",
         foreign_keys="PowerUpUseTarget.target_team_id",
         back_populates="target_team",
+    )
+
+    bet_edit_permissions: Mapped[list["BetEditPermission"]] = relationship(
+        "BetEditPermission",
+        back_populates="team",
     )

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, List, Optional
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.db.betting import BetContext
+    from app.db.betting import BetContext, BetEditPermission
     from app.db.scoring import ScoreSeasonAggregate, TeamSeasonAggregate, TeamEventAggregate
     from app.db.social import GroupMembership, Team
     from app.db.powerups import PowerUpUseTarget, PowerUpUse, PowerUpAssignment
@@ -126,5 +126,10 @@ class Group(Base):
 
     audit_logs: Mapped[list["AuditLog"]] = relationship(
         "AuditLog",
+        back_populates="group",
+    )
+
+    bet_edit_permissions: Mapped[list["BetEditPermission"]] = relationship(
+        "BetEditPermission",
         back_populates="group",
     )

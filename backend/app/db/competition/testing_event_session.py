@@ -12,7 +12,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.db.competition import TestingEvent
-    from app.db.betting import Bet
+    from app.db.betting import Bet, BetEditPermission
 
 from app.db.enums import SourceProvider
 
@@ -114,5 +114,10 @@ class TestingEventSession(Base):
 
     bets: Mapped[List["Bet"]] = relationship(
         "Bet",
+        back_populates="testing_event_session",
+    )
+
+    bet_edit_permissions: Mapped[List["BetEditPermission"]] = relationship(
+        "BetEditPermission",
         back_populates="testing_event_session",
     )

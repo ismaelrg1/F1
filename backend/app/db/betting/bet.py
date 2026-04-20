@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, DateTime, Index, func, CheckConstraint, text
+from sqlalchemy import ForeignKey, DateTime, Index, func, CheckConstraint, text, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from typing import TYPE_CHECKING, Optional, List
@@ -9,7 +9,7 @@ from datetime import datetime
 if TYPE_CHECKING:
     from app.db.competition import EventSession, TestingEventSession
     from app.db.auth import User
-    from app.db.betting import BetContext, BetPick
+    from app.db.betting import BetContext, BetPick, BetSubmissionRevision
 
 from app.db.base import Base
 
@@ -104,6 +104,45 @@ class Bet(Base):
         # Lookup habitual por usuario + contexto.
         Index("ix_bets_user_context", "user_id", "bet_context_id"),
 
+        Index(
+            "ix_bets_context_submit_order",
+            "bet_context_id",
+            "submit_order_int",
+            "id",
+            postgresql_where=text(
+                "submitted_at IS NOT NULL "
+                "AND event_session_id IS NULL "
+                "AND testing_event_session_id IS NULL "
+                "AND submit_order_int IS NOT NULL"
+            ),
+        ),
+
+        Index(
+            "ix_bets_gp_session_submit_order",
+            "bet_context_id",
+            "event_session_id",
+            "submit_order_int",
+            "id",
+            postgresql_where=text(
+                "submitted_at IS NOT NULL "
+                "AND event_session_id IS NOT NULL "
+                "AND submit_order_int IS NOT NULL"
+            ),
+        ),
+
+        Index(
+            "ix_bets_testing_session_submit_order",
+            "bet_context_id",
+            "testing_event_session_id",
+            "submit_order_int",
+            "id",
+            postgresql_where=text(
+                "submitted_at IS NOT NULL "
+                "AND testing_event_session_id IS NOT NULL "
+                "AND submit_order_int IS NOT NULL"
+            ),
+        ),
+
         {"schema": "betting"},
     )
 
@@ -147,6 +186,11 @@ class Bet(Base):
         nullable=True,
     )
 
+    submit_order_int: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
     user: Mapped["User"] = relationship(
         'User',
         back_populates="bets",
@@ -172,6 +216,12 @@ class Bet(Base):
     testing_event_session: Mapped[Optional["TestingEventSession"]] = relationship(
         "TestingEventSession",
         back_populates="bets",
+    )
+
+    submission_revisions: Mapped[List["BetSubmissionRevision"]] = relationship(
+        "BetSubmissionRevision",
+        back_populates="bet",
+        cascade="all, delete-orphan",
     )
 
 

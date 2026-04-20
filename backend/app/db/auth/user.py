@@ -14,7 +14,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.db.audit import AuditLog
     from app.db.auth import Role, PasswordResetToken
-    from app.db.betting import Bet, BetPick
+    from app.db.betting import Bet, BetPick, BetEditPermission
     from app.db.powerups import PowerUpAssignment, PowerUpUse, PowerUpUseTarget
     from app.db.scoring import ResultPublication, Score, ScoreSeasonAggregate, ScoreSession
     from app.db.social import GroupMembership, TeamMembership
@@ -133,4 +133,16 @@ class User(Base):
         "PasswordResetToken",
         back_populates="user",
         cascade="all, delete-orphan",
+    )
+
+    bet_edit_permissions: Mapped[list["BetEditPermission"]] = relationship(
+        "BetEditPermission",
+        foreign_keys="BetEditPermission.user_id",
+        back_populates="user",
+    )
+
+    created_bet_edit_permissions: Mapped[list["BetEditPermission"]] = relationship(
+        "BetEditPermission",
+        foreign_keys="BetEditPermission.created_by_user_id",
+        back_populates="created_by_user",
     )
