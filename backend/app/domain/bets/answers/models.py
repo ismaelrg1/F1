@@ -52,3 +52,14 @@ class TestingEventBetAnswersResult:
     locked_at: datetime | None
     event_answers: list[BetAnswerResult]
     sessions: list[TestingEventBetAnswersSessionResult]
+
+@dataclass(frozen=True)
+class SeasonBetAnswersResult:
+    bet_context_public_id: UUID
+    kind: str
+    season_year: int
+    label: str
+    submitted_at: datetime | None
+    last_modified_at: datetime | None
+    locked_at: datetime | None
+    answers: list[BetAnswerResult]

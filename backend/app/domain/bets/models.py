@@ -25,6 +25,9 @@ from app.domain.bets.questions.models import (
 from app.domain.bets.answers.models import (
     RaceEventBetAnswersResult,
     RaceEventBetAnswersSessionResult,
+    SeasonBetAnswersResult,
+    TestingEventBetAnswersResult,
+    TestingEventBetAnswersSessionResult,
 )
 
 __all__ = [
@@ -53,4 +56,7 @@ __all__ = [
 
     "RaceEventBetAnswersResult",
     "RaceEventBetAnswersSessionResult",
+    "SeasonBetAnswersResult",
+    "TestingEventBetAnswersResult",
+    "TestingEventBetAnswersSessionResult",
 ]

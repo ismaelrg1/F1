@@ -4,14 +4,17 @@ from app.domain.bets.shared.ports import BetQuestionsRepository
 from app.domain.bets.answers.models import (
     RaceEventBetAnswersResult,
     RaceEventBetAnswersSessionResult,
+    SeasonBetAnswersResult,
     TestingEventBetAnswersResult,
     TestingEventBetAnswersSessionResult,
 )
 from app.domain.bets.errors import (
     BetContextNotFoundForRaceEventError,
+    BetContextNotFoundForSeasonError,
     BetContextNotFoundForTestingEventError,
     RaceEventNotFoundForBetQuestionsError,
     RaceEventSessionNotFoundForBetAnswersError,
+    SeasonNotFoundForBetQuestionsError,
     TestingEventNotFoundForBetQuestionsError,
     TestingEventSessionNotFoundForBetAnswersError,
 )
@@ -280,4 +283,46 @@ class GetTestingEventSessionBetAnswers:
                     answers=list(session_bet.picks) if session_bet is not None else [],
                 )
             ],
+        )
+
+
+class GetSeasonBetAnswers:
+    def __init__(self, repository: BetQuestionsRepository):
+        self._repository = repository
+
+    def execute(self, *, season_year: int, group_id: int, user_id: int) -> SeasonBetAnswersResult:
+        season = self._repository.get_season_by_year(season_year)
+        if season is None:
+            raise SeasonNotFoundForBetQuestionsError()
+
+        bet_context = self._repository.get_season_bet_context(
+            group_id=group_id,
+            season_id=season.id,
+        )
+        if bet_context is None:
+            raise BetContextNotFoundForSeasonError()
+
+        bets = self._repository.list_user_bets_for_context(
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+        )
+
+        season_bet = next(
+            (
+                bet
+                for bet in bets
+                if bet.event_session_id is None and bet.testing_event_session_id is None
+            ),
+            None,
+        )
+
+        return SeasonBetAnswersResult(
+            bet_context_public_id=bet_context.public_id,
+            kind=str(bet_context.kind),
+            season_year=season.year,
+            label=bet_context.label,
+            submitted_at=season_bet.submitted_at if season_bet is not None else None,
+            last_modified_at=season_bet.last_modified_at if season_bet is not None else None,
+            locked_at=season_bet.locked_at if season_bet is not None else None,
+            answers=list(season_bet.picks) if season_bet is not None else [],
         )

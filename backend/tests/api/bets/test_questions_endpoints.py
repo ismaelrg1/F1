@@ -2231,3 +2231,168 @@ def test_get_testing_event_bet_answers_returns_event_and_filtered_session_answer
             "value": "LEC",
         }
     ]
+
+
+def test_get_season_bet_answers_returns_answers(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+
+    season = Season(year=2026, is_active=True)
+    db_session.add(season)
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.SEASON,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=None,
+        label="2026 Season",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    champion_score = BetScore(
+        code="DRIVERS_CHAMPION",
+        label="Drivers champion",
+        base_points=10,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    constructors_score = BetScore(
+        code="CONSTRUCTORS_CHAMPION",
+        label="Constructors champion",
+        base_points=8,
+        value_type=BetValueType.TEAM,
+        constraints_json=None,
+    )
+    db_session.add_all([champion_score, constructors_score])
+    db_session.flush()
+
+    season_bet = Bet(
+        user_id=user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=datetime(2026, 2, 1, 12, 0, tzinfo=timezone.utc),
+        locked_at=None,
+    )
+    db_session.add(season_bet)
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetPick(
+                bet_id=season_bet.id,
+                bet_score_id=champion_score.id,
+                value="VER",
+            ),
+            BetPick(
+                bet_id=season_bet.id,
+                bet_score_id=constructors_score.id,
+                value="RBR",
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/seasons/{season.year}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["bet_context_public_id"] == str(bet_context.public_id)
+    assert payload["kind"] == "SEASON"
+    assert payload["season_year"] == 2026
+    assert payload["label"] == "2026 Season"
+    assert payload["submitted_at"] == "2026-02-01T12:00:00Z"
+    assert payload["answers"] == [
+        {
+            "bet_score_code": "CONSTRUCTORS_CHAMPION",
+            "value": "RBR",
+        },
+        {
+            "bet_score_code": "DRIVERS_CHAMPION",
+            "value": "VER",
+        },
+    ]
+
+
+def test_get_season_bet_answers_returns_404_when_season_is_missing(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        "/api/v1/bets/seasons/2099/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["error"]["code"] == "bets.season_not_found"
+
+
+def test_get_season_bet_answers_returns_404_when_bet_context_is_missing(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+
+    season = Season(year=2026, is_active=True)
+    db_session.add(season)
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/seasons/{season.year}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["error"]["code"] == "bets.bet_context_not_found_for_season"

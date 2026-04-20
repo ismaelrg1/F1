@@ -121,3 +121,13 @@ class TestingEventBetAnswersResponse(BaseModel):
     locked_at: datetime | None
     event_answers: list[BetAnswerRead]
     sessions: list[TestingEventBetAnswersSessionResponse]
+
+class SeasonBetAnswersResponse(BaseModel):
+    bet_context_public_id: UUID
+    kind: BetContextKind
+    season_year: int
+    label: str
+    submitted_at: datetime | None
+    last_modified_at: datetime | None
+    locked_at: datetime | None
+    answers: list[BetAnswerRead]
