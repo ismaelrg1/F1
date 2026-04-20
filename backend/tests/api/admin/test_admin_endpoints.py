@@ -2,8 +2,21 @@ from sqlalchemy import select
 
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import Permission, Role, User
-from app.db.competition import Season, Country, Circuit
-from app.db.enums import RoleName
+from app.db.betting import BetContext
+from app.db.competition import (
+    Circuit,
+    Country,
+    RaceEvent,
+    Season,
+    TestingEvent as CompetitionTestingEvent,
+)
+from app.db.enums import (
+    BetContextKind,
+    RaceEventStatus,
+    RoleName,
+    TestingEventStatus as CompetitionTestingEventStatus,
+)
+from app.db.social import Group
 
 def _create_admin_user_with_permission(
     db_session,
@@ -246,6 +259,136 @@ def test_patch_season_endpoint_returns_not_found_for_missing_season(client, db_s
 
     assert response.status_code == 404
     assert response.json()["detail"]["error"]["code"] == "admin.season_not_found"
+
+
+def test_generate_bet_contexts_endpoint_creates_contexts_and_is_idempotent(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_generate_bet_contexts",
+        email="admin_generate_bet_contexts@example.com",
+        password="secret123",
+        permission_code="COMPETITION_MANAGE",
+    )
+
+    group = Group(
+        name="Bet Context Group",
+        is_private=True,
+        teams_enabled=False,
+        max_team_size=None,
+    )
+    season = Season(year=2030, is_active=False)
+    country = Country(
+        iso2="GB",
+        name="United Kingdom",
+        flag_asset_url=None,
+    )
+    db_session.add_all([group, season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code="silverstone",
+        name="Silverstone Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=1,
+        name="British Grand Prix",
+        status=RaceEventStatus.SCHEDULED,
+    )
+    testing_event = CompetitionTestingEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        name="British Pre-Season Testing",
+        status=CompetitionTestingEventStatus.SCHEDULED,
+    )
+    db_session.add_all([race_event, testing_event])
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_generate_bet_contexts", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/bet-contexts/generate",
+        json={
+            "season_id": season.id,
+            "group_id": group.id,
+            "include_season": True,
+            "include_race_events": True,
+            "include_testing_events": True,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "groups_processed": 1,
+        "created": 3,
+        "existing": 0,
+        "season_contexts_created": 1,
+        "race_event_contexts_created": 1,
+        "testing_event_contexts_created": 1,
+    }
+
+    contexts = db_session.execute(
+        select(BetContext)
+        .where(BetContext.group_id == group.id)
+        .order_by(BetContext.kind.asc())
+    ).scalars().all()
+    assert len(contexts) == 3
+
+    season_context = next(context for context in contexts if context.kind == BetContextKind.SEASON)
+    race_context = next(context for context in contexts if context.kind == BetContextKind.GP)
+    testing_context = next(context for context in contexts if context.kind == BetContextKind.PRETESTING)
+
+    assert season_context.season_id == season.id
+    assert season_context.race_event_id is None
+    assert season_context.testing_event_id is None
+    assert season_context.label == f"Season {season.id}"
+
+    assert race_context.season_id == season.id
+    assert race_context.race_event_id == race_event.id
+    assert race_context.testing_event_id is None
+    assert race_context.label == "British Grand Prix"
+
+    assert testing_context.season_id == season.id
+    assert testing_context.race_event_id is None
+    assert testing_context.testing_event_id == testing_event.id
+    assert testing_context.label == "British Pre-Season Testing"
+
+    second_response = client.post(
+        "/api/v1/admin/bet-contexts/generate",
+        json={
+            "season_id": season.id,
+            "group_id": group.id,
+            "include_season": True,
+            "include_race_events": True,
+            "include_testing_events": True,
+        },
+    )
+
+    assert second_response.status_code == 200
+    assert second_response.json() == {
+        "groups_processed": 1,
+        "created": 0,
+        "existing": 3,
+        "season_contexts_created": 0,
+        "race_event_contexts_created": 0,
+        "testing_event_contexts_created": 0,
+    }
+
+    total_contexts = db_session.execute(
+        select(BetContext).where(BetContext.group_id == group.id)
+    ).scalars().all()
+    assert len(total_contexts) == 3
 
 
 def test_create_country_endpoint_creates_country(client, db_session) -> None:

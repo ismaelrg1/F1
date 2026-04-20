@@ -6,6 +6,8 @@ from app.api.i18n.messages.admin.race_events import MESSAGES_ADMIN_RACE_EVENTS
 from app.api.i18n.messages.admin.seasons import MESSAGES_ADMIN_SEASONS
 from app.api.i18n.messages.admin.teams import MESSAGES_ADMIN_TEAMS
 from app.api.i18n.messages.admin.testing_events import MESSAGES_ADMIN_TESTING_EVENTS
+from app.api.i18n.messages.admin.bet_contexts import MESSAGES_ADMIN_BET_CONTEXTS
+
 
 MESSAGES_ADMIN = {
     **MESSAGES_ADMIN_SEASONS,
@@ -16,6 +18,7 @@ MESSAGES_ADMIN = {
     **MESSAGES_ADMIN_DRIVERS,
     **MESSAGES_ADMIN_TEAMS,
     **MESSAGES_ADMIN_ENGINES,
+    **MESSAGES_ADMIN_BET_CONTEXTS,
 }
 
 __all__ = ["MESSAGES_ADMIN"]

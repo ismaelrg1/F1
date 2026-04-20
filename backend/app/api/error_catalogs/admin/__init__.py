@@ -6,6 +6,7 @@ from app.api.error_catalogs.admin.race_events import ADMIN_RACE_EVENT_ERROR_MAP
 from app.api.error_catalogs.admin.seasons import ADMIN_SEASON_ERROR_MAP
 from app.api.error_catalogs.admin.teams import ADMIN_TEAM_ERROR_MAP
 from app.api.error_catalogs.admin.testing_events import ADMIN_TESTING_EVENT_ERROR_MAP
+from app.api.error_catalogs.admin.bet_contexts import ADMIN_BET_CONTEXT_ERROR_MAP
 
 ADMIN_ERROR_MAP = {
     **ADMIN_SEASON_ERROR_MAP,
@@ -16,6 +17,7 @@ ADMIN_ERROR_MAP = {
     **ADMIN_DRIVER_ERROR_MAP,
     **ADMIN_TEAM_ERROR_MAP,
     **ADMIN_ENGINE_ERROR_MAP,
+    **ADMIN_BET_CONTEXT_ERROR_MAP,
 }
 
 __all__ = ["ADMIN_ERROR_MAP"]

@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from . import (
+    bet_contexts,
     circuits,
     countries,
     drivers,
@@ -22,5 +23,6 @@ router.include_router(race_events.router)
 router.include_router(drivers.router)
 router.include_router(teams.router)
 router.include_router(engines.router)
+router.include_router(bet_contexts.router)
 
 __all__ = ["router"]
