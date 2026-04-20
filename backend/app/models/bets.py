@@ -99,3 +99,25 @@ class RaceEventBetAnswersResponse(BaseModel):
     locked_at: datetime | None
     event_answers: list[BetAnswerRead]
     sessions: list[RaceEventBetAnswersSessionResponse]
+
+class TestingEventBetAnswersSessionResponse(BaseModel):
+    testing_event_session_public_id: UUID
+    session_order: int
+    name: str
+    submitted_at: datetime | None
+    last_modified_at: datetime | None
+    locked_at: datetime | None
+    answers: list[BetAnswerRead]
+
+
+class TestingEventBetAnswersResponse(BaseModel):
+    bet_context_public_id: UUID
+    kind: BetContextKind
+    testing_event_public_id: UUID
+    label: str
+    status: TestingEventStatus
+    submitted_at: datetime | None
+    last_modified_at: datetime | None
+    locked_at: datetime | None
+    event_answers: list[BetAnswerRead]
+    sessions: list[TestingEventBetAnswersSessionResponse]

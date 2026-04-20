@@ -28,3 +28,27 @@ class RaceEventBetAnswersResult:
     locked_at: datetime | None
     event_answers: list[BetAnswerResult]
     sessions: list[RaceEventBetAnswersSessionResult]
+
+@dataclass(frozen=True)
+class TestingEventBetAnswersSessionResult:
+    testing_event_session_public_id: UUID
+    session_order: int
+    name: str
+    submitted_at: datetime | None
+    last_modified_at: datetime | None
+    locked_at: datetime | None
+    answers: list[BetAnswerResult]
+
+
+@dataclass(frozen=True)
+class TestingEventBetAnswersResult:
+    bet_context_public_id: UUID
+    kind: str
+    testing_event_public_id: UUID
+    label: str
+    status: str
+    submitted_at: datetime | None
+    last_modified_at: datetime | None
+    locked_at: datetime | None
+    event_answers: list[BetAnswerResult]
+    sessions: list[TestingEventBetAnswersSessionResult]

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.adapters.sqlalchemy import SqlAlchemyBetQuestionsRepository
@@ -12,13 +12,18 @@ from app.db.social import Group
 
 from app.domain.bets import BetsError
 from app.domain.bets.use_cases import (
-    GetTestingEventBetQuestions, 
+    GetTestingEventBetQuestions,
+    GetTestingEventBetAnswers,
+    GetTestingEventSessionBetAnswers,
 )
 from app.models.bets import (
+    BetAnswerRead,
     BetQuestionRead,
     BetQuestionOptionRead,
     TestingEventBetQuestionsResponse,
     TestingEventBetQuestionsSessionRead,
+    TestingEventBetAnswersResponse,
+    TestingEventBetAnswersSessionResponse,
 )
 
 router = APIRouter()
@@ -107,6 +112,80 @@ def get_testing_event_questions(
                         ),
                     )
                     for question in session.questions
+                ],
+            )
+            for session in result.sessions
+        ],
+    )
+
+
+@router.get(
+    "/testing-events/{testing_event_public_id}/answers",
+    response_model=TestingEventBetAnswersResponse,
+    response_model_exclude_none=True,
+)
+def get_testing_event_answers(
+    testing_event_public_id: UUID,
+    request: Request,
+    session_id: UUID | None = Query(default=None),
+    db: Session = Depends(get_db),
+    user_group: tuple[User, Group] = Depends(require_group_member),
+) -> TestingEventBetAnswersResponse:
+    user, group = user_group
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
+    repository = SqlAlchemyBetQuestionsRepository(db)
+
+    try:
+        if session_id is not None:
+            use_case = GetTestingEventSessionBetAnswers(repository)
+            result = use_case.execute(
+                testing_event_public_id=testing_event_public_id,
+                testing_event_session_public_id=session_id,
+                group_id=group.id,
+                user_id=user.id,
+            )
+        else:
+            use_case = GetTestingEventBetAnswers(repository)
+            result = use_case.execute(
+                testing_event_public_id=testing_event_public_id,
+                group_id=group.id,
+                user_id=user.id,
+            )
+
+    except BetsError as exc:
+        raise _translate_bets_error(exc, locale=locale) from exc
+
+    return TestingEventBetAnswersResponse(
+        bet_context_public_id=result.bet_context_public_id,
+        kind=result.kind,
+        testing_event_public_id=result.testing_event_public_id,
+        label=result.label,
+        status=result.status,
+        submitted_at=result.submitted_at,
+        last_modified_at=result.last_modified_at,
+        locked_at=result.locked_at,
+        event_answers=[
+            BetAnswerRead(
+                bet_score_code=answer.bet_score_code,
+                value=answer.value,
+            )
+            for answer in result.event_answers
+        ],
+        sessions=[
+            TestingEventBetAnswersSessionResponse(
+                testing_event_session_public_id=session.testing_event_session_public_id,
+                session_order=session.session_order,
+                name=session.name,
+                submitted_at=session.submitted_at,
+                last_modified_at=session.last_modified_at,
+                locked_at=session.locked_at,
+                answers=[
+                    BetAnswerRead(
+                        bet_score_code=answer.bet_score_code,
+                        value=answer.value,
+                    )
+                    for answer in session.answers
                 ],
             )
             for session in result.sessions

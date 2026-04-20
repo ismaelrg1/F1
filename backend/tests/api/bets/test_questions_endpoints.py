@@ -2016,3 +2016,218 @@ def test_get_race_event_bet_answers_returns_event_and_session_answers(client, db
             "value": "NOR",
         }
     ]
+
+
+def test_get_testing_event_bet_answers_returns_event_and_filtered_session_answers(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+
+    season = Season(year=2026, is_active=True)
+    country = Country(iso2="BH", name="Bahrain", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code="bahrain",
+        name="Bahrain International Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    testing_event = CompetitionTestingEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        name="Pre-Season Testing Bahrain",
+        source_provider=SourceProvider.MANUAL,
+        status=CompetitionTestingEventStatus.SCHEDULED,
+        scheduled_event_start=datetime(2026, 2, 11, 7, 0, tzinfo=timezone.utc),
+        scheduled_event_end=datetime(2026, 2, 13, 17, 0, tzinfo=timezone.utc),
+    )
+    testing_event.sessions = [
+        CompetitionTestingEventSession(
+            session_order=1,
+            name="Day 1",
+            source_provider=SourceProvider.MANUAL,
+            scheduled_start_datetime=datetime(2026, 2, 11, 7, 0, tzinfo=timezone.utc),
+            scheduled_end_datetime=datetime(2026, 2, 11, 17, 0, tzinfo=timezone.utc),
+        ),
+        CompetitionTestingEventSession(
+            session_order=2,
+            name="Day 2",
+            source_provider=SourceProvider.MANUAL,
+            scheduled_start_datetime=datetime(2026, 2, 12, 7, 0, tzinfo=timezone.utc),
+            scheduled_end_datetime=datetime(2026, 2, 12, 17, 0, tzinfo=timezone.utc),
+        ),
+    ]
+    db_session.add(testing_event)
+    db_session.flush()
+
+    day_1 = next(session for session in testing_event.sessions if session.session_order == 1)
+    day_2 = next(session for session in testing_event.sessions if session.session_order == 2)
+
+    bet_context = BetContext(
+        kind=BetContextKind.PRETESTING,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=testing_event.id,
+        label="Bahrain Testing",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    event_score = BetScore(
+        code="TESTING_TOP_TEAM",
+        label="Top team in testing",
+        base_points=3,
+        value_type=BetValueType.TEAM,
+        constraints_json=None,
+    )
+    day_1_score = BetScore(
+        code="TESTING_DAY_1_FASTEST",
+        label="Day 1 fastest driver",
+        base_points=5,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    day_2_score = BetScore(
+        code="TESTING_DAY_2_FASTEST",
+        label="Day 2 fastest driver",
+        base_points=5,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([event_score, day_1_score, day_2_score])
+    db_session.flush()
+
+    event_bet = Bet(
+        user_id=user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=datetime(2026, 2, 10, 10, 0, tzinfo=timezone.utc),
+        locked_at=None,
+    )
+    day_1_bet = Bet(
+        user_id=user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=day_1.id,
+        submitted_at=None,
+        locked_at=None,
+    )
+    day_2_bet = Bet(
+        user_id=user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=day_2.id,
+        submitted_at=datetime(2026, 2, 12, 6, 30, tzinfo=timezone.utc),
+        locked_at=None,
+    )
+    db_session.add_all([event_bet, day_1_bet, day_2_bet])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetPick(
+                bet_id=event_bet.id,
+                bet_score_id=event_score.id,
+                value="RBR",
+            ),
+            BetPick(
+                bet_id=day_1_bet.id,
+                bet_score_id=day_1_score.id,
+                value="VER",
+            ),
+            BetPick(
+                bet_id=day_2_bet.id,
+                bet_score_id=day_2_score.id,
+                value="LEC",
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/testing-events/{testing_event.public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["bet_context_public_id"] == str(bet_context.public_id)
+    assert payload["kind"] == "PRETESTING"
+    assert payload["testing_event_public_id"] == str(testing_event.public_id)
+    assert payload["label"] == "Bahrain Testing"
+    assert payload["status"] == "SCHEDULED"
+    assert payload["submitted_at"] == "2026-02-10T10:00:00Z"
+    assert payload["event_answers"] == [
+        {
+            "bet_score_code": "TESTING_TOP_TEAM",
+            "value": "RBR",
+        }
+    ]
+
+    assert len(payload["sessions"]) == 2
+    assert [session["session_order"] for session in payload["sessions"]] == [1, 2]
+    assert payload["sessions"][0]["testing_event_session_public_id"] == str(day_1.public_id)
+    assert payload["sessions"][0]["answers"] == [
+        {
+            "bet_score_code": "TESTING_DAY_1_FASTEST",
+            "value": "VER",
+        }
+    ]
+    assert payload["sessions"][1]["testing_event_session_public_id"] == str(day_2.public_id)
+    assert payload["sessions"][1]["submitted_at"] == "2026-02-12T06:30:00Z"
+    assert payload["sessions"][1]["answers"] == [
+        {
+            "bet_score_code": "TESTING_DAY_2_FASTEST",
+            "value": "LEC",
+        }
+    ]
+
+    filtered_response = client.get(
+        f"/api/v1/bets/testing-events/{testing_event.public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"session_id": str(day_2.public_id)},
+    )
+
+    assert filtered_response.status_code == 200
+    filtered_payload = filtered_response.json()
+
+    assert filtered_payload["bet_context_public_id"] == str(bet_context.public_id)
+    assert filtered_payload["kind"] == "PRETESTING"
+    assert filtered_payload["testing_event_public_id"] == str(testing_event.public_id)
+    assert filtered_payload["event_answers"] == []
+    assert len(filtered_payload["sessions"]) == 1
+    assert filtered_payload["sessions"][0]["testing_event_session_public_id"] == str(day_2.public_id)
+    assert filtered_payload["sessions"][0]["session_order"] == 2
+    assert filtered_payload["sessions"][0]["name"] == "Day 2"
+    assert filtered_payload["sessions"][0]["submitted_at"] == "2026-02-12T06:30:00Z"
+    assert filtered_payload["sessions"][0]["answers"] == [
+        {
+            "bet_score_code": "TESTING_DAY_2_FASTEST",
+            "value": "LEC",
+        }
+    ]
