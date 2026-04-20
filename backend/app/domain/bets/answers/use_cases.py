@@ -549,7 +549,9 @@ class PatchTestingEventBetAnswers:
         user_id: int,
         answers: list[BetAnswerInput],
     ) -> TestingEventBetAnswersResult:
-        testing_event = self._repository.get_testing_event_by_public_id(testing_event_public_id)
+        testing_event = self._repository.get_testing_event_by_public_id(
+            testing_event_public_id
+        )
         if testing_event is None:
             raise TestingEventNotFoundForBetQuestionsError()
 
@@ -675,14 +677,21 @@ class PatchTestingEventBetAnswers:
         self,
         *,
         templates: list[BetTemplateDefinition],
-        bet_context_exceptions: tuple,
+        bet_context_exceptions: tuple[BetExceptionDefinition, ...],
         session: BetTestingEventSession | None,
     ) -> set[str]:
+        if session is None:
+            template_scope = BetTemplateScope.EVENT
+            exception_testing_event_session_id = None
+        else:
+            template_scope = BetTemplateScope.SESSION
+            exception_testing_event_session_id = session.id
+
         allowed_codes: set[str] = set()
         score_id_by_code: dict[str, int] = {}
 
         for template in templates:
-            if template.scope != BetTemplateScope.EVENT:
+            if template.scope != template_scope:
                 continue
 
             for item in template.items:
@@ -692,15 +701,28 @@ class PatchTestingEventBetAnswers:
         disabled_score_ids = {
             exception.bet_score_id
             for exception in bet_context_exceptions
-            if exception.event_session_id is None
+            if exception.testing_event_session_id == exception_testing_event_session_id
             and exception.is_disabled is True
         }
+
+        fallback_disabled_score_ids = set()
+        if session is not None:
+            fallback_disabled_score_ids = {
+                exception.bet_score_id
+                for exception in bet_context_exceptions
+                if exception.testing_event_session_id is None
+                and exception.is_disabled is True
+            }
+
+        disabled_score_ids = disabled_score_ids | fallback_disabled_score_ids
 
         return {
             code
             for code in allowed_codes
             if score_id_by_code[code] not in disabled_score_ids
         }
+    
+
     
 class PatchSeasonBetAnswers:
     def __init__(self, repository: BetQuestionsRepository):
