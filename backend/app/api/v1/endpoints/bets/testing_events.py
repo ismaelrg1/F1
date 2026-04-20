@@ -11,7 +11,7 @@ from app.db.session import get_db
 from app.db.social import Group
 
 from app.domain.bets import BetsError
-from app.domain.bets.answers.models import BetAnswerInput
+from app.domain.bets.models import BetAnswerInput
 from app.domain.bets.use_cases import (
     GetTestingEventBetQuestions,
     GetTestingEventBetAnswers,

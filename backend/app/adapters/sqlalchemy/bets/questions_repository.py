@@ -190,6 +190,9 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
         return BetSeason(
             id=season.id,
             year=season.year,
+            betting_open_at=season.betting_open_at,
+            lock_cutoff=season.lock_cutoff,
+            scheduled_lock_cutoff=season.scheduled_lock_cutoff,
             season_driver_entries=tuple(
                 self._map_driver_entry(entry, driver_numbers)
                 for entry in season.driver_entries

@@ -11,6 +11,7 @@ from app.domain.bets.answers.use_cases import (
     GetSeasonBetAnswers,
     PatchRaceEventBetAnswers,
     PatchTestingEventBetAnswers,
+    PatchSeasonBetAnswers,
 )
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "GetSeasonBetAnswers",
     "PatchRaceEventBetAnswers",
     "PatchTestingEventBetAnswers",
+    "PatchSeasonBetAnswers",
 ]

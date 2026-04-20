@@ -122,6 +122,9 @@ class BetTestingEvent:
 class BetSeason:
     id: int
     year: int
+    betting_open_at: datetime | None
+    lock_cutoff: datetime | None
+    scheduled_lock_cutoff: datetime | None
     season_driver_entries: tuple[BetRosterEntry, ...]
 
 @dataclass(frozen=True)

@@ -10,6 +10,7 @@ from app.domain.bets.shared.models import (
     BetExceptionDefinition,
     BetTestingEventSession,
     BetTestingEvent,
+    BetSeason,
 )
 from app.domain.bets.answers.models import (
     RaceEventBetAnswersResult,
@@ -673,6 +674,134 @@ class PatchTestingEventBetAnswers:
         templates: list[BetTemplateDefinition],
         bet_context_exceptions: tuple,
         session: BetTestingEventSession | None,
+    ) -> set[str]:
+        allowed_codes: set[str] = set()
+        score_id_by_code: dict[str, int] = {}
+
+        for template in templates:
+            if template.scope != BetTemplateScope.EVENT:
+                continue
+
+            for item in template.items:
+                allowed_codes.add(item.bet_score.code)
+                score_id_by_code[item.bet_score.code] = item.bet_score.id
+
+        disabled_score_ids = {
+            exception.bet_score_id
+            for exception in bet_context_exceptions
+            if exception.event_session_id is None
+            and exception.is_disabled is True
+        }
+
+        return {
+            code
+            for code in allowed_codes
+            if score_id_by_code[code] not in disabled_score_ids
+        }
+    
+class PatchSeasonBetAnswers:
+    def __init__(self, repository: BetQuestionsRepository):
+        self._repository = repository
+
+    def execute(
+        self,
+        *,
+        season_year: int,
+        group_id: int,
+        user_id: int,
+        answers: list[BetAnswerInput],
+    ) -> SeasonBetAnswersResult:
+        season = self._repository.get_season_by_year(season_year)
+        if season is None:
+            raise SeasonNotFoundForBetQuestionsError()
+
+        bet_context = self._repository.get_season_bet_context(
+            group_id=group_id,
+            season_id=season.id,
+        )
+        if bet_context is None:
+            raise BetContextNotFoundForSeasonError()
+
+        now = datetime.now(timezone.utc)
+
+        betting_open_at, lock_cutoff = self._resolve_betting_window(season=season)
+
+        if betting_open_at is not None and now < betting_open_at:
+            raise BetAnswersNotOpenError()
+
+        if lock_cutoff is not None and now >= lock_cutoff:
+            raise BetAnswersClosedError()
+
+        templates = self._repository.list_season_templates_for_season(
+            season_id=season.id,
+        )
+
+        allowed_score_codes = self._resolve_allowed_score_codes(
+            templates=templates,
+            bet_context_exceptions=bet_context.exceptions,
+        )
+
+        received_codes = {
+            answer.bet_score_code
+            for answer in answers
+        }
+
+        if not received_codes.issubset(allowed_score_codes):
+            raise BetAnswerQuestionNotFoundError()
+
+        score_ids_by_code = self._repository.get_bet_score_ids_by_codes(
+            codes=received_codes,
+        )
+        if set(score_ids_by_code) != received_codes:
+            raise BetAnswerQuestionNotFoundError()
+
+        existing_bets = self._repository.list_user_bets_for_context(
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+        )
+
+        current_bet = next(
+            (
+                bet
+                for bet in existing_bets
+                if bet.event_session_id is None
+                and bet.testing_event_session_id is None
+            ),
+            None,
+        )
+
+        if current_bet is not None and current_bet.submitted_at is not None:
+            raise BetAlreadySubmittedError()
+
+        self._repository.upsert_user_bet_draft(
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+            event_session_id=None,
+            testing_event_session_id=None,
+            answers=answers,
+            modified_at=now,
+        )
+
+        return GetSeasonBetAnswers(self._repository).execute(
+            season_year=season_year,
+            group_id=group_id,
+            user_id=user_id,
+        )
+
+    def _resolve_betting_window(
+        self,
+        *,
+        season: BetSeason,
+    ) -> tuple[datetime | None, datetime | None]:
+        betting_open_at = season.betting_open_at
+        lock_cutoff = season.lock_cutoff or season.scheduled_lock_cutoff
+        return betting_open_at, lock_cutoff
+
+    def _resolve_allowed_score_codes(
+        self,
+        *,
+        templates: list[BetTemplateDefinition],
+        bet_context_exceptions: tuple[BetExceptionDefinition, ...],
     ) -> set[str]:
         allowed_codes: set[str] = set()
         score_id_by_code: dict[str, int] = {}
