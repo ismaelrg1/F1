@@ -5,6 +5,7 @@ from app.domain.bets.questions.use_cases import (
 )
 from app.domain.bets.answers.use_cases import (
     GetRaceEventBetAnswers,
+    GetRaceEventSessionBetAnswers,
 )
 
 __all__ = [
@@ -13,4 +14,5 @@ __all__ = [
     "GetTestingEventBetQuestions",
 
     "GetRaceEventBetAnswers",
+    "GetRaceEventSessionBetAnswers",
 ]

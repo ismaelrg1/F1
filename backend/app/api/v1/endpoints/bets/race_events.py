@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Query
 from sqlalchemy.orm import Session
 
 from app.adapters.sqlalchemy import SqlAlchemyBetQuestionsRepository
@@ -13,8 +13,8 @@ from app.db.social import Group
 from app.domain.bets import BetsError
 from app.domain.bets.use_cases import (
     GetRaceEventBetAnswers,
-    GetRaceEventBetQuestions, 
-
+    GetRaceEventBetQuestions,
+    GetRaceEventSessionBetAnswers,
 )
 from app.models.bets import (
     BetAnswerRead,
@@ -120,12 +120,13 @@ def get_race_event_questions(
 
 @router.get(
     "/race-events/{race_event_public_id}/answers",
-    response_model=RaceEventBetAnswersResponse,
+    response_model=RaceEventBetAnswersResponse ,
     response_model_exclude_none=True,
 )
 def get_race_event_answers(
     race_event_public_id: UUID,
     request: Request,
+    session_id: UUID | None = Query(default=None),
     db: Session = Depends(get_db),
     user_group: tuple[User, Group] = Depends(require_group_member),
 ) -> RaceEventBetAnswersResponse:
@@ -133,14 +134,25 @@ def get_race_event_answers(
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
     repository = SqlAlchemyBetQuestionsRepository(db)
-    use_case = GetRaceEventBetAnswers(repository)
 
     try:
-        result = use_case.execute(
-            race_event_public_id=race_event_public_id,
-            group_id=group.id,
-            user_id=user.id,
-        )
+        if session_id is not None:
+            use_case = GetRaceEventSessionBetAnswers(repository)
+            result = use_case.execute(
+                race_event_public_id=race_event_public_id,
+                event_session_public_id=session_id,
+                group_id=group.id,
+                user_id=user.id,
+            )
+
+        else:
+            use_case = GetRaceEventBetAnswers(repository)
+            result = use_case.execute(
+                race_event_public_id=race_event_public_id,
+                group_id=group.id,
+                user_id=user.id,
+            )
+
     except BetsError as exc:
         raise _translate_bets_error(exc, locale=locale) from exc
 
