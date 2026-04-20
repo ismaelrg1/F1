@@ -10,6 +10,10 @@ from app.domain.bets.errors import (
     SeasonNotFoundForBetQuestionsError,
     TestingEventNotFoundForBetQuestionsError,
     TestingEventSessionNotFoundForBetAnswersError,
+    BetAnswersClosedError,
+    BetAnswerQuestionNotFoundError,
+    BetAlreadySubmittedError,
+    BetAnswersNotOpenError,
 )
 
 BETS_ERROR_MAP = {
@@ -44,5 +48,21 @@ BETS_ERROR_MAP = {
     BetContextNotFoundForSeasonError: ErrorCatalogEntry(
         status_code=status.HTTP_404_NOT_FOUND,
         error_code="bets.bet_context_not_found_for_season",
+    ),
+    BetAnswersClosedError: ErrorCatalogEntry(
+    status_code=status.HTTP_409_CONFLICT,
+    error_code="bets.answers_closed",
+    ),
+    BetAnswerQuestionNotFoundError: ErrorCatalogEntry(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        error_code="bets.answer_question_not_found",
+    ),
+    BetAlreadySubmittedError: ErrorCatalogEntry(
+        status_code=status.HTTP_409_CONFLICT,
+        error_code="bets.already_submitted",
+    ),
+    BetAnswersNotOpenError: ErrorCatalogEntry(
+        status_code=status.HTTP_409_CONFLICT,
+        error_code="bets.answers_not_open",
     ),
 }

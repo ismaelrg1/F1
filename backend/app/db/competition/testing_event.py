@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from typing import Optional, TYPE_CHECKING, List
 
-from sqlalchemy import DateTime, String, ForeignKey, Enum, Index, text
+from sqlalchemy import DateTime, String, ForeignKey, Enum, Index, text, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,6 +26,10 @@ class TestingEvent(Base):
             "source_key",
             unique=True,
             postgresql_where=text("source_key IS NOT NULL"),
+        ),
+        CheckConstraint(
+            "betting_open_at IS NULL OR lock_cutoff IS NULL OR betting_open_at < lock_cutoff",
+            name="ck_testing_events_betting_window_order",
         ),
         {"schema": "competition"},
     )
@@ -59,6 +63,20 @@ class TestingEvent(Base):
         server_default=text("'MANUAL'"),
     )
     source_key: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+
+    betting_open_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    lock_cutoff: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    scheduled_lock_cutoff: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     status: Mapped[TestingEventStatus] = mapped_column(
                                         Enum(TestingEventStatus, name="testing_event_status_enum", schema="competition"),

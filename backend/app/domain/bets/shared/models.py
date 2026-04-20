@@ -69,7 +69,8 @@ class BetRaceEventSession:
     session_type: str
     start_datetime: datetime
     scheduled_start_datetime: datetime | None
-    lock_cutoff: datetime
+    betting_open_at: datetime | None
+    lock_cutoff: datetime | None
     scheduled_lock_cutoff: datetime | None
     status: str
     driver_entries: tuple[BetRosterEntry, ...]
@@ -81,6 +82,9 @@ class BetRaceEvent:
     season_id: int
     event_start: datetime | None
     scheduled_event_start: datetime | None
+    betting_open_at: datetime | None
+    lock_cutoff: datetime | None
+    scheduled_lock_cutoff: datetime | None
     season_driver_entries: tuple[BetRosterEntry, ...]
     event_driver_entries: tuple[BetRosterEntry, ...]
     sessions: tuple[BetRaceEventSession, ...]

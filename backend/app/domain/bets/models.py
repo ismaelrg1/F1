@@ -28,6 +28,7 @@ from app.domain.bets.answers.models import (
     SeasonBetAnswersResult,
     TestingEventBetAnswersResult,
     TestingEventBetAnswersSessionResult,
+    BetAnswerInput,
 )
 
 __all__ = [
@@ -59,4 +60,5 @@ __all__ = [
     "SeasonBetAnswersResult",
     "TestingEventBetAnswersResult",
     "TestingEventBetAnswersSessionResult",
+    "BetAnswerInput",
 ]

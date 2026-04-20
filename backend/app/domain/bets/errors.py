@@ -32,3 +32,17 @@ class SeasonNotFoundForBetQuestionsError(BetsError):
 
 class BetContextNotFoundForSeasonError(BetsError):
     pass
+
+class BetAnswersNotOpenError(BetsError):
+    pass
+
+class BetAnswersClosedError(BetsError):
+    pass
+
+
+class BetAnswerQuestionNotFoundError(BetsError):
+    pass
+
+
+class BetAlreadySubmittedError(BetsError):
+    pass

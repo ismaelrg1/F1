@@ -1,9 +1,10 @@
 from uuid import UUID
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from app.db.betting import BetContext, BetTemplate, BetTemplateItem, Bet, BetPick
+from app.db.betting import BetContext, BetTemplate, BetTemplateItem, Bet, BetPick, BetScore
 from app.db.competition import (
     DriverEntry,
     EventSession,
@@ -28,6 +29,7 @@ from app.domain.bets.models import (
     BetTestingEvent,
     BetTestingEventSession,
     UserBetDefinition,
+    BetAnswerInput,
 )
 from app.domain.bets.ports import BetQuestionsRepository
 
@@ -75,6 +77,9 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
             season_id=event.season_id,
             event_start=event.event_start,
             scheduled_event_start=event.scheduled_event_start,
+            betting_open_at=event.betting_open_at,
+            lock_cutoff=event.lock_cutoff,
+            scheduled_lock_cutoff=event.scheduled_lock_cutoff,
             season_driver_entries=tuple(
                 self._map_driver_entry(entry, driver_numbers)
                 for entry in event.season.driver_entries
@@ -91,6 +96,7 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
                     session_type=session.session_type.value,
                     start_datetime=session.start_datetime,
                     scheduled_start_datetime=session.scheduled_start_datetime,
+                    betting_open_at=session.betting_open_at,
                     lock_cutoff=session.lock_cutoff,
                     scheduled_lock_cutoff=session.scheduled_lock_cutoff,
                     status=session.status.value,
@@ -301,6 +307,88 @@ class SqlAlchemyBetQuestionsRepository(BetQuestionsRepository):
             )
             for bet in bets
         ]
+    
+    def get_bet_score_ids_by_codes(self, *, codes: set[str]) -> dict[str, int]:
+        if not codes:
+            return {}
+
+        stmt = select(BetScore).where(BetScore.code.in_(codes))
+        scores = self._session.execute(stmt).scalars().all()
+
+        return {
+            score.code: score.id
+            for score in scores
+        }
+    
+    def upsert_user_bet_draft(
+        self,
+        *,
+        user_id: int,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+        answers: list[BetAnswerInput],
+        modified_at: datetime,
+    ) -> None:
+        stmt = (
+            select(Bet)
+            .where(
+                Bet.user_id == user_id,
+                Bet.bet_context_id == bet_context_id,
+                Bet.event_session_id.is_(None)
+                if event_session_id is None
+                else Bet.event_session_id == event_session_id,
+                Bet.testing_event_session_id.is_(None)
+                if testing_event_session_id is None
+                else Bet.testing_event_session_id == testing_event_session_id,
+            )
+            .options(selectinload(Bet.bet_picks))
+        )
+        bet = self._session.execute(stmt).scalar_one_or_none()
+
+        if bet is None:
+            bet = Bet(
+                user_id=user_id,
+                bet_context_id=bet_context_id,
+                event_session_id=event_session_id,
+                testing_event_session_id=testing_event_session_id,
+                submitted_at=None,
+                last_modified_at=modified_at,
+                locked_at=None,
+            )
+            self._session.add(bet)
+            self._session.flush()
+        else:
+            bet.submitted_at = None
+            bet.last_modified_at = modified_at
+            bet.locked_at = None
+
+        score_ids_by_code = self.get_bet_score_ids_by_codes(
+            codes={answer.bet_score_code for answer in answers},
+        )
+
+        existing_picks_by_score_id = {
+            pick.bet_score_id: pick
+            for pick in bet.bet_picks
+        }
+
+        for answer in answers:
+            bet_score_id = score_ids_by_code[answer.bet_score_code]
+            existing_pick = existing_picks_by_score_id.get(bet_score_id)
+
+            if existing_pick is None:
+                self._session.add(
+                    BetPick(
+                        bet_id=bet.id,
+                        bet_score_id=bet_score_id,
+                        value=answer.value,
+                    )
+                )
+            else:
+                existing_pick.value = answer.value
+
+        self._session.flush()
+
 
     @staticmethod
     def _map_driver_entry(entry: DriverEntry, driver_numbers: dict[int, int | None]) -> BetRosterEntry:

@@ -37,6 +37,10 @@ class RaceEvent(Base):
             unique=True,
             postgresql_where=text("source_key IS NOT NULL"),
         ),
+        CheckConstraint(
+            "betting_open_at IS NULL OR lock_cutoff IS NULL OR betting_open_at < lock_cutoff",
+            name="ck_race_events_betting_window_order",
+        ),
         {"schema": "competition"},
     )
 
@@ -74,6 +78,21 @@ class RaceEvent(Base):
         server_default=text("'MANUAL'"),
     )
     source_key: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+
+    betting_open_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    lock_cutoff: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    scheduled_lock_cutoff: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     status: Mapped[RaceEventStatus] = mapped_column(
         Enum(RaceEventStatus, name="race_event_status_enum", schema="competition"),

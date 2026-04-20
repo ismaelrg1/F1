@@ -1,5 +1,6 @@
 from typing import Protocol
 from uuid import UUID
+from datetime import datetime
 
 from app.domain.bets.models import (
     BetContextDefinition,
@@ -8,6 +9,7 @@ from app.domain.bets.models import (
     BetTemplateDefinition,
     BetTestingEvent,
     UserBetDefinition,
+    BetAnswerInput,
 )
 
 
@@ -40,4 +42,19 @@ class BetQuestionsRepository(Protocol):
         ...
 
     def list_user_bets_for_context(self, *, user_id: int, bet_context_id: int) -> list[UserBetDefinition]:
+        ...
+
+    def get_bet_score_ids_by_codes(self, *, codes: set[str]) -> dict[str, int]:
+        ...
+
+    def upsert_user_bet_draft(
+        self,
+        *,
+        user_id: int,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+        answers: list[BetAnswerInput],
+        modified_at: datetime,
+    ) -> None:
         ...

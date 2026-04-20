@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Enum, DateTime, ForeignKey, Boolean, UniqueConstraint, Index, text, String
+from sqlalchemy import Enum, DateTime, ForeignKey, Boolean, UniqueConstraint, Index, text, String, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -39,6 +39,10 @@ class EventSession(Base):
             postgresql_where=text("source_key IS NOT NULL"),
         ),
 
+        CheckConstraint(
+            "betting_open_at IS NULL OR lock_cutoff IS NULL OR betting_open_at < lock_cutoff",
+            name="ck_event_sessions_betting_window_order",
+        ),
         {"schema": "competition"},
     )
 
@@ -88,10 +92,16 @@ class EventSession(Base):
         nullable=True,
     )
 
-    lock_cutoff: Mapped[datetime] = mapped_column(
+    betting_open_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
-        nullable=False,
+        nullable=True,
     )
+
+    lock_cutoff: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     scheduled_lock_cutoff: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

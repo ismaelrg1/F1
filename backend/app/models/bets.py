@@ -131,3 +131,11 @@ class SeasonBetAnswersResponse(BaseModel):
     last_modified_at: datetime | None
     locked_at: datetime | None
     answers: list[BetAnswerRead]
+
+class BetAnswerWrite(BaseModel):
+    bet_score_code: str
+    value: str
+
+
+class BetAnswersPatchRequest(BaseModel):
+    answers: list[BetAnswerWrite]

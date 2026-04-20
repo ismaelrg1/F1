@@ -63,3 +63,8 @@ class SeasonBetAnswersResult:
     last_modified_at: datetime | None
     locked_at: datetime | None
     answers: list[BetAnswerResult]
+
+@dataclass(frozen=True)
+class BetAnswerInput:
+    bet_score_code: str
+    value: str

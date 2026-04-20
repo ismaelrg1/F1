@@ -46,6 +46,10 @@ class TestingEventSession(Base):
             unique=True,
             postgresql_where=text("source_key IS NOT NULL"),
         ),
+        CheckConstraint(
+            "betting_open_at IS NULL OR lock_cutoff IS NULL OR betting_open_at < lock_cutoff",
+            name="ck_testing_event_sessions_betting_window_order",
+        ),
         {"schema": "competition"},
     )
 
@@ -89,12 +93,26 @@ class TestingEventSession(Base):
         nullable=True,
     )
 
+    betting_open_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    lock_cutoff: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    scheduled_lock_cutoff: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     testing_event: Mapped["TestingEvent"] = relationship(
         "TestingEvent",
         back_populates="sessions",
     )
 
     bets: Mapped[List["Bet"]] = relationship(
-    "Bet",
-    back_populates="testing_event_session",
-)
+        "Bet",
+        back_populates="testing_event_session",
+    )

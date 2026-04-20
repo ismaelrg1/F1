@@ -1,9 +1,10 @@
 from __future__ import annotations
+from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Index, Integer, text
+from sqlalchemy import Boolean, CheckConstraint, Index, Integer, text, DateTime, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 
 from app.db.base import Base
 
@@ -24,12 +25,30 @@ class Season(Base):
             unique=True,
             postgresql_where=text("is_active = true"),
         ),
+        CheckConstraint(
+            "betting_open_at IS NULL OR lock_cutoff IS NULL OR betting_open_at < lock_cutoff",
+            name="ck_seasons_betting_window_order",
+        ),
         {"schema": "competition"},
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+
+    betting_open_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    lock_cutoff: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    scheduled_lock_cutoff: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
 
     race_events: Mapped[List["RaceEvent"]] = relationship(
