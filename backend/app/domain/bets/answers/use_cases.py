@@ -680,18 +680,11 @@ class PatchTestingEventBetAnswers:
         bet_context_exceptions: tuple[BetExceptionDefinition, ...],
         session: BetTestingEventSession | None,
     ) -> set[str]:
-        if session is None:
-            template_scope = BetTemplateScope.EVENT
-            exception_testing_event_session_id = None
-        else:
-            template_scope = BetTemplateScope.SESSION
-            exception_testing_event_session_id = session.id
-
         allowed_codes: set[str] = set()
         score_id_by_code: dict[str, int] = {}
 
         for template in templates:
-            if template.scope != template_scope:
+            if template.scope != BetTemplateScope.EVENT:
                 continue
 
             for item in template.items:
@@ -701,20 +694,9 @@ class PatchTestingEventBetAnswers:
         disabled_score_ids = {
             exception.bet_score_id
             for exception in bet_context_exceptions
-            if exception.testing_event_session_id == exception_testing_event_session_id
+            if exception.event_session_id is None
             and exception.is_disabled is True
         }
-
-        fallback_disabled_score_ids = set()
-        if session is not None:
-            fallback_disabled_score_ids = {
-                exception.bet_score_id
-                for exception in bet_context_exceptions
-                if exception.testing_event_session_id is None
-                and exception.is_disabled is True
-            }
-
-        disabled_score_ids = disabled_score_ids | fallback_disabled_score_ids
 
         return {
             code
@@ -1127,3 +1109,264 @@ class SubmitRaceEventBetAnswers:
         }
 
         return allowed_codes, required_codes
+
+
+class SubmitTestingEventBetAnswers:
+    def __init__(self, repository: BetQuestionsRepository):
+        self._repository = repository
+
+    def execute(
+        self,
+        *,
+        testing_event_public_id: UUID,
+        testing_event_session_public_id: UUID | None,
+        group_id: int,
+        user_id: int,
+        team_ids: set[int],
+        answers: list[BetAnswerInput],
+    ) -> TestingEventBetAnswersResult:
+        testing_event = self._repository.get_testing_event_by_public_id(
+            testing_event_public_id
+        )
+        if testing_event is None:
+            raise TestingEventNotFoundForBetQuestionsError()
+
+        session = None
+        if testing_event_session_public_id is not None:
+            session = next(
+                (
+                    session
+                    for session in testing_event.sessions
+                    if session.public_id == testing_event_session_public_id
+                ),
+                None,
+            )
+            if session is None:
+                raise TestingEventSessionNotFoundForBetAnswersError()
+
+        bet_context = self._repository.get_pretesting_bet_context(
+            group_id=group_id,
+            testing_event_id=testing_event.id,
+        )
+        if bet_context is None:
+            raise BetContextNotFoundForTestingEventError()
+
+        now = datetime.now(timezone.utc)
+
+        existing_bets = self._repository.list_user_bets_for_context(
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+        )
+
+        current_bet = next(
+            (
+                bet
+                for bet in existing_bets
+                if bet.event_session_id is None
+                and bet.testing_event_session_id == (session.id if session is not None else None)
+            ),
+            None,
+        )
+
+        if current_bet is not None and current_bet.locked_at is not None:
+            raise BetAnswersClosedError()
+
+        is_modification = current_bet is not None and current_bet.submitted_at is not None
+
+        betting_open_at, lock_cutoff = self._resolve_betting_window(
+            testing_event=testing_event,
+            session=session,
+        )
+
+        has_normal_window = self._normal_window_is_open(
+            now=now,
+            betting_open_at=betting_open_at,
+            lock_cutoff=lock_cutoff,
+        )
+
+        matching_permission = None
+        if not has_normal_window and is_modification:
+            matching_permission = self._find_matching_edit_permission(
+                permissions=self._repository.list_active_edit_permissions_for_scope(
+                    bet_context_id=bet_context.id,
+                    event_session_id=None,
+                    testing_event_session_id=session.id if session is not None else None,
+                    now=now,
+                ),
+                group_id=group_id,
+                user_id=user_id,
+                team_ids=team_ids,
+            )
+
+        if not has_normal_window and matching_permission is None:
+            if betting_open_at is not None and now < betting_open_at:
+                raise BetAnswersNotOpenError()
+            raise BetAnswersClosedError()
+
+        max_modifications = (
+            matching_permission.max_modifications
+            if matching_permission is not None
+            else None
+        )
+        if is_modification and max_modifications is not None:
+            modification_count = max(current_bet.revision_count - 1, 0)
+            if modification_count >= max_modifications:
+                raise BetModificationLimitReachedError()
+
+        templates = self._repository.list_pretesting_templates_for_season(
+            season_id=testing_event.season_id,
+        )
+
+        allowed_score_codes, required_score_codes = (
+            self._resolve_allowed_and_required_score_codes(
+                templates=templates,
+                bet_context_exceptions=bet_context.exceptions,
+                session=session,
+            )
+        )
+
+        answers_by_code = {
+            answer.bet_score_code: answer
+            for answer in answers
+        }
+
+        existing_answers_by_code = {}
+        if current_bet is not None:
+            existing_answers_by_code = {
+                pick.bet_score_code: pick
+                for pick in current_bet.picks
+            }
+
+        received_codes = set(answers_by_code)
+        existing_codes = set(existing_answers_by_code)
+        final_answer_codes = received_codes | existing_codes
+
+        if not received_codes.issubset(allowed_score_codes):
+            raise BetAnswerQuestionNotFoundError()
+
+        if not required_score_codes.issubset(final_answer_codes):
+            raise BetRequiredAnswerMissingError()
+
+        score_ids_by_code = self._repository.get_bet_score_ids_by_codes(
+            codes=received_codes,
+        )
+        if set(score_ids_by_code) != received_codes:
+            raise BetAnswerQuestionNotFoundError()
+
+        self._repository.upsert_user_bet_submission(
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+            event_session_id=None,
+            testing_event_session_id=session.id if session is not None else None,
+            answers=answers,
+            submitted_at=now,
+        )
+
+        if session is not None:
+            return GetTestingEventSessionBetAnswers(self._repository).execute(
+                testing_event_public_id=testing_event_public_id,
+                testing_event_session_public_id=testing_event_session_public_id,
+                group_id=group_id,
+                user_id=user_id,
+            )
+
+        return GetTestingEventBetAnswers(self._repository).execute(
+            testing_event_public_id=testing_event_public_id,
+            group_id=group_id,
+            user_id=user_id,
+        )
+
+    def _normal_window_is_open(
+        self,
+        *,
+        now: datetime,
+        betting_open_at: datetime | None,
+        lock_cutoff: datetime | None,
+    ) -> bool:
+        if betting_open_at is not None and now < betting_open_at:
+            return False
+        if lock_cutoff is not None and now >= lock_cutoff:
+            return False
+        return True
+
+    def _find_matching_edit_permission(
+        self,
+        *,
+        permissions: list[BetEditPermissionDefinition],
+        group_id: int,
+        user_id: int,
+        team_ids: set[int],
+    ) -> BetEditPermissionDefinition | None:
+        for permission in permissions:
+            if permission.applies_to_all:
+                return permission
+            if permission.group_id == group_id:
+                return permission
+            if permission.user_id == user_id:
+                return permission
+            if permission.team_id is not None and permission.team_id in team_ids:
+                return permission
+
+        return None
+
+    def _resolve_betting_window(
+        self,
+        *,
+        testing_event: BetTestingEvent,
+        session: BetTestingEventSession | None,
+    ) -> tuple[datetime | None, datetime | None]:
+        if session is not None:
+            betting_open_at = session.betting_open_at
+            lock_cutoff = session.lock_cutoff or session.scheduled_lock_cutoff
+            return betting_open_at, lock_cutoff
+
+        betting_open_at = testing_event.betting_open_at
+        lock_cutoff = (
+            testing_event.lock_cutoff
+            or testing_event.scheduled_lock_cutoff
+            or testing_event.event_start
+            or testing_event.scheduled_event_start
+        )
+        return betting_open_at, lock_cutoff
+
+    def _resolve_allowed_and_required_score_codes(
+        self,
+        *,
+        templates: list[BetTemplateDefinition],
+        bet_context_exceptions: tuple[BetExceptionDefinition, ...],
+        session: BetTestingEventSession | None,
+    ) -> tuple[set[str], set[str]]:
+        allowed_codes: set[str] = set()
+        required_codes: set[str] = set()
+        score_id_by_code: dict[str, int] = {}
+
+        for template in templates:
+            if template.scope != BetTemplateScope.EVENT:
+                continue
+
+            for item in template.items:
+                allowed_codes.add(item.bet_score.code)
+                score_id_by_code[item.bet_score.code] = item.bet_score.id
+
+                if item.required is True:
+                    required_codes.add(item.bet_score.code)
+
+        disabled_score_ids = {
+            exception.bet_score_id
+            for exception in bet_context_exceptions
+            if exception.event_session_id is None
+            and exception.is_disabled is True
+        }
+
+        return (
+            {
+                code
+                for code in allowed_codes
+                if score_id_by_code[code] not in disabled_score_ids
+            },
+            {
+                code
+                for code in required_codes
+                if score_id_by_code[code] not in disabled_score_ids
+            },
+        )

@@ -3888,6 +3888,273 @@ def test_patch_testing_event_bet_answers_returns_409_when_bet_is_already_submitt
     assert response.json()["detail"]["error"]["code"] == "bets.already_submitted"
 
 
+def test_submit_testing_event_bet_answers_creates_first_submission(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_patch_testing_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/testing-events/{data['testing_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["top_team_score"].code,
+                    "value": "RBR",
+                },
+                {
+                    "bet_score_code": data["fastest_score"].code,
+                    "value": "VER",
+                },
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    answers_by_code = {
+        answer["bet_score_code"]: answer["value"]
+        for answer in payload["event_answers"]
+    }
+
+    assert payload["bet_context_public_id"] == str(data["bet_context"].public_id)
+    assert payload["kind"] == "PRETESTING"
+    assert payload["testing_event_public_id"] == str(data["testing_event"].public_id)
+    assert payload["label"] == "Bahrain Testing"
+    assert payload["status"] == "SCHEDULED"
+    assert payload["submitted_at"] is not None
+    assert payload["last_modified_at"] is not None
+    assert answers_by_code == {
+        data["top_team_score"].code: "RBR",
+        data["fastest_score"].code: "VER",
+    }
+
+    db_session.expire_all()
+    saved_bet = next(
+        bet
+        for bet in data["bet_context"].bets
+        if bet.user_id == user.id and bet.testing_event_session_id is None
+    )
+    assert saved_bet.event_session_id is None
+    assert saved_bet.submitted_at is not None
+    assert saved_bet.last_modified_at is not None
+    assert saved_bet.locked_at is None
+    assert saved_bet.submit_order_int is None
+    assert len(saved_bet.submission_revisions) == 1
+    assert saved_bet.submission_revisions[0].revision_number == 1
+
+
+def test_submit_testing_event_bet_answers_merges_existing_draft(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_patch_testing_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    draft_bet = Bet(
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=None,
+        locked_at=None,
+    )
+    db_session.add(draft_bet)
+    db_session.flush()
+    db_session.add(
+        BetPick(
+            bet_id=draft_bet.id,
+            bet_score_id=data["top_team_score"].id,
+            value="FER",
+        )
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/testing-events/{data['testing_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["fastest_score"].code,
+                    "value": "VER",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    answers_by_code = {
+        answer["bet_score_code"]: answer["value"]
+        for answer in payload["event_answers"]
+    }
+
+    assert payload["submitted_at"] is not None
+    assert answers_by_code == {
+        data["top_team_score"].code: "FER",
+        data["fastest_score"].code: "VER",
+    }
+
+    db_session.expire_all()
+    saved_bet = next(
+        bet
+        for bet in data["bet_context"].bets
+        if bet.user_id == user.id and bet.testing_event_session_id is None
+    )
+    assert saved_bet.submitted_at is not None
+    assert len(saved_bet.submission_revisions) == 1
+
+
+def test_submit_testing_event_session_bet_answers_creates_session_submission(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_patch_testing_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/testing-events/{data['testing_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"session_id": str(data["day_1"].public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["top_team_score"].code,
+                    "value": "RBR",
+                },
+                {
+                    "bet_score_code": data["fastest_score"].code,
+                    "value": "VER",
+                },
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["event_answers"] == []
+    assert len(payload["sessions"]) == 1
+    assert payload["sessions"][0]["testing_event_session_public_id"] == str(data["day_1"].public_id)
+    assert payload["sessions"][0]["session_order"] == 1
+    assert payload["sessions"][0]["name"] == "Day 1"
+    assert payload["sessions"][0]["submitted_at"] is not None
+    assert payload["sessions"][0]["last_modified_at"] is not None
+    session_answers_by_code = {
+        answer["bet_score_code"]: answer["value"]
+        for answer in payload["sessions"][0]["answers"]
+    }
+    assert session_answers_by_code == {
+        data["top_team_score"].code: "RBR",
+        data["fastest_score"].code: "VER",
+    }
+
+    db_session.expire_all()
+    saved_bet = next(
+        bet
+        for bet in data["bet_context"].bets
+        if bet.user_id == user.id and bet.testing_event_session_id == data["day_1"].id
+    )
+    assert saved_bet.event_session_id is None
+    assert saved_bet.submitted_at is not None
+    assert len(saved_bet.submission_revisions) == 1
+
+
+def test_submit_testing_event_bet_answers_returns_400_when_required_answer_is_missing(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_patch_testing_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/testing-events/{data['testing_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["top_team_score"].code,
+                    "value": "RBR",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"]["code"] == "bets.required_answer_missing"
+
+
 def _create_patch_season_answers_fixture(db_session, *, user_id: int, group_id: int):
     now = datetime.now(timezone.utc)
     suffix = uuid4().hex[:8].upper()
