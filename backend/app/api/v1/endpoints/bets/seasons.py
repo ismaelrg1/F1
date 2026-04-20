@@ -14,6 +14,7 @@ from app.domain.bets.use_cases import (
     GetSeasonBetQuestions,
     GetSeasonBetAnswers,
     PatchSeasonBetAnswers,
+    SubmitSeasonBetAnswers
 )
 from app.models.bets import (
     BetAnswerRead,
@@ -147,6 +148,60 @@ def patch_season_answers(
             season_year=season_year,
             group_id=group.id,
             user_id=user.id,
+            answers=[
+                BetAnswerInput(
+                    bet_score_code=answer.bet_score_code,
+                    value=answer.value,
+                )
+                for answer in payload.answers
+            ],
+        )
+        db.commit()
+    except BetsError as exc:
+        db.rollback()
+        raise _translate_bets_error(exc, locale=locale) from exc
+
+    return SeasonBetAnswersResponse(
+        bet_context_public_id=result.bet_context_public_id,
+        kind=result.kind,
+        season_year=result.season_year,
+        label=result.label,
+        submitted_at=result.submitted_at,
+        last_modified_at=result.last_modified_at,
+        locked_at=result.locked_at,
+        answers=[
+            BetAnswerRead(
+                bet_score_code=answer.bet_score_code,
+                value=answer.value,
+            )
+            for answer in result.answers
+        ],
+    )
+
+@router.post(
+    "/seasons/{season_year}/answers",
+    response_model=SeasonBetAnswersResponse,
+    response_model_exclude_none=True,
+)
+def submit_season_answers(
+    season_year: int,
+    payload: BetAnswersPatchRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user_group: tuple[User, Group] = Depends(require_group_member),
+) -> SeasonBetAnswersResponse:
+    user, group = user_group
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
+    repository = SqlAlchemyBetQuestionsRepository(db)
+    use_case = SubmitSeasonBetAnswers(repository)
+
+    try:
+        result = use_case.execute(
+            season_year=season_year,
+            group_id=group.id,
+            user_id=user.id,
+            team_ids=set(),
             answers=[
                 BetAnswerInput(
                     bet_score_code=answer.bet_score_code,
