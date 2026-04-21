@@ -32,6 +32,7 @@ router = APIRouter()
     "/testing-events",
     response_model=AdminTestingEventListResponse,
     status_code=status.HTTP_200_OK,
+    response_model_exclude_none=True,
 )
 def list_testing_events(
     season_year: int | None = Query(default=None),

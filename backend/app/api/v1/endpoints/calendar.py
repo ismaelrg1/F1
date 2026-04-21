@@ -20,6 +20,7 @@ router = APIRouter()
 @router.get(
     "/calendar",
     response_model=CalendarResponse,
+    response_model_exclude_none=True,
 )
 def get_calendar(
     season_year: int | None = Query(default=None),

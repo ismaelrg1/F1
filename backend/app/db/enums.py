@@ -122,3 +122,8 @@ class BetResultsVisibilityMode(str, enum.Enum):
     # AFTER_RESULTS_PUBLISHED:
     #     solo ves cuando admin publique resultados oficiales.
     # El usuario solo puede ver cuando el admin ha publicado resultados oficiales.
+
+class RankingEventType(str, enum.Enum):
+    TESTING_EVENT = "TESTING_EVENT"
+    RACE_EVENT = "RACE_EVENT"
+    SEASON = "SEASON"

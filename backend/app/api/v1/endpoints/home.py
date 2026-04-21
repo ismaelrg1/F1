@@ -15,6 +15,7 @@ router = APIRouter()
 @router.get(
     "/home",
     response_model=HomeResponse,
+    response_model_exclude_none=True,
 )
 def get_home(
     db: Session = Depends(get_db),
