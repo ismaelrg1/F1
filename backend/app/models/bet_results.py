@@ -9,9 +9,15 @@ from app.db.enums import BetContextKind, BetResultsVisibilityMode, RaceEventStat
 
 class BetResultsScopeRead(BaseModel):
     type: str
-    race_event_public_id: UUID
+
+    race_event_public_id: UUID | None = None
     event_session_public_id: UUID | None = None
     session_type: SessionType | None = None
+
+    testing_event_public_id: UUID | None = None
+    testing_event_session_public_id: UUID | None = None
+    session_order: int | None = None
+    name: str | None = None
 
 
 class BetResultsVisibilityRead(BaseModel):
@@ -114,6 +120,16 @@ class RaceEventSessionBetResultsResponse(BaseModel):
     bet_context_public_id: UUID
     kind: BetContextKind
     race_event_public_id: UUID
+    label: str
+    scope: BetResultsScopeRead
+    visibility: BetResultsVisibilityRead
+    official_results: list[BetOfficialResultRead]
+    entries: list[BetResultEntryRead]
+
+class TestingEventSessionBetResultsResponse(BaseModel):
+    bet_context_public_id: UUID
+    kind: BetContextKind
+    testing_event_public_id: UUID
     label: str
     scope: BetResultsScopeRead
     visibility: BetResultsVisibilityRead

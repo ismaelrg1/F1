@@ -46,6 +46,7 @@ from app.domain.bets.results.models import (
     RaceEventBetResultsSession,
     RaceEventBetResults,
     RaceEventSessionBetResults,
+    TestingEventSessionBetResults,
 
 )
 
@@ -94,4 +95,5 @@ __all__ = [
     "RaceEventBetResultsSession",
     "RaceEventBetResults",
     "RaceEventSessionBetResults",
+    "TestingEventSessionBetResults",
 ]

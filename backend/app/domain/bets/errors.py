@@ -66,3 +66,15 @@ class RaceEventSessionNotFoundForBetResultsError(BetsError):
 
 class BetContextNotFoundForRaceEventResultsError(BetsError):
     pass
+
+
+class TestingEventNotFoundForBetResultsError(BetsError):
+    pass
+
+
+class TestingEventSessionNotFoundForBetResultsError(BetsError):
+    pass
+
+
+class BetContextNotFoundForTestingEventResultsError(BetsError):
+    pass

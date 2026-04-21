@@ -84,9 +84,15 @@ class BetResultsVisibility:
 @dataclass(frozen=True)
 class BetResultsScope:
     type: str
-    race_event_public_id: UUID
+
+    race_event_public_id: UUID | None = None
     event_session_public_id: UUID | None = None
     session_type: SessionType | None = None
+
+    testing_event_public_id: UUID | None = None
+    testing_event_session_public_id: UUID | None = None
+    session_order: int | None = None
+    name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -126,6 +132,18 @@ class RaceEventSessionBetResults:
     bet_context_public_id: UUID
     kind: BetContextKind
     race_event_public_id: UUID
+    label: str
+    scope: BetResultsScope
+    visibility: BetResultsVisibility
+    official_results: list[BetOfficialResult]
+    entries: list[BetResultEntry]
+
+    
+@dataclass(frozen=True)
+class TestingEventSessionBetResults:
+    bet_context_public_id: UUID
+    kind: BetContextKind
+    testing_event_public_id: UUID
     label: str
     scope: BetResultsScope
     visibility: BetResultsVisibility

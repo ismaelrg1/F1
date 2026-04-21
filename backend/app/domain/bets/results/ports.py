@@ -7,6 +7,7 @@ from app.domain.bets.models import (
     BetResultEntry,
     BetResultsVisibility,
     BetOfficialResult,
+    BetTestingEvent,
 
     # Shared
     BetContextDefinition,
@@ -19,16 +20,29 @@ class BetResultsRepository(Protocol):
     def get_race_event_by_public_id(self, public_id: UUID) -> BetRaceEvent | None:
         ...
 
+    def get_testing_event_by_public_id(self, public_id: UUID) -> BetTestingEvent | None:
+        ...
 
     def get_gp_bet_context(self, *, group_id: int, race_event_id: int) -> BetContextDefinition | None:
         ...
 
+    def get_pretesting_bet_context(self, *, group_id: int, testing_event_id: int) -> BetContextDefinition | None:
+        ...
 
     def get_race_event_visibility(
         self,
         *,
         bet_context_id: int,
         event_session_id: int | None,
+        now: datetime,
+    ) -> BetResultsVisibility:
+        ...
+
+    def get_testing_event_visibility(
+        self,
+        *,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
         now: datetime,
     ) -> BetResultsVisibility:
         ...
@@ -43,12 +57,29 @@ class BetResultsRepository(Protocol):
     ) -> bool:
         ...
 
+    def viewer_has_submitted_testing_scope(
+        self,
+        *,
+        user_id: int,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
+    ) -> bool:
+        ...
+
 
     def list_official_results(
         self,
         *,
         bet_context_id: int,
         event_session_id: int | None,
+    ) -> list[BetOfficialResult]:
+        ...
+
+    def list_testing_official_results(
+        self,
+        *,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
     ) -> list[BetOfficialResult]:
         ...
 
@@ -59,5 +90,14 @@ class BetResultsRepository(Protocol):
         group_id: int,
         bet_context_id: int,
         event_session_id: int | None,
+    ) -> list[BetResultEntry]:
+        ...
+
+    def list_group_submitted_testing_bet_entries(
+        self,
+        *,
+        group_id: int,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
     ) -> list[BetResultEntry]:
         ...

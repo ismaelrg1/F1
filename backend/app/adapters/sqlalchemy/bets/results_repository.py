@@ -94,6 +94,76 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
             results_published_at=publication.published_at if publication is not None else None,
             viewer_submitted=False,
         )
+    
+    def get_testing_event_visibility(
+        self,
+        *,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
+        now: datetime,
+    ) -> BetResultsVisibility:
+        policy_stmt = (
+            select(BetResultsVisibilityPolicy)
+            .where(
+                BetResultsVisibilityPolicy.bet_context_id == bet_context_id,
+                BetResultsVisibilityPolicy.event_session_id.is_(None),
+                BetResultsVisibilityPolicy.starts_at.is_(None)
+                | (BetResultsVisibilityPolicy.starts_at <= now),
+                BetResultsVisibilityPolicy.ends_at.is_(None)
+                | (BetResultsVisibilityPolicy.ends_at > now),
+            )
+        )
+
+        if testing_event_session_id is None:
+            policy_stmt = policy_stmt.where(BetResultsVisibilityPolicy.testing_event_session_id.is_(None))
+        else:
+            policy_stmt = policy_stmt.where(BetResultsVisibilityPolicy.testing_event_session_id == testing_event_session_id)
+
+        policy = self._session.execute(policy_stmt).scalar_one_or_none()
+
+        if policy is None and testing_event_session_id is not None:
+            fallback_stmt = (
+                select(BetResultsVisibilityPolicy)
+                .where(
+                    BetResultsVisibilityPolicy.bet_context_id == bet_context_id,
+                    BetResultsVisibilityPolicy.event_session_id.is_(None),
+                    BetResultsVisibilityPolicy.testing_event_session_id.is_(None),
+                    BetResultsVisibilityPolicy.starts_at.is_(None)
+                    | (BetResultsVisibilityPolicy.starts_at <= now),
+                    BetResultsVisibilityPolicy.ends_at.is_(None)
+                    | (BetResultsVisibilityPolicy.ends_at > now),
+                )
+            )
+            policy = self._session.execute(fallback_stmt).scalar_one_or_none()
+
+        publication_stmt = (
+            select(ResultPublication)
+            .where(
+                ResultPublication.bet_context_id == bet_context_id,
+                ResultPublication.event_session_id.is_(None),
+            )
+        )
+
+        if testing_event_session_id is None:
+            publication_stmt = publication_stmt.where(ResultPublication.testing_event_session_id.is_(None))
+        else:
+            publication_stmt = publication_stmt.where(ResultPublication.testing_event_session_id == testing_event_session_id)
+
+        publication = self._session.execute(publication_stmt).scalar_one_or_none()
+
+        return BetResultsVisibility(
+            mode=(
+                policy.visibility_mode
+                if policy is not None
+                else BetResultsVisibilityMode.SUBMIT_REQUIRED
+            ),
+            can_view_group_results=False,
+            reason="PENDING",
+            is_locked=False,
+            results_published=publication is not None,
+            results_published_at=publication.published_at if publication is not None else None,
+            viewer_submitted=False,
+        )
 
     def viewer_has_submitted_scope(
         self,
@@ -118,6 +188,31 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
             stmt = stmt.where(Bet.event_session_id == event_session_id)
 
         return self._session.execute(stmt).first() is not None
+    
+    def viewer_has_submitted_testing_scope(
+        self,
+        *,
+        user_id: int,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
+    ) -> bool:
+        stmt = (
+            select(Bet.id)
+            .where(
+                Bet.user_id == user_id,
+                Bet.bet_context_id == bet_context_id,
+                Bet.event_session_id.is_(None),
+                Bet.submitted_at.is_not(None),
+            )
+        )
+
+        if testing_event_session_id is None:
+            stmt = stmt.where(Bet.testing_event_session_id.is_(None))
+        else:
+            stmt = stmt.where(Bet.testing_event_session_id == testing_event_session_id)
+
+        return self._session.execute(stmt).first() is not None
+
 
     def list_official_results(
         self,
@@ -151,6 +246,41 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
             )
             for result in sorted(results, key=lambda item: item.bet_score.code)
         ]
+    
+    def list_testing_official_results(
+        self,
+        *,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
+    ) -> list[BetOfficialResult]:
+        stmt = (
+            select(OfficialResult)
+            .where(
+                OfficialResult.bet_context_id == bet_context_id,
+                OfficialResult.event_session_id.is_(None),
+            )
+            .options(joinedload(OfficialResult.bet_score))
+        )
+
+        if testing_event_session_id is None:
+            stmt = stmt.where(OfficialResult.testing_event_session_id.is_(None))
+        else:
+            stmt = stmt.where(OfficialResult.testing_event_session_id == testing_event_session_id)
+
+        results = self._session.execute(stmt).scalars().all()
+
+        return [
+            BetOfficialResult(
+                bet_score_code=result.bet_score.code,
+                label=result.bet_score.label,
+                value=result.value,
+                source=result.source.value,
+                created_at=result.created_at,
+            )
+            for result in sorted(results, key=lambda item: item.bet_score.code)
+        ]
+
+
 
     def list_group_submitted_bet_entries(
         self,
@@ -171,6 +301,67 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
         score_components_by_user_id, scores_by_user_id = self._score_data_by_user_id(
             bet_context_id=bet_context_id,
             event_session_id=event_session_id,
+        )
+
+        entries: list[BetResultEntry] = []
+        for bet in bets:
+            components = score_components_by_user_id.get(bet.user_id, [])
+            question_components_by_score_code, score_level_components = self._split_components_by_question(components)
+
+            answers = [
+                self._map_answer(
+                    pick=pick,
+                    official_values_by_score_id=official_values_by_score_id,
+                    components=question_components_by_score_code.get(pick.bet_score.code, []),
+                )
+                for pick in sorted(bet.bet_picks, key=lambda item: (item.bet_score.code, item.id))
+            ]
+
+            score = scores_by_user_id.get(bet.user_id)
+            entries.append(
+                BetResultEntry(
+                    user=BetResultsUser(
+                        public_id=bet.user.public_id,
+                        username=bet.user.username,
+                        display_name=getattr(bet.user, "display_name", None),
+                    ),
+                    submitted_at=bet.submitted_at,
+                    last_modified_at=bet.last_modified_at,
+                    locked_at=bet.locked_at,
+                    answers=answers,
+                    score=(
+                        BetResultScore(
+                            points=self._sum_points(components),
+                            components=score_level_components,
+                            computed_at=score.computed_at,
+                        )
+                        if score is not None
+                        else None
+                    ),
+                )
+            )
+
+        return entries
+    
+    def list_group_submitted_testing_bet_entries(
+        self,
+        *,
+        group_id: int,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
+    ) -> list[BetResultEntry]:
+        bets = self._list_testing_scope_bets(
+            group_id=group_id,
+            bet_context_id=bet_context_id,
+            testing_event_session_id=testing_event_session_id,
+        )
+        official_values_by_score_id = self._testing_official_values_by_score_id(
+            bet_context_id=bet_context_id,
+            testing_event_session_id=testing_event_session_id,
+        )
+        score_components_by_user_id, scores_by_user_id = self._testing_score_data_by_user_id(
+            bet_context_id=bet_context_id,
+            testing_event_session_id=testing_event_session_id,
         )
 
         entries: list[BetResultEntry] = []
@@ -245,6 +436,40 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
             stmt = stmt.where(Bet.event_session_id == event_session_id)
 
         return list(self._session.execute(stmt).scalars().unique().all())
+    
+    def _list_testing_scope_bets(
+        self,
+        *,
+        group_id: int,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
+    ) -> list[Bet]:
+        user_ids_stmt = (
+            select(GroupMembership.user_id)
+            .where(GroupMembership.group_id == group_id)
+        )
+
+        stmt = (
+            select(Bet)
+            .where(
+                Bet.user_id.in_(user_ids_stmt),
+                Bet.bet_context_id == bet_context_id,
+                Bet.event_session_id.is_(None),
+                Bet.submitted_at.is_not(None),
+            )
+            .options(
+                joinedload(Bet.user),
+                selectinload(Bet.bet_picks).joinedload(BetPick.bet_score),
+            )
+        )
+
+        if testing_event_session_id is None:
+            stmt = stmt.where(Bet.testing_event_session_id.is_(None))
+        else:
+            stmt = stmt.where(Bet.testing_event_session_id == testing_event_session_id)
+
+        return list(self._session.execute(stmt).scalars().unique().all())
+
 
     def _official_values_by_score_id(
         self,
@@ -264,6 +489,28 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
             stmt = stmt.where(OfficialResult.event_session_id.is_(None))
         else:
             stmt = stmt.where(OfficialResult.event_session_id == event_session_id)
+
+        results = self._session.execute(stmt).scalars().all()
+        return {result.bet_score_id: result.value for result in results}
+    
+    def _testing_official_values_by_score_id(
+        self,
+        *,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
+    ) -> dict[int, str]:
+        stmt = (
+            select(OfficialResult)
+            .where(
+                OfficialResult.bet_context_id == bet_context_id,
+                OfficialResult.event_session_id.is_(None),
+            )
+        )
+
+        if testing_event_session_id is None:
+            stmt = stmt.where(OfficialResult.testing_event_session_id.is_(None))
+        else:
+            stmt = stmt.where(OfficialResult.testing_event_session_id == testing_event_session_id)
 
         results = self._session.execute(stmt).scalars().all()
         return {result.bet_score_id: result.value for result in results}
@@ -297,6 +544,51 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
             .where(
                 ScoreSession.bet_context_id == bet_context_id,
                 ScoreSession.event_session_id == event_session_id,
+            )
+            .options(selectinload(ScoreSession.score_session_components))
+        )
+        scores = list(self._session.execute(stmt).scalars().unique().all())
+
+        return (
+            {
+                score.user_id: [
+                    self._map_session_component(component)
+                    for component in score.score_session_components
+                ]
+                for score in scores
+            },
+            {score.user_id: score for score in scores},
+        )
+    
+    def _testing_score_data_by_user_id(
+        self,
+        *,
+        bet_context_id: int,
+        testing_event_session_id: int | None,
+    ) -> tuple[dict[int, list[BetResultsComponent]], dict[int, Score | ScoreSession]]:
+        if testing_event_session_id is None:
+            stmt = (
+                select(Score)
+                .where(Score.bet_context_id == bet_context_id)
+                .options(selectinload(Score.score_components))
+            )
+            scores = list(self._session.execute(stmt).scalars().unique().all())
+            return (
+                {
+                    score.user_id: [
+                        self._map_component(component)
+                        for component in score.score_components
+                    ]
+                    for score in scores
+                },
+                {score.user_id: score for score in scores},
+            )
+
+        stmt = (
+            select(ScoreSession)
+            .where(
+                ScoreSession.bet_context_id == bet_context_id,
+                ScoreSession.testing_event_session_id == testing_event_session_id,
             )
             .options(selectinload(ScoreSession.score_session_components))
         )

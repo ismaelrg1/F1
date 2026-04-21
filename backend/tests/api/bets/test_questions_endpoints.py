@@ -5559,3 +5559,481 @@ def test_get_race_event_bet_results_hides_group_entries_when_submit_required_and
     assert visibility["results_published"] is False
     assert payload["event_results"]["entries"] == []
     assert payload["event_results"]["official_results"] == []
+
+
+def test_get_testing_event_bet_results_with_session_id_returns_session_results_when_always_visible(
+    client,
+    db_session,
+) -> None:
+    viewer = _create_user(
+        db_session,
+        username=f"viewer_{uuid4().hex[:8]}",
+        email=f"viewer_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    other_user = _create_user(
+        db_session,
+        username=f"other_{uuid4().hex[:8]}",
+        email=f"other_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=viewer.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    db_session.add(
+        GroupMembership(
+            group_id=group.id,
+            user_id=other_user.id,
+            role=GroupRole.MEMBER,
+        )
+    )
+    db_session.flush()
+
+    season = Season(year=2034, is_active=True)
+    country = Country(iso2="SA", name="Saudi Arabia", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code=f"jeddah_{uuid4().hex[:8]}",
+        name="Jeddah Corniche Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    testing_event = CompetitionTestingEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        name="Jeddah Testing",
+        source_provider=SourceProvider.MANUAL,
+        status=CompetitionTestingEventStatus.SCHEDULED,
+        scheduled_event_start=datetime(2034, 2, 11, 7, 0, tzinfo=timezone.utc),
+        scheduled_event_end=datetime(2034, 2, 13, 17, 0, tzinfo=timezone.utc),
+    )
+    testing_event.sessions = [
+        CompetitionTestingEventSession(
+            session_order=1,
+            name="Day 1",
+            source_provider=SourceProvider.MANUAL,
+            scheduled_start_datetime=datetime(2034, 2, 11, 7, 0, tzinfo=timezone.utc),
+            scheduled_end_datetime=datetime(2034, 2, 11, 17, 0, tzinfo=timezone.utc),
+            lock_cutoff=datetime(2034, 2, 11, 6, 55, tzinfo=timezone.utc),
+            scheduled_lock_cutoff=datetime(2034, 2, 11, 6, 55, tzinfo=timezone.utc),
+        )
+    ]
+    db_session.add(testing_event)
+    db_session.flush()
+    session = testing_event.sessions[0]
+
+    bet_context = BetContext(
+        kind=BetContextKind.PRETESTING,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=testing_event.id,
+        label="Jeddah Testing",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    fastest_score = BetScore(
+        code=f"TEST_DAY1_FASTEST_{uuid4().hex[:8].upper()}",
+        label="Day 1 Fastest",
+        base_points=5,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([bet_context, fastest_score])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetResultsVisibilityPolicy(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=session.id,
+                visibility_mode=BetResultsVisibilityMode.ALWAYS_VISIBLE,
+            ),
+            OfficialResult(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=session.id,
+                bet_score_id=fastest_score.id,
+                value="VER",
+                source=SourceType.MANUAL,
+            ),
+            ResultPublication(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=session.id,
+                published_by_user_id=viewer.id,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    submitted_at = datetime(2034, 2, 11, 6, 30, tzinfo=timezone.utc)
+    bet = Bet(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=session.id,
+        submitted_at=submitted_at,
+        last_modified_at=submitted_at,
+        locked_at=None,
+    )
+    db_session.add(bet)
+    db_session.flush()
+    db_session.add(
+        BetPick(
+            bet_id=bet.id,
+            bet_score_id=fastest_score.id,
+            value="VER",
+        )
+    )
+
+    score_session = ScoreSession(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=session.id,
+        base_points=5,
+        total_points=8,
+        computed_at=datetime(2034, 2, 11, 17, 15, tzinfo=timezone.utc),
+    )
+    db_session.add(score_session)
+    db_session.flush()
+    db_session.add_all(
+        [
+            ScoreSessionComponent(
+                score_session_id=score_session.id,
+                component_type=ScoreComponentType.BASE,
+                code="TEST_DAY1_FASTEST_BASE",
+                points=5,
+                details_json={
+                    "applies_to": {
+                        "level": "QUESTION",
+                        "bet_score_code": fastest_score.code,
+                    },
+                    "matched": True,
+                },
+            ),
+            ScoreSessionComponent(
+                score_session_id=score_session.id,
+                component_type=ScoreComponentType.EXTRA,
+                code="FIRST_SUBMIT",
+                points=3,
+                details_json={"applies_to": {"level": "SESSION"}},
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": viewer.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/testing-events/{testing_event.public_id}/results",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"session_id": str(session.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["bet_context_public_id"] == str(bet_context.public_id)
+    assert payload["kind"] == "PRETESTING"
+    assert payload["testing_event_public_id"] == str(testing_event.public_id)
+    assert payload["label"] == "Jeddah Testing"
+    assert payload["scope"] == {
+        "type": "SESSION",
+        "testing_event_public_id": str(testing_event.public_id),
+        "testing_event_session_public_id": str(session.public_id),
+        "session_order": 1,
+        "name": "Day 1",
+    }
+    assert payload["visibility"]["mode"] == "ALWAYS_VISIBLE"
+    assert payload["visibility"]["can_view_group_results"] is True
+    assert payload["visibility"]["reason"] == "ALWAYS_VISIBLE"
+    assert payload["visibility"]["viewer_submitted"] is False
+    assert payload["visibility"]["results_published"] is True
+
+    assert payload["official_results"] == [
+        {
+            "bet_score_code": fastest_score.code,
+            "label": "Day 1 Fastest",
+            "value": "VER",
+            "source": "MANUAL",
+            "created_at": payload["official_results"][0]["created_at"],
+        }
+    ]
+
+    assert len(payload["entries"]) == 1
+    entry = payload["entries"][0]
+    assert entry["user"]["public_id"] == str(other_user.public_id)
+    assert entry["user"]["username"] == other_user.username
+    assert entry["submitted_at"] == "2034-02-11T06:30:00Z"
+    assert entry["answers"] == [
+        {
+            "bet_score_code": fastest_score.code,
+            "label": "Day 1 Fastest",
+            "value": "VER",
+            "is_invalid": False,
+            "official_value": "VER",
+            "is_correct": True,
+            "points": {
+                "base": 5.0,
+                "powerup": 0.0,
+                "extra": 0.0,
+                "penalty": 0.0,
+                "total": 5.0,
+            },
+            "components": [
+                {
+                    "type": "BASE",
+                    "code": "TEST_DAY1_FASTEST_BASE",
+                    "points": 5.0,
+                    "applies_to": {
+                        "level": "QUESTION",
+                        "bet_score_code": fastest_score.code,
+                    },
+                    "details": {
+                        "applies_to": {
+                            "level": "QUESTION",
+                            "bet_score_code": fastest_score.code,
+                        },
+                        "matched": True,
+                    },
+                }
+            ],
+        }
+    ]
+    assert entry["score"]["points"] == {
+        "base": 5.0,
+        "powerup": 0.0,
+        "extra": 3.0,
+        "penalty": 0.0,
+        "total": 8.0,
+    }
+    assert entry["score"]["components"] == [
+        {
+            "type": "EXTRA",
+            "code": "FIRST_SUBMIT",
+            "points": 3.0,
+            "applies_to": {"level": "SESSION"},
+            "details": {"applies_to": {"level": "SESSION"}},
+        }
+    ]
+
+
+def test_get_testing_event_bet_results_with_session_id_uses_submit_required_for_same_testing_session(
+    client,
+    db_session,
+) -> None:
+    viewer = _create_user(
+        db_session,
+        username=f"viewer_{uuid4().hex[:8]}",
+        email=f"viewer_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    other_user = _create_user(
+        db_session,
+        username=f"other_{uuid4().hex[:8]}",
+        email=f"other_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=viewer.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    db_session.add(
+        GroupMembership(
+            group_id=group.id,
+            user_id=other_user.id,
+            role=GroupRole.MEMBER,
+        )
+    )
+    db_session.flush()
+
+    season = Season(year=2035, is_active=True)
+    country = Country(iso2="AE", name="United Arab Emirates", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code=f"yas_marina_{uuid4().hex[:8]}",
+        name="Yas Marina Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    now = datetime.now(timezone.utc)
+    testing_event = CompetitionTestingEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        name="Abu Dhabi Testing",
+        source_provider=SourceProvider.MANUAL,
+        status=CompetitionTestingEventStatus.SCHEDULED,
+        scheduled_event_start=now + timedelta(days=3),
+        scheduled_event_end=now + timedelta(days=5),
+    )
+    testing_event.sessions = [
+        CompetitionTestingEventSession(
+            session_order=1,
+            name="Day 1",
+            source_provider=SourceProvider.MANUAL,
+            scheduled_start_datetime=now + timedelta(days=3),
+            scheduled_end_datetime=now + timedelta(days=3, hours=8),
+            lock_cutoff=now + timedelta(days=2),
+            scheduled_lock_cutoff=now + timedelta(days=2),
+        ),
+        CompetitionTestingEventSession(
+            session_order=2,
+            name="Day 2",
+            source_provider=SourceProvider.MANUAL,
+            scheduled_start_datetime=now + timedelta(days=4),
+            scheduled_end_datetime=now + timedelta(days=4, hours=8),
+            lock_cutoff=now + timedelta(days=3),
+            scheduled_lock_cutoff=now + timedelta(days=3),
+        ),
+    ]
+    db_session.add(testing_event)
+    db_session.flush()
+    day_1 = next(session for session in testing_event.sessions if session.session_order == 1)
+    day_2 = next(session for session in testing_event.sessions if session.session_order == 2)
+
+    bet_context = BetContext(
+        kind=BetContextKind.PRETESTING,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=testing_event.id,
+        label="Abu Dhabi Testing",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    fastest_score = BetScore(
+        code=f"TEST_DAY2_FASTEST_{uuid4().hex[:8].upper()}",
+        label="Day 2 Fastest",
+        base_points=5,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([bet_context, fastest_score])
+    db_session.flush()
+
+    submitted_at = now - timedelta(minutes=30)
+    viewer_day_1_bet = Bet(
+        user_id=viewer.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=day_1.id,
+        submitted_at=submitted_at,
+        last_modified_at=submitted_at,
+        locked_at=None,
+    )
+    viewer_day_2_bet = Bet(
+        user_id=viewer.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=day_2.id,
+        submitted_at=submitted_at,
+        last_modified_at=submitted_at,
+        locked_at=None,
+    )
+    other_day_2_bet = Bet(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=day_2.id,
+        submitted_at=submitted_at,
+        last_modified_at=submitted_at,
+        locked_at=None,
+    )
+    db_session.add_all([viewer_day_1_bet, viewer_day_2_bet, other_day_2_bet])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetPick(
+                bet_id=viewer_day_1_bet.id,
+                bet_score_id=fastest_score.id,
+                value="SAI",
+            ),
+            BetPick(
+                bet_id=viewer_day_2_bet.id,
+                bet_score_id=fastest_score.id,
+                value="VER",
+            ),
+            BetPick(
+                bet_id=other_day_2_bet.id,
+                bet_score_id=fastest_score.id,
+                value="LEC",
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": viewer.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/testing-events/{testing_event.public_id}/results",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"session_id": str(day_2.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["scope"] == {
+        "type": "SESSION",
+        "testing_event_public_id": str(testing_event.public_id),
+        "testing_event_session_public_id": str(day_2.public_id),
+        "session_order": 2,
+        "name": "Day 2",
+    }
+    assert payload["visibility"]["mode"] == "SUBMIT_REQUIRED"
+    assert payload["visibility"]["can_view_group_results"] is True
+    assert payload["visibility"]["reason"] == "USER_SUBMITTED"
+    assert payload["visibility"]["is_locked"] is False
+    assert payload["visibility"]["viewer_submitted"] is True
+    assert payload["visibility"]["results_published"] is False
+    assert payload["official_results"] == []
+
+    entries_by_username = {
+        entry["user"]["username"]: entry
+        for entry in payload["entries"]
+    }
+    assert set(entries_by_username) == {viewer.username, other_user.username}
+    assert entries_by_username[viewer.username]["answers"] == [
+        {
+            "bet_score_code": fastest_score.code,
+            "label": "Day 2 Fastest",
+            "value": "VER",
+            "is_invalid": False,
+            "points": {
+                "base": 0.0,
+                "powerup": 0.0,
+                "extra": 0.0,
+                "penalty": 0.0,
+                "total": 0.0,
+            },
+            "components": [],
+        }
+    ]
+    assert entries_by_username[other_user.username]["answers"][0]["value"] == "LEC"
