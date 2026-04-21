@@ -33,6 +33,10 @@ from app.db.betting.bet_pick import BetPick  # noqa: F401
 from app.db.betting.bet_score import BetScore  # noqa: F401
 from app.db.betting.bet_template import BetTemplate  # noqa: F401
 from app.db.betting.bet_template_item import BetTemplateItem  # noqa: F401
+from app.db.betting.bet_edit_permission import BetEditPermission # noqa: F401
+from app.db.betting.bet_results_visibility_policy import BetResultsVisibilityPolicy # noqa: F401
+from app.db.betting.bet_submission_revision import BetSubmissionRevision # noqa: F401
+from app.db.betting.bet_score_relation import BetScoreRelation # noqa: F401
 
 # Scoring
 from app.db.scoring.official_result import OfficialResult  # noqa: F401

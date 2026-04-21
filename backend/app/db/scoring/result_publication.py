@@ -1,53 +1,55 @@
 from __future__ import annotations
 
 from datetime import datetime
-
-from sqlalchemy import func, Text, ForeignKey, DateTime, Index, CheckConstraint, text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-
 from typing import TYPE_CHECKING, Optional
+
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Text, func, text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.db.competition import EventSession
-    from app.db.betting import BetContext
     from app.db.auth import User
+    from app.db.betting import BetContext
+    from app.db.competition import EventSession, TestingEventSession
 
 
 class ResultPublication(Base):
     __tablename__ = "result_publications"
     __table_args__ = (
-        # 1) Solo 1 publicación por (contexto) cuando NO es por sesión
+        CheckConstraint(
+            "NOT (event_session_id IS NOT NULL AND testing_event_session_id IS NOT NULL)",
+            name="ck_result_publications_not_both_session_ids",
+        ),
         Index(
             "uq_result_publications_ctx_nosession",
             "bet_context_id",
             unique=True,
-            postgresql_where=text("event_session_id IS NULL"),
+            postgresql_where=text("event_session_id IS NULL AND testing_event_session_id IS NULL"),
         ),
-
-        # 2) Solo 1 publicación por (contexto + sesión) cuando SÍ es por sesión
         Index(
             "uq_result_publications_ctx_session",
             "bet_context_id",
             "event_session_id",
             unique=True,
-            postgresql_where=text("event_session_id IS NOT NULL"),
+            postgresql_where=text("event_session_id IS NOT NULL AND testing_event_session_id IS NULL"),
         ),
-
-        # 3) Índices típicos de lookup
+        Index(
+            "uq_result_publications_ctx_testing_session",
+            "bet_context_id",
+            "testing_event_session_id",
+            unique=True,
+            postgresql_where=text("event_session_id IS NULL AND testing_event_session_id IS NOT NULL"),
+        ),
         Index("ix_result_publications_ctx", "bet_context_id"),
         Index("ix_result_publications_session", "event_session_id"),
+        Index("ix_result_publications_testing_session", "testing_event_session_id"),
         Index("ix_result_publications_published_by", "published_by_user_id"),
         Index("ix_result_publications_published_at", "published_at"),
-
-        # 4) Checks útiles
         CheckConstraint(
             "note IS NULL OR length(note) <= 5000",
             name="ck_result_publications_note_len",
         ),
-
         {"schema": "scoring"},
     )
 
@@ -58,13 +60,16 @@ class ResultPublication(Base):
         nullable=False,
     )
 
-    # NULL => publicación para el evento completo (no una sesión concreta)
     event_session_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("competition.event_sessions.id", ondelete="RESTRICT"),
         nullable=True,
     )
 
-    # ondelete=SET NULL => nullable tiene que ser True
+    testing_event_session_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("competition.testing_event_sessions.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+
     published_by_user_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("auth.users.id", ondelete="SET NULL"),
         nullable=True,
@@ -81,20 +86,23 @@ class ResultPublication(Base):
         nullable=True,
     )
 
-
     bet_context: Mapped["BetContext"] = relationship(
-        'BetContext',
+        "BetContext",
         back_populates="result_publications",
     )
 
     event_session: Mapped[Optional["EventSession"]] = relationship(
-        'EventSession',
+        "EventSession",
+        back_populates="result_publications",
+    )
+
+    testing_event_session: Mapped[Optional["TestingEventSession"]] = relationship(
+        "TestingEventSession",
         back_populates="result_publications",
     )
 
     published_by: Mapped[Optional["User"]] = relationship(
-        'User',
+        "User",
         foreign_keys=[published_by_user_id],
         back_populates="result_publications_published",
     )
-
