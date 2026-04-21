@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
-from app.adapters.sqlalchemy import SqlAlchemyBetQuestionsRepository
+from app.adapters.sqlalchemy import SqlAlchemyBetAnswersRepository, SqlAlchemyBetQuestionsRepository
 from app.api.deps import require_group_member, _translate_bets_error
 from app.api.error_translators import get_preferred_locale
 from app.db.auth import User
@@ -138,7 +138,7 @@ def get_testing_event_answers(
     user, group = user_group
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
-    repository = SqlAlchemyBetQuestionsRepository(db)
+    repository = SqlAlchemyBetAnswersRepository(db)
 
     try:
         if session_id is not None:
@@ -212,7 +212,7 @@ def patch_testing_event_answers(
     user, group = user_group
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
-    repository = SqlAlchemyBetQuestionsRepository(db)
+    repository = SqlAlchemyBetAnswersRepository(db)
     use_case = PatchTestingEventBetAnswers(repository)
 
     try:
@@ -287,7 +287,7 @@ def submit_testing_event_answers(
     user, group = user_group
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
-    repository = SqlAlchemyBetQuestionsRepository(db)
+    repository = SqlAlchemyBetAnswersRepository(db)
     use_case = SubmitTestingEventBetAnswers(repository)
 
     try:

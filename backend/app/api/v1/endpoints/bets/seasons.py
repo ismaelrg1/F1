@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
-from app.adapters.sqlalchemy import SqlAlchemyBetQuestionsRepository
+from app.adapters.sqlalchemy import SqlAlchemyBetAnswersRepository, SqlAlchemyBetQuestionsRepository
 from app.api.deps import require_group_member, _translate_bets_error
 from app.api.error_translators import get_preferred_locale
 from app.db.auth import User
@@ -96,7 +96,7 @@ def get_season_answers(
     user, group = user_group
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
-    repository = SqlAlchemyBetQuestionsRepository(db)
+    repository = SqlAlchemyBetAnswersRepository(db)
     use_case = GetSeasonBetAnswers(repository)
 
     try:
@@ -140,7 +140,7 @@ def patch_season_answers(
     user, group = user_group
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
-    repository = SqlAlchemyBetQuestionsRepository(db)
+    repository = SqlAlchemyBetAnswersRepository(db)
     use_case = PatchSeasonBetAnswers(repository)
 
     try:
@@ -193,7 +193,7 @@ def submit_season_answers(
     user, group = user_group
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
-    repository = SqlAlchemyBetQuestionsRepository(db)
+    repository = SqlAlchemyBetAnswersRepository(db)
     use_case = SubmitSeasonBetAnswers(repository)
 
     try:

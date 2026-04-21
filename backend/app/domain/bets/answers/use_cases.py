@@ -2,7 +2,7 @@ from uuid import UUID
 from datetime import datetime, timezone
 
 from app.domain.bets.enums import BetTemplateScope
-from app.domain.bets.ports import BetQuestionsRepository
+from app.domain.bets.ports import BetAnswersRepository
 from app.domain.bets.models import (
     # Shared
     BetRaceEvent,
@@ -41,7 +41,7 @@ from app.domain.bets.errors import (
 
 
 class GetRaceEventBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(self, *, race_event_public_id: UUID, group_id: int, user_id: int) -> RaceEventBetAnswersResult:
@@ -100,7 +100,7 @@ class GetRaceEventBetAnswers:
         
 
 class GetRaceEventSessionBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(
@@ -169,7 +169,7 @@ class GetRaceEventSessionBetAnswers:
         )
     
 class GetTestingEventBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(self, *, testing_event_public_id: UUID, group_id: int, user_id: int) -> TestingEventBetAnswersResult:
@@ -235,7 +235,7 @@ class GetTestingEventBetAnswers:
 
 
 class GetTestingEventSessionBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(
@@ -307,7 +307,7 @@ class GetTestingEventSessionBetAnswers:
 
 
 class GetSeasonBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(self, *, season_year: int, group_id: int, user_id: int) -> SeasonBetAnswersResult:
@@ -348,7 +348,7 @@ class GetSeasonBetAnswers:
         )
     
 class PatchRaceEventBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(
@@ -538,7 +538,7 @@ class PatchRaceEventBetAnswers:
 
 
 class PatchTestingEventBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(
@@ -708,7 +708,7 @@ class PatchTestingEventBetAnswers:
 
     
 class PatchSeasonBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(
@@ -836,7 +836,7 @@ class PatchSeasonBetAnswers:
         }
     
 class SubmitRaceEventBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(
@@ -1113,7 +1113,7 @@ class SubmitRaceEventBetAnswers:
 
 
 class SubmitTestingEventBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(
@@ -1374,7 +1374,7 @@ class SubmitTestingEventBetAnswers:
 
 
 class SubmitSeasonBetAnswers:
-    def __init__(self, repository: BetQuestionsRepository):
+    def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
 
     def execute(

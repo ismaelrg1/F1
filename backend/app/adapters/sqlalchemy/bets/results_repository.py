@@ -1,19 +1,17 @@
 from collections import defaultdict
 from datetime import datetime
-from decimal import Decimal
 from typing import Any
-from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
-from app.db.auth import User
-from app.db.betting import Bet, BetContext, BetPick, BetResultsVisibilityPolicy
-from app.db.competition import EventSession, RaceEvent
-from app.db.enums import BetContextKind, BetResultsVisibilityMode, ScoreComponentType
+from app.adapters.sqlalchemy.bets.base_repository import SqlAlchemyBetBaseRepository
+from app.db.betting import Bet, BetPick, BetResultsVisibilityPolicy
+from app.db.enums import BetResultsVisibilityMode, ScoreComponentType
 from app.db.scoring import OfficialResult, ResultPublication, Score, ScoreComponent, ScoreSession, ScoreSessionComponent
 from app.db.social import GroupMembership
-from app.domain.bets.results.models import (
+from app.domain.bets.models import (
+    # Results
     BetOfficialResult,
     BetResultAnswer,
     BetResultEntry,
@@ -23,30 +21,10 @@ from app.domain.bets.results.models import (
     BetResultsUser,
     BetResultsVisibility,
 )
-from app.domain.bets.results.ports import BetResultsRepository
-from app.domain.bets.shared.models import (
-    BetContextDefinition,
-    BetExceptionDefinition,
-    BetRaceEvent,
-    BetRaceEventSession,
-)
-from app.adapters.sqlalchemy.bets.questions_repository import SqlAlchemyBetQuestionsRepository
+from app.domain.bets.ports import BetResultsRepository
 
 
-class SqlAlchemyBetResultsRepository(BetResultsRepository):
-    def __init__(self, session: Session):
-        self._session = session
-        self._questions_repository = SqlAlchemyBetQuestionsRepository(session)
-
-    def get_race_event_by_public_id(self, public_id: UUID) -> BetRaceEvent | None:
-        return self._questions_repository.get_race_event_by_public_id(public_id)
-
-    def get_gp_bet_context(self, *, group_id: int, race_event_id: int) -> BetContextDefinition | None:
-        return self._questions_repository.get_gp_bet_context(
-            group_id=group_id,
-            race_event_id=race_event_id,
-        )
-
+class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepository):
     def get_race_event_visibility(
         self,
         *,

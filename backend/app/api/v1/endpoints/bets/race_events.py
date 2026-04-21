@@ -3,7 +3,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, Query
 from sqlalchemy.orm import Session
 
-from app.adapters.sqlalchemy import SqlAlchemyBetQuestionsRepository, SqlAlchemyBetResultsRepository
+from app.adapters.sqlalchemy import (
+    SqlAlchemyBetAnswersRepository,
+    SqlAlchemyBetQuestionsRepository,
+    SqlAlchemyBetResultsRepository,
+)
 from app.api.deps import require_group_member, _translate_bets_error
 from app.api.error_translators import get_preferred_locale
 from app.db.auth import User
@@ -159,7 +163,7 @@ def get_race_event_answers(
     user, group = user_group
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
-    repository = SqlAlchemyBetQuestionsRepository(db)
+    repository = SqlAlchemyBetAnswersRepository(db)
 
     try:
         if session_id is not None:
@@ -233,7 +237,7 @@ def patch_race_event_answers(
     user, group = user_group
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
-    repository = SqlAlchemyBetQuestionsRepository(db)
+    repository = SqlAlchemyBetAnswersRepository(db)
     use_case = PatchRaceEventBetAnswers(repository)
 
     try:
@@ -305,7 +309,7 @@ def submit_race_event_answers(
     user, group = user_group
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
 
-    repository = SqlAlchemyBetQuestionsRepository(db)
+    repository = SqlAlchemyBetAnswersRepository(db)
     use_case = SubmitRaceEventBetAnswers(repository)
 
     try:
