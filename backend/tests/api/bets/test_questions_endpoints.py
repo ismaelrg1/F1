@@ -6037,3 +6037,353 @@ def test_get_testing_event_bet_results_with_session_id_uses_submit_required_for_
         }
     ]
     assert entries_by_username[other_user.username]["answers"][0]["value"] == "LEC"
+
+
+def test_get_season_bet_results_returns_group_results_when_always_visible(client, db_session) -> None:
+    viewer = _create_user(
+        db_session,
+        username=f"viewer_{uuid4().hex[:8]}",
+        email=f"viewer_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    other_user = _create_user(
+        db_session,
+        username=f"other_{uuid4().hex[:8]}",
+        email=f"other_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=viewer.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    db_session.add(
+        GroupMembership(
+            group_id=group.id,
+            user_id=other_user.id,
+            role=GroupRole.MEMBER,
+        )
+    )
+    db_session.flush()
+
+    season = Season(
+        year=2036,
+        is_active=True,
+        betting_open_at=datetime(2036, 1, 1, 0, 0, tzinfo=timezone.utc),
+        lock_cutoff=datetime(2036, 3, 1, 0, 0, tzinfo=timezone.utc),
+        scheduled_lock_cutoff=datetime(2036, 3, 1, 0, 0, tzinfo=timezone.utc),
+    )
+    db_session.add(season)
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.SEASON,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=None,
+        label="2036 Season",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    champion_score = BetScore(
+        code=f"SEASON_CHAMPION_{uuid4().hex[:8].upper()}",
+        label="World Champion",
+        base_points=10,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([bet_context, champion_score])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetResultsVisibilityPolicy(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                visibility_mode=BetResultsVisibilityMode.ALWAYS_VISIBLE,
+            ),
+            OfficialResult(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                bet_score_id=champion_score.id,
+                value="VER",
+                source=SourceType.MANUAL,
+            ),
+            ResultPublication(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                published_by_user_id=viewer.id,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    submitted_at = datetime(2036, 2, 20, 10, 0, tzinfo=timezone.utc)
+    bet = Bet(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=submitted_at,
+        last_modified_at=submitted_at,
+        locked_at=None,
+    )
+    db_session.add(bet)
+    db_session.flush()
+    db_session.add(
+        BetPick(
+            bet_id=bet.id,
+            bet_score_id=champion_score.id,
+            value="VER",
+        )
+    )
+
+    score = Score(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        base_points=10,
+        total_points=14,
+        computed_at=datetime(2036, 12, 15, 18, 0, tzinfo=timezone.utc),
+    )
+    db_session.add(score)
+    db_session.flush()
+    db_session.add_all(
+        [
+            ScoreComponent(
+                score_id=score.id,
+                component_type=ScoreComponentType.BASE,
+                code="SEASON_CHAMPION_BASE",
+                points=10,
+                details_json={
+                    "applies_to": {
+                        "level": "QUESTION",
+                        "bet_score_code": champion_score.code,
+                    },
+                    "matched": True,
+                },
+            ),
+            ScoreComponent(
+                score_id=score.id,
+                component_type=ScoreComponentType.EXTRA,
+                code="FIRST_SUBMIT",
+                points=4,
+                details_json={"applies_to": {"level": "SEASON"}},
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": viewer.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/seasons/{season.year}/results",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["bet_context_public_id"] == str(bet_context.public_id)
+    assert payload["kind"] == "SEASON"
+    assert payload["season_year"] == season.year
+    assert payload["label"] == "2036 Season"
+    assert payload["scope"] == {
+        "type": "SEASON",
+        "season_year": season.year,
+    }
+    assert payload["visibility"]["mode"] == "ALWAYS_VISIBLE"
+    assert payload["visibility"]["can_view_group_results"] is True
+    assert payload["visibility"]["reason"] == "ALWAYS_VISIBLE"
+    assert payload["visibility"]["viewer_submitted"] is False
+    assert payload["visibility"]["results_published"] is True
+
+    assert payload["official_results"] == [
+        {
+            "bet_score_code": champion_score.code,
+            "label": "World Champion",
+            "value": "VER",
+            "source": "MANUAL",
+            "created_at": payload["official_results"][0]["created_at"],
+        }
+    ]
+
+    assert len(payload["entries"]) == 1
+    entry = payload["entries"][0]
+    assert entry["user"]["public_id"] == str(other_user.public_id)
+    assert entry["user"]["username"] == other_user.username
+    assert entry["submitted_at"] == "2036-02-20T10:00:00Z"
+    assert entry["answers"] == [
+        {
+            "bet_score_code": champion_score.code,
+            "label": "World Champion",
+            "value": "VER",
+            "is_invalid": False,
+            "official_value": "VER",
+            "is_correct": True,
+            "points": {
+                "base": 10.0,
+                "powerup": 0.0,
+                "extra": 0.0,
+                "penalty": 0.0,
+                "total": 10.0,
+            },
+            "components": [
+                {
+                    "type": "BASE",
+                    "code": "SEASON_CHAMPION_BASE",
+                    "points": 10.0,
+                    "applies_to": {
+                        "level": "QUESTION",
+                        "bet_score_code": champion_score.code,
+                    },
+                    "details": {
+                        "applies_to": {
+                            "level": "QUESTION",
+                            "bet_score_code": champion_score.code,
+                        },
+                        "matched": True,
+                    },
+                }
+            ],
+        }
+    ]
+    assert entry["score"]["points"] == {
+        "base": 10.0,
+        "powerup": 0.0,
+        "extra": 4.0,
+        "penalty": 0.0,
+        "total": 14.0,
+    }
+    assert entry["score"]["components"] == [
+        {
+            "type": "EXTRA",
+            "code": "FIRST_SUBMIT",
+            "points": 4.0,
+            "applies_to": {"level": "SEASON"},
+            "details": {"applies_to": {"level": "SEASON"}},
+        }
+    ]
+
+
+def test_get_season_bet_results_hides_group_entries_when_submit_required_and_viewer_has_not_submitted(
+    client,
+    db_session,
+) -> None:
+    viewer = _create_user(
+        db_session,
+        username=f"viewer_{uuid4().hex[:8]}",
+        email=f"viewer_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    other_user = _create_user(
+        db_session,
+        username=f"other_{uuid4().hex[:8]}",
+        email=f"other_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=viewer.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    db_session.add(
+        GroupMembership(
+            group_id=group.id,
+            user_id=other_user.id,
+            role=GroupRole.MEMBER,
+        )
+    )
+    db_session.flush()
+
+    now = datetime.now(timezone.utc)
+    season = Season(
+        year=2037,
+        is_active=True,
+        betting_open_at=now - timedelta(days=10),
+        lock_cutoff=now + timedelta(days=30),
+        scheduled_lock_cutoff=now + timedelta(days=30),
+    )
+    db_session.add(season)
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.SEASON,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=None,
+        label="2037 Season",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    champion_score = BetScore(
+        code=f"SEASON_CHAMPION_{uuid4().hex[:8].upper()}",
+        label="World Champion",
+        base_points=10,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([bet_context, champion_score])
+    db_session.flush()
+
+    submitted_at = now - timedelta(days=1)
+    bet = Bet(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=submitted_at,
+        last_modified_at=submitted_at,
+        locked_at=None,
+    )
+    db_session.add(bet)
+    db_session.flush()
+    db_session.add(
+        BetPick(
+            bet_id=bet.id,
+            bet_score_id=champion_score.id,
+            value="LEC",
+        )
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": viewer.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/seasons/{season.year}/results",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["bet_context_public_id"] == str(bet_context.public_id)
+    assert payload["kind"] == "SEASON"
+    assert payload["season_year"] == season.year
+    assert payload["label"] == "2037 Season"
+    assert payload["scope"] == {
+        "type": "SEASON",
+        "season_year": season.year,
+    }
+
+    visibility = payload["visibility"]
+    assert visibility["mode"] == "SUBMIT_REQUIRED"
+    assert visibility["can_view_group_results"] is False
+    assert visibility["reason"] == "SUBMIT_REQUIRED_NOT_SUBMITTED"
+    assert visibility["is_locked"] is False
+    assert visibility["viewer_submitted"] is False
+    assert visibility["results_published"] is False
+    assert payload["official_results"] == []
+    assert payload["entries"] == []

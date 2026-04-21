@@ -12,11 +12,49 @@ from app.domain.bets.models import (
     # Shared
     BetContextDefinition,
     BetRaceEvent,
+    BetSeason,
 
 )
 
 
 class BetResultsRepository(Protocol):
+    def get_season_by_year(self, year: int) -> BetSeason | None:
+        ...
+
+    def get_season_bet_context(self, *, group_id: int, season_id: int) -> BetContextDefinition | None:
+        ...
+
+    def get_season_visibility(
+        self,
+        *,
+        bet_context_id: int,
+        now: datetime,
+    ) -> BetResultsVisibility:
+        ...
+
+    def viewer_has_submitted_season_scope(
+        self,
+        *,
+        user_id: int,
+        bet_context_id: int,
+    ) -> bool:
+        ...
+
+    def list_season_official_results(
+        self,
+        *,
+        bet_context_id: int,
+    ) -> list[BetOfficialResult]:
+        ...
+
+    def list_group_submitted_season_bet_entries(
+        self,
+        *,
+        group_id: int,
+        bet_context_id: int,
+    ) -> list[BetResultEntry]:
+        ...
+    
     def get_race_event_by_public_id(self, public_id: UUID) -> BetRaceEvent | None:
         ...
 

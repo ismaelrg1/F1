@@ -25,6 +25,230 @@ from app.domain.bets.ports import BetResultsRepository
 
 
 class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepository):
+    def get_season_visibility(
+        self,
+        *,
+        bet_context_id: int,
+        now: datetime,
+    ) -> BetResultsVisibility:
+        policy_stmt = (
+            select(BetResultsVisibilityPolicy)
+            .where(
+                BetResultsVisibilityPolicy.bet_context_id == bet_context_id,
+                BetResultsVisibilityPolicy.event_session_id.is_(None),
+                BetResultsVisibilityPolicy.testing_event_session_id.is_(None),
+                BetResultsVisibilityPolicy.starts_at.is_(None)
+                | (BetResultsVisibilityPolicy.starts_at <= now),
+                BetResultsVisibilityPolicy.ends_at.is_(None)
+                | (BetResultsVisibilityPolicy.ends_at > now),
+            )
+        )
+        policy = self._session.execute(policy_stmt).scalar_one_or_none()
+
+        publication_stmt = (
+            select(ResultPublication)
+            .where(
+                ResultPublication.bet_context_id == bet_context_id,
+                ResultPublication.event_session_id.is_(None),
+                ResultPublication.testing_event_session_id.is_(None),
+            )
+        )
+        publication = self._session.execute(publication_stmt).scalar_one_or_none()
+
+        return BetResultsVisibility(
+            mode=(
+                policy.visibility_mode
+                if policy is not None
+                else BetResultsVisibilityMode.SUBMIT_REQUIRED
+            ),
+            can_view_group_results=False,
+            reason="PENDING",
+            is_locked=False,
+            results_published=publication is not None,
+            results_published_at=publication.published_at if publication is not None else None,
+            viewer_submitted=False,
+        )
+
+
+    def viewer_has_submitted_season_scope(
+        self,
+        *,
+        user_id: int,
+        bet_context_id: int,
+    ) -> bool:
+        stmt = (
+            select(Bet.id)
+            .where(
+                Bet.user_id == user_id,
+                Bet.bet_context_id == bet_context_id,
+                Bet.event_session_id.is_(None),
+                Bet.testing_event_session_id.is_(None),
+                Bet.submitted_at.is_not(None),
+            )
+        )
+
+        return self._session.execute(stmt).first() is not None
+
+
+    def list_season_official_results(
+        self,
+        *,
+        bet_context_id: int,
+    ) -> list[BetOfficialResult]:
+        stmt = (
+            select(OfficialResult)
+            .where(
+                OfficialResult.bet_context_id == bet_context_id,
+                OfficialResult.event_session_id.is_(None),
+                OfficialResult.testing_event_session_id.is_(None),
+            )
+            .options(joinedload(OfficialResult.bet_score))
+        )
+
+        results = self._session.execute(stmt).scalars().all()
+
+        return [
+            BetOfficialResult(
+                bet_score_code=result.bet_score.code,
+                label=result.bet_score.label,
+                value=result.value,
+                source=result.source.value,
+                created_at=result.created_at,
+            )
+            for result in sorted(results, key=lambda item: item.bet_score.code)
+        ]
+
+
+    def list_group_submitted_season_bet_entries(
+        self,
+        *,
+        group_id: int,
+        bet_context_id: int,
+    ) -> list[BetResultEntry]:
+        bets = self._list_season_scope_bets(
+            group_id=group_id,
+            bet_context_id=bet_context_id,
+        )
+        official_values_by_score_id = self._season_official_values_by_score_id(
+            bet_context_id=bet_context_id,
+        )
+        score_components_by_user_id, scores_by_user_id = self._season_score_data_by_user_id(
+            bet_context_id=bet_context_id,
+        )
+
+        entries: list[BetResultEntry] = []
+        for bet in bets:
+            components = score_components_by_user_id.get(bet.user_id, [])
+            question_components_by_score_code, score_level_components = self._split_components_by_question(components)
+
+            answers = [
+                self._map_answer(
+                    pick=pick,
+                    official_values_by_score_id=official_values_by_score_id,
+                    components=question_components_by_score_code.get(pick.bet_score.code, []),
+                )
+                for pick in sorted(bet.bet_picks, key=lambda item: (item.bet_score.code, item.id))
+            ]
+
+            score = scores_by_user_id.get(bet.user_id)
+            entries.append(
+                BetResultEntry(
+                    user=BetResultsUser(
+                        public_id=bet.user.public_id,
+                        username=bet.user.username,
+                        display_name=getattr(bet.user, "display_name", None),
+                    ),
+                    submitted_at=bet.submitted_at,
+                    last_modified_at=bet.last_modified_at,
+                    locked_at=bet.locked_at,
+                    answers=answers,
+                    score=(
+                        BetResultScore(
+                            points=self._sum_points(components),
+                            components=score_level_components,
+                            computed_at=score.computed_at,
+                        )
+                        if score is not None
+                        else None
+                    ),
+                )
+            )
+
+        return entries
+
+
+    def _list_season_scope_bets(
+        self,
+        *,
+        group_id: int,
+        bet_context_id: int,
+    ) -> list[Bet]:
+        user_ids_stmt = (
+            select(GroupMembership.user_id)
+            .where(GroupMembership.group_id == group_id)
+        )
+
+        stmt = (
+            select(Bet)
+            .where(
+                Bet.user_id.in_(user_ids_stmt),
+                Bet.bet_context_id == bet_context_id,
+                Bet.event_session_id.is_(None),
+                Bet.testing_event_session_id.is_(None),
+                Bet.submitted_at.is_not(None),
+            )
+            .options(
+                joinedload(Bet.user),
+                selectinload(Bet.bet_picks).joinedload(BetPick.bet_score),
+            )
+        )
+
+        return list(self._session.execute(stmt).scalars().unique().all())
+
+
+    def _season_official_values_by_score_id(
+        self,
+        *,
+        bet_context_id: int,
+    ) -> dict[int, str]:
+        stmt = (
+            select(OfficialResult)
+            .where(
+                OfficialResult.bet_context_id == bet_context_id,
+                OfficialResult.event_session_id.is_(None),
+                OfficialResult.testing_event_session_id.is_(None),
+            )
+        )
+
+        results = self._session.execute(stmt).scalars().all()
+        return {result.bet_score_id: result.value for result in results}
+
+
+    def _season_score_data_by_user_id(
+        self,
+        *,
+        bet_context_id: int,
+    ) -> tuple[dict[int, list[BetResultsComponent]], dict[int, Score]]:
+        stmt = (
+            select(Score)
+            .where(Score.bet_context_id == bet_context_id)
+            .options(selectinload(Score.score_components))
+        )
+        scores = list(self._session.execute(stmt).scalars().unique().all())
+
+        return (
+            {
+                score.user_id: [
+                    self._map_component(component)
+                    for component in score.score_components
+                ]
+                for score in scores
+            },
+            {score.user_id: score for score in scores},
+        )
+    
+    
+    
     def get_race_event_visibility(
         self,
         *,

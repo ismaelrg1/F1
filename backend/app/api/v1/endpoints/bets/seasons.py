@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
-from app.adapters.sqlalchemy import SqlAlchemyBetAnswersRepository, SqlAlchemyBetQuestionsRepository
+from app.adapters.sqlalchemy import SqlAlchemyBetAnswersRepository, SqlAlchemyBetQuestionsRepository, SqlAlchemyBetResultsRepository
 from app.api.deps import require_group_member, _translate_bets_error
 from app.api.error_translators import get_preferred_locale
 from app.db.auth import User
@@ -13,6 +13,7 @@ from app.domain.bets.models import BetAnswerInput
 from app.domain.bets.use_cases import (
     GetSeasonBetQuestions,
     GetSeasonBetAnswers,
+    GetSeasonBetResults,
     PatchSeasonBetAnswers,
     SubmitSeasonBetAnswers
 )
@@ -23,6 +24,19 @@ from app.models.bets import (
     BetQuestionOptionRead,
     SeasonBetQuestionsResponse,
     SeasonBetAnswersResponse,
+)
+
+from app.models.bet_results import (
+    BetOfficialResultRead,
+    BetResultAnswerRead,
+    BetResultEntryRead,
+    BetResultScoreRead,
+    BetResultsComponentRead,
+    BetResultsPointsRead,
+    BetResultsScopeRead,
+    BetResultsUserRead,
+    BetResultsVisibilityRead,
+    SeasonBetResultsResponse,
 )
 
 router = APIRouter()
@@ -230,4 +244,129 @@ def submit_season_answers(
             )
             for answer in result.answers
         ],
+    )
+
+
+@router.get(
+    "/seasons/{season_year}/results",
+    response_model=SeasonBetResultsResponse,
+    response_model_exclude_none=True,
+)
+def get_season_results(
+    season_year: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    user_group: tuple[User, Group] = Depends(require_group_member),
+) -> SeasonBetResultsResponse:
+    user, group = user_group
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
+    repository = SqlAlchemyBetResultsRepository(db)
+    use_case = GetSeasonBetResults(repository)
+
+    try:
+        result = use_case.execute(
+            season_year=season_year,
+            group_id=group.id,
+            user_id=user.id,
+        )
+    except BetsError as exc:
+        raise _translate_bets_error(exc, locale=locale) from exc
+
+    return SeasonBetResultsResponse(
+        bet_context_public_id=result.bet_context_public_id,
+        kind=result.kind,
+        season_year=result.season_year,
+        label=result.label,
+        scope=BetResultsScopeRead(
+            type=result.scope.type,
+            season_year=result.scope.season_year,
+        ),
+        visibility=_map_visibility(result.visibility),
+        official_results=[
+            _map_official_result(official_result)
+            for official_result in result.official_results
+        ],
+        entries=[
+            _map_entry(entry)
+            for entry in result.entries
+        ],
+    )
+
+def _map_points(points) -> BetResultsPointsRead:
+    return BetResultsPointsRead(
+        base=points.base,
+        powerup=points.powerup,
+        extra=points.extra,
+        penalty=points.penalty,
+        total=points.total,
+    )
+
+
+def _map_component(component) -> BetResultsComponentRead:
+    return BetResultsComponentRead(
+        type=component.type,
+        code=component.code,
+        points=component.points,
+        applies_to=component.applies_to,
+        details=component.details,
+    )
+
+
+def _map_visibility(visibility) -> BetResultsVisibilityRead:
+    return BetResultsVisibilityRead(
+        mode=visibility.mode,
+        can_view_group_results=visibility.can_view_group_results,
+        reason=visibility.reason,
+        is_locked=visibility.is_locked,
+        results_published=visibility.results_published,
+        results_published_at=visibility.results_published_at,
+        viewer_submitted=visibility.viewer_submitted,
+    )
+
+
+def _map_official_result(result) -> BetOfficialResultRead:
+    return BetOfficialResultRead(
+        bet_score_code=result.bet_score_code,
+        label=result.label,
+        value=result.value,
+        source=result.source,
+        created_at=result.created_at,
+    )
+
+
+def _map_answer(answer) -> BetResultAnswerRead:
+    return BetResultAnswerRead(
+        bet_score_code=answer.bet_score_code,
+        label=answer.label,
+        value=answer.value,
+        is_invalid=answer.is_invalid,
+        invalid_reason=answer.invalid_reason,
+        official_value=answer.official_value,
+        is_correct=answer.is_correct,
+        points=_map_points(answer.points),
+        components=[_map_component(component) for component in answer.components],
+    )
+
+
+def _map_entry(entry) -> BetResultEntryRead:
+    return BetResultEntryRead(
+        user=BetResultsUserRead(
+            public_id=entry.user.public_id,
+            username=entry.user.username,
+            display_name=entry.user.display_name,
+        ),
+        submitted_at=entry.submitted_at,
+        last_modified_at=entry.last_modified_at,
+        locked_at=entry.locked_at,
+        answers=[_map_answer(answer) for answer in entry.answers],
+        score=(
+            BetResultScoreRead(
+                points=_map_points(entry.score.points),
+                components=[_map_component(component) for component in entry.score.components],
+                computed_at=entry.score.computed_at,
+            )
+            if entry.score is not None
+            else None
+        ),
     )

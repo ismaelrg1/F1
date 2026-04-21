@@ -78,3 +78,10 @@ class TestingEventSessionNotFoundForBetResultsError(BetsError):
 
 class BetContextNotFoundForTestingEventResultsError(BetsError):
     pass
+
+class SeasonNotFoundForBetResultsError(BetsError):
+    pass
+
+
+class BetContextNotFoundForSeasonResultsError(BetsError):
+    pass

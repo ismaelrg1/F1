@@ -24,6 +24,8 @@ from app.domain.bets.errors import (
     TestingEventNotFoundForBetResultsError,
     TestingEventSessionNotFoundForBetResultsError,
     BetContextNotFoundForTestingEventResultsError,
+    SeasonNotFoundForBetResultsError,
+    BetContextNotFoundForSeasonResultsError,
 )
 
 BETS_ERROR_MAP = {
@@ -110,5 +112,14 @@ BETS_ERROR_MAP = {
     BetContextNotFoundForTestingEventResultsError: ErrorCatalogEntry(
         status_code=status.HTTP_404_NOT_FOUND,
         error_code="bets.testing_event_context_not_found_for_results",
+    ),
+
+    SeasonNotFoundForBetResultsError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="bets.season_not_found_for_results",
+    ),
+    BetContextNotFoundForSeasonResultsError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="bets.season_context_not_found_for_results",
     ),
 }

@@ -19,6 +19,8 @@ class BetResultsScopeRead(BaseModel):
     session_order: int | None = None
     name: str | None = None
 
+    season_year: int | None = None
+
 
 class BetResultsVisibilityRead(BaseModel):
     mode: BetResultsVisibilityMode
@@ -130,6 +132,16 @@ class TestingEventSessionBetResultsResponse(BaseModel):
     bet_context_public_id: UUID
     kind: BetContextKind
     testing_event_public_id: UUID
+    label: str
+    scope: BetResultsScopeRead
+    visibility: BetResultsVisibilityRead
+    official_results: list[BetOfficialResultRead]
+    entries: list[BetResultEntryRead]
+
+class SeasonBetResultsResponse(BaseModel):
+    bet_context_public_id: UUID
+    kind: BetContextKind
+    season_year: int
     label: str
     scope: BetResultsScopeRead
     visibility: BetResultsVisibilityRead

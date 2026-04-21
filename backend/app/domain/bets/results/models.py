@@ -94,6 +94,7 @@ class BetResultsScope:
     session_order: int | None = None
     name: str | None = None
 
+    season_year: int | None = None
 
 @dataclass(frozen=True)
 class RaceEventBetResultsBlock:
@@ -144,6 +145,17 @@ class TestingEventSessionBetResults:
     bet_context_public_id: UUID
     kind: BetContextKind
     testing_event_public_id: UUID
+    label: str
+    scope: BetResultsScope
+    visibility: BetResultsVisibility
+    official_results: list[BetOfficialResult]
+    entries: list[BetResultEntry]
+
+@dataclass(frozen=True)
+class SeasonBetResults:
+    bet_context_public_id: UUID
+    kind: BetContextKind
+    season_year: int
     label: str
     scope: BetResultsScope
     visibility: BetResultsVisibility

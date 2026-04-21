@@ -22,6 +22,8 @@ MESSAGES_BETS = {
         "bets.testing_event_not_found_for_results": "Testing event not found for bet results.",
         "bets.testing_event_session_not_found_for_results": "Testing event session not found for bet results.",
         "bets.testing_event_context_not_found_for_results": "Bet context not found for testing event results.",
+        "bets.season_not_found_for_results": "Season not found for bet results.",
+        "bets.season_context_not_found_for_results": "Bet context not found for season results.",
     },
     "es": {
         "bets.race_event_not_found": "No se ha encontrado el evento de carrera",
@@ -46,5 +48,7 @@ MESSAGES_BETS = {
         "bets.testing_event_not_found_for_results": "No se encontró el evento de testing para los resultados de apuestas.",
         "bets.testing_event_session_not_found_for_results": "No se encontró la sesión de testing para los resultados de apuestas.",
         "bets.testing_event_context_not_found_for_results": "No se encontró el contexto de apuestas para los resultados del evento de testing.",
+        "bets.season_not_found_for_results": "No se encontró la temporada para los resultados de apuestas.",
+        "bets.season_context_not_found_for_results": "No se encontró el contexto de apuestas para los resultados de la temporada.",
     },
 }
