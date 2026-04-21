@@ -14,6 +14,11 @@ MESSAGES_BETS = {
         "bets.answers_not_open": "Bet answers are not open yet",
         "bets.required_answer_missing": "One or more required answers are missing",
         "bets.modification_limit_reached": "The modification limit has been reached",
+        
+        # Results
+        "bets.race_event_context_not_found": "Bet context not found for this race event.",
+        "bets.testing_event_context_not_found": "Bet context not found for this testing event.",
+        "bets.season_context_not_found": "Bet context not found for this season.",
     },
     "es": {
         "bets.race_event_not_found": "No se ha encontrado el evento de carrera",
@@ -30,5 +35,11 @@ MESSAGES_BETS = {
         "bets.answers_not_open": "Las respuestas todavía no están abiertas",
         "bets.required_answer_missing": "Faltan una o más respuestas obligatorias",
         "bets.modification_limit_reached": "Se ha alcanzado el límite de modificaciones",
+
+        # Results
+        "bets.race_event_context_not_found": "No se ha encontrado el contexto de apuesta para este gran premio.",
+        "bets.testing_event_context_not_found": "No se ha encontrado el contexto de apuesta para este evento de testing.",
+        "bets.season_context_not_found": "No se ha encontrado el contexto de apuesta para esta temporada.",
+   
     },
 }

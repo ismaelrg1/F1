@@ -2,8 +2,9 @@ from uuid import UUID
 from datetime import datetime, timezone
 
 from app.domain.bets.enums import BetTemplateScope
-from app.domain.bets.shared.ports import BetQuestionsRepository
-from app.domain.bets.shared.models import (
+from app.domain.bets.ports import BetQuestionsRepository
+from app.domain.bets.models import (
+    # Shared
     BetRaceEvent,
     BetRaceEventSession,
     BetTemplateDefinition,
@@ -12,8 +13,8 @@ from app.domain.bets.shared.models import (
     BetTestingEvent,
     BetSeason,
     BetEditPermissionDefinition,
-)
-from app.domain.bets.answers.models import (
+    
+    # Answers
     RaceEventBetAnswersResult,
     RaceEventBetAnswersSessionResult,
     SeasonBetAnswersResult,

@@ -11,6 +11,7 @@ from app.db.betting import (
     BetEditPermission,
     BetException,
     BetPick,
+    BetResultsVisibilityPolicy,
     BetScore,
     BetSubmissionRevision,
     BetTemplate,
@@ -32,14 +33,25 @@ from app.db.competition import (
 )
 from app.db.enums import (
     BetContextKind,
+    BetResultsVisibilityMode,
     BetTemplateScope,
     BetValueType,
     RaceEventStatus,
     SeasonDriverStatus,
+    ScoreComponentType,
     SessionType,
     SourceProvider,
     TestingEventStatus as CompetitionTestingEventStatus,
 )
+from app.db.scoring import (
+    OfficialResult,
+    ResultPublication,
+    Score,
+    ScoreComponent,
+    ScoreSession,
+    ScoreSessionComponent,
+)
+from app.db.scoring.official_result import SourceType
 from app.db.social import Group, GroupMembership
 from app.db.social.group_membership import GroupRole
 
@@ -4965,3 +4977,585 @@ def test_get_season_bet_answers_returns_404_when_bet_context_is_missing(client, 
 
     assert response.status_code == 404
     assert response.json()["detail"]["error"]["code"] == "bets.bet_context_not_found_for_season"
+
+
+def test_get_race_event_bet_results_returns_group_event_results_when_always_visible(client, db_session) -> None:
+    viewer = _create_user(
+        db_session,
+        username=f"viewer_{uuid4().hex[:8]}",
+        email=f"viewer_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    other_user = _create_user(
+        db_session,
+        username=f"other_{uuid4().hex[:8]}",
+        email=f"other_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=viewer.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    db_session.add(
+        GroupMembership(
+            group_id=group.id,
+            user_id=other_user.id,
+            role=GroupRole.MEMBER,
+        )
+    )
+    db_session.flush()
+
+    season = Season(year=2031, is_active=True)
+    country = Country(iso2="QA", name="Qatar", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code=f"lusail_{uuid4().hex[:8]}",
+        name="Lusail International Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=1,
+        name="Qatar Grand Prix",
+        source_provider=SourceProvider.MANUAL,
+        status=RaceEventStatus.SCHEDULED,
+        event_start=datetime(2031, 3, 10, 16, 0, tzinfo=timezone.utc),
+        scheduled_event_start=datetime(2031, 3, 10, 16, 0, tzinfo=timezone.utc),
+        scheduled_event_end=datetime(2031, 3, 10, 18, 0, tzinfo=timezone.utc),
+        lock_cutoff=datetime(2031, 3, 10, 15, 55, tzinfo=timezone.utc),
+        scheduled_lock_cutoff=datetime(2031, 3, 10, 15, 55, tzinfo=timezone.utc),
+    )
+    db_session.add(race_event)
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.GP,
+        season_id=season.id,
+        race_event_id=race_event.id,
+        testing_event_id=None,
+        label="Qatar GP",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    race_winner_score = BetScore(
+        code=f"RACE_WINNER_{uuid4().hex[:8].upper()}",
+        label="Race Winner",
+        base_points=10,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([bet_context, race_winner_score])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetResultsVisibilityPolicy(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                visibility_mode=BetResultsVisibilityMode.ALWAYS_VISIBLE,
+            ),
+            OfficialResult(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                bet_score_id=race_winner_score.id,
+                value="VER",
+                source=SourceType.MANUAL,
+            ),
+            ResultPublication(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                published_by_user_id=viewer.id,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    submitted_at = datetime(2031, 3, 10, 15, 30, tzinfo=timezone.utc)
+    bet = Bet(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=submitted_at,
+        last_modified_at=submitted_at,
+        locked_at=None,
+    )
+    db_session.add(bet)
+    db_session.flush()
+
+    db_session.add(
+        BetPick(
+            bet_id=bet.id,
+            bet_score_id=race_winner_score.id,
+            value="VER",
+        )
+    )
+    score = Score(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        base_points=10,
+        total_points=12,
+        computed_at=datetime(2031, 3, 10, 18, 10, tzinfo=timezone.utc),
+    )
+    db_session.add(score)
+    db_session.flush()
+    db_session.add_all(
+        [
+            ScoreComponent(
+                score_id=score.id,
+                component_type=ScoreComponentType.BASE,
+                code="RACE_WINNER_BASE",
+                points=10,
+                details_json={
+                    "applies_to": {
+                        "level": "QUESTION",
+                        "bet_score_code": race_winner_score.code,
+                    },
+                    "matched": True,
+                },
+            ),
+            ScoreComponent(
+                score_id=score.id,
+                component_type=ScoreComponentType.EXTRA,
+                code="FIRST_SUBMIT",
+                points=2,
+                details_json={"applies_to": {"level": "EVENT"}},
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": viewer.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/race-events/{race_event.public_id}/results",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["bet_context_public_id"] == str(bet_context.public_id)
+    assert payload["kind"] == "GP"
+    assert payload["race_event_public_id"] == str(race_event.public_id)
+    assert payload["label"] == "Qatar GP"
+
+    event_results = payload["event_results"]
+    assert event_results["scope"] == {
+        "type": "EVENT",
+        "race_event_public_id": str(race_event.public_id),
+    }
+    assert event_results["visibility"]["mode"] == "ALWAYS_VISIBLE"
+    assert event_results["visibility"]["can_view_group_results"] is True
+    assert event_results["visibility"]["reason"] == "ALWAYS_VISIBLE"
+    assert event_results["visibility"]["viewer_submitted"] is False
+    assert event_results["visibility"]["results_published"] is True
+
+    assert event_results["official_results"] == [
+        {
+            "bet_score_code": race_winner_score.code,
+            "label": "Race Winner",
+            "value": "VER",
+            "source": "MANUAL",
+            "created_at": event_results["official_results"][0]["created_at"],
+        }
+    ]
+
+    assert len(event_results["entries"]) == 1
+    entry = event_results["entries"][0]
+    assert entry["user"]["public_id"] == str(other_user.public_id)
+    assert entry["user"]["username"] == other_user.username
+    assert entry["submitted_at"] == "2031-03-10T15:30:00Z"
+    assert entry["answers"] == [
+        {
+            "bet_score_code": race_winner_score.code,
+            "label": "Race Winner",
+            "value": "VER",
+            "is_invalid": False,
+            "official_value": "VER",
+            "is_correct": True,
+            "points": {
+                "base": 10.0,
+                "powerup": 0.0,
+                "extra": 0.0,
+                "penalty": 0.0,
+                "total": 10.0,
+            },
+            "components": [
+                {
+                    "type": "BASE",
+                    "code": "RACE_WINNER_BASE",
+                    "points": 10.0,
+                    "applies_to": {
+                        "level": "QUESTION",
+                        "bet_score_code": race_winner_score.code,
+                    },
+                    "details": {
+                        "applies_to": {
+                            "level": "QUESTION",
+                            "bet_score_code": race_winner_score.code,
+                        },
+                        "matched": True,
+                    },
+                }
+            ],
+        }
+    ]
+    assert entry["score"]["points"] == {
+        "base": 10.0,
+        "powerup": 0.0,
+        "extra": 2.0,
+        "penalty": 0.0,
+        "total": 12.0,
+    }
+    assert entry["score"]["components"] == [
+        {
+            "type": "EXTRA",
+            "code": "FIRST_SUBMIT",
+            "points": 2.0,
+            "applies_to": {"level": "EVENT"},
+            "details": {"applies_to": {"level": "EVENT"}},
+        }
+    ]
+    assert payload["sessions"] == []
+
+
+def test_get_race_event_bet_results_with_session_id_returns_only_session_results(client, db_session) -> None:
+    viewer = _create_user(
+        db_session,
+        username=f"viewer_{uuid4().hex[:8]}",
+        email=f"viewer_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    other_user = _create_user(
+        db_session,
+        username=f"other_{uuid4().hex[:8]}",
+        email=f"other_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=viewer.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    db_session.add(
+        GroupMembership(
+            group_id=group.id,
+            user_id=other_user.id,
+            role=GroupRole.MEMBER,
+        )
+    )
+    db_session.flush()
+
+    season = Season(year=2032, is_active=True)
+    country = Country(iso2="JP", name="Japan", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code=f"suzuka_{uuid4().hex[:8]}",
+        name="Suzuka Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=2,
+        name="Japanese Grand Prix",
+        source_provider=SourceProvider.MANUAL,
+        status=RaceEventStatus.SCHEDULED,
+        scheduled_event_start=datetime(2032, 4, 4, 8, 0, tzinfo=timezone.utc),
+        scheduled_event_end=datetime(2032, 4, 4, 10, 0, tzinfo=timezone.utc),
+    )
+    race_event.event_sessions = [
+        EventSession(
+            session_type=SessionType.QUALY,
+            source_provider=SourceProvider.MANUAL,
+            status=RaceEventStatus.COMPLETED,
+            start_datetime=datetime(2032, 4, 3, 7, 0, tzinfo=timezone.utc),
+            scheduled_start_datetime=datetime(2032, 4, 3, 7, 0, tzinfo=timezone.utc),
+            lock_cutoff=datetime(2032, 4, 3, 6, 55, tzinfo=timezone.utc),
+            scheduled_lock_cutoff=datetime(2032, 4, 3, 6, 55, tzinfo=timezone.utc),
+        )
+    ]
+    db_session.add(race_event)
+    db_session.flush()
+    session = race_event.event_sessions[0]
+
+    bet_context = BetContext(
+        kind=BetContextKind.GP,
+        season_id=season.id,
+        race_event_id=race_event.id,
+        testing_event_id=None,
+        label="Japanese GP",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    pole_score = BetScore(
+        code=f"POLE_{uuid4().hex[:8].upper()}",
+        label="Pole Position",
+        base_points=5,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([bet_context, pole_score])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetResultsVisibilityPolicy(
+                bet_context_id=bet_context.id,
+                event_session_id=session.id,
+                testing_event_session_id=None,
+                visibility_mode=BetResultsVisibilityMode.ALWAYS_VISIBLE,
+            ),
+            OfficialResult(
+                bet_context_id=bet_context.id,
+                event_session_id=session.id,
+                testing_event_session_id=None,
+                bet_score_id=pole_score.id,
+                value="LEC",
+                source=SourceType.FASTF1,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    submitted_at = datetime(2032, 4, 3, 6, 40, tzinfo=timezone.utc)
+    bet = Bet(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=session.id,
+        testing_event_session_id=None,
+        submitted_at=submitted_at,
+        last_modified_at=submitted_at,
+        locked_at=None,
+    )
+    db_session.add(bet)
+    db_session.flush()
+    db_session.add(
+        BetPick(
+            bet_id=bet.id,
+            bet_score_id=pole_score.id,
+            value="VER",
+        )
+    )
+    score_session = ScoreSession(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=session.id,
+        testing_event_session_id=None,
+        base_points=0,
+        total_points=0,
+        computed_at=datetime(2032, 4, 3, 8, 0, tzinfo=timezone.utc),
+    )
+    db_session.add(score_session)
+    db_session.flush()
+    db_session.add(
+        ScoreSessionComponent(
+            score_session_id=score_session.id,
+            component_type=ScoreComponentType.BASE,
+            code="POLE_BASE",
+            points=0,
+            details_json={
+                "applies_to": {
+                    "level": "QUESTION",
+                    "bet_score_code": pole_score.code,
+                },
+                "matched": False,
+            },
+        )
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": viewer.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/race-events/{race_event.public_id}/results",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"session_id": str(session.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert "event_results" not in payload
+    assert "sessions" not in payload
+    assert payload["bet_context_public_id"] == str(bet_context.public_id)
+    assert payload["kind"] == "GP"
+    assert payload["race_event_public_id"] == str(race_event.public_id)
+    assert payload["label"] == "Japanese GP"
+    assert payload["scope"] == {
+        "type": "SESSION",
+        "race_event_public_id": str(race_event.public_id),
+        "event_session_public_id": str(session.public_id),
+        "session_type": "QUALY",
+    }
+    assert payload["visibility"]["can_view_group_results"] is True
+    assert payload["official_results"][0]["bet_score_code"] == pole_score.code
+    assert payload["official_results"][0]["value"] == "LEC"
+    assert len(payload["entries"]) == 1
+    assert payload["entries"][0]["answers"][0]["value"] == "VER"
+    assert payload["entries"][0]["answers"][0]["official_value"] == "LEC"
+    assert payload["entries"][0]["answers"][0]["is_correct"] is False
+    assert payload["entries"][0]["score"]["points"] == {
+        "base": 0.0,
+        "powerup": 0.0,
+        "extra": 0.0,
+        "penalty": 0.0,
+        "total": 0.0,
+    }
+
+
+def test_get_race_event_bet_results_hides_group_entries_when_submit_required_and_viewer_has_not_submitted(
+    client,
+    db_session,
+) -> None:
+    viewer = _create_user(
+        db_session,
+        username=f"viewer_{uuid4().hex[:8]}",
+        email=f"viewer_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    other_user = _create_user(
+        db_session,
+        username=f"other_{uuid4().hex[:8]}",
+        email=f"other_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=viewer.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    db_session.add(
+        GroupMembership(
+            group_id=group.id,
+            user_id=other_user.id,
+            role=GroupRole.MEMBER,
+        )
+    )
+    db_session.flush()
+
+    season = Season(year=2033, is_active=True)
+    country = Country(iso2="AU", name="Australia", flag_asset_url=None)
+    db_session.add_all([season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code=f"melbourne_{uuid4().hex[:8]}",
+        name="Albert Park Circuit",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=3,
+        name="Australian Grand Prix",
+        source_provider=SourceProvider.MANUAL,
+        status=RaceEventStatus.SCHEDULED,
+        event_start=datetime(2033, 3, 20, 6, 0, tzinfo=timezone.utc),
+        scheduled_event_start=datetime(2033, 3, 20, 6, 0, tzinfo=timezone.utc),
+        scheduled_event_end=datetime(2033, 3, 20, 8, 0, tzinfo=timezone.utc),
+        lock_cutoff=datetime(2033, 3, 20, 5, 55, tzinfo=timezone.utc),
+        scheduled_lock_cutoff=datetime(2033, 3, 20, 5, 55, tzinfo=timezone.utc),
+    )
+    db_session.add(race_event)
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.GP,
+        season_id=season.id,
+        race_event_id=race_event.id,
+        testing_event_id=None,
+        label="Australian GP",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    winner_score = BetScore(
+        code=f"AUS_WINNER_{uuid4().hex[:8].upper()}",
+        label="Winner",
+        base_points=10,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([bet_context, winner_score])
+    db_session.flush()
+
+    submitted_at = datetime(2033, 3, 20, 5, 30, tzinfo=timezone.utc)
+    bet = Bet(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=submitted_at,
+        last_modified_at=submitted_at,
+        locked_at=None,
+    )
+    db_session.add(bet)
+    db_session.flush()
+    db_session.add(
+        BetPick(
+            bet_id=bet.id,
+            bet_score_id=winner_score.id,
+            value="VER",
+        )
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": viewer.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/race-events/{race_event.public_id}/results",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    visibility = payload["event_results"]["visibility"]
+
+    assert visibility["mode"] == "SUBMIT_REQUIRED"
+    assert visibility["can_view_group_results"] is False
+    assert visibility["reason"] == "SUBMIT_REQUIRED_NOT_SUBMITTED"
+    assert visibility["is_locked"] is False
+    assert visibility["viewer_submitted"] is False
+    assert visibility["results_published"] is False
+    assert payload["event_results"]["entries"] == []
+    assert payload["event_results"]["official_results"] == []

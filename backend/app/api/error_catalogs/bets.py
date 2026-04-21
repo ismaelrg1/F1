@@ -1,6 +1,7 @@
 from fastapi import status
 
 from app.api.error_catalogs.base import ErrorCatalogEntry
+
 from app.domain.bets.errors import (
     BetContextNotFoundForRaceEventError,
     BetContextNotFoundForSeasonError,
@@ -16,6 +17,10 @@ from app.domain.bets.errors import (
     BetAnswersNotOpenError,
     BetModificationLimitReachedError,
     BetRequiredAnswerMissingError,
+
+    BetContextNotFoundForRaceEventResultsError,
+    RaceEventNotFoundForBetResultsError,
+    RaceEventSessionNotFoundForBetResultsError,
 )
 
 BETS_ERROR_MAP = {
@@ -52,8 +57,8 @@ BETS_ERROR_MAP = {
         error_code="bets.bet_context_not_found_for_season",
     ),
     BetAnswersClosedError: ErrorCatalogEntry(
-    status_code=status.HTTP_409_CONFLICT,
-    error_code="bets.answers_closed",
+        status_code=status.HTTP_409_CONFLICT,
+        error_code="bets.answers_closed",
     ),
     BetAnswerQuestionNotFoundError: ErrorCatalogEntry(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -74,5 +79,20 @@ BETS_ERROR_MAP = {
     BetModificationLimitReachedError: ErrorCatalogEntry(
         status_code=status.HTTP_409_CONFLICT,
         error_code="bets.modification_limit_reached",
+    ),
+
+     # Results
+
+    RaceEventNotFoundForBetResultsError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="bets.race_event_not_found",
+    ),
+    RaceEventSessionNotFoundForBetResultsError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="bets.race_event_session_not_found",
+    ),
+    BetContextNotFoundForRaceEventResultsError: ErrorCatalogEntry(
+        status_code=status.HTTP_404_NOT_FOUND,
+        error_code="bets.bet_context_not_found_for_race_event",
     ),
 }

@@ -2,7 +2,10 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from app.domain.bets.shared.models import (
+from app.domain.bets.ports import BetQuestionsRepository
+
+from app.domain.bets.models import (
+    # Shared
     BetTemplateDefinition,
     BetRaceEvent,
     BetRaceEventSession,
@@ -10,10 +13,9 @@ from app.domain.bets.shared.models import (
     BetRosterEntry,
     BetTestingEvent,
     BetTestingEventSession,
-    BetSeason
-)
-from app.domain.bets.shared.ports import BetQuestionsRepository
-from app.domain.bets.questions.models import (
+    BetSeason,
+
+    # Questions
     RaceEventBetQuestionsResult,
     BetQuestionResult,
     RaceEventBetQuestionsSessionResult,

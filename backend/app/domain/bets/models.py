@@ -32,6 +32,23 @@ from app.domain.bets.answers.models import (
     BetAnswerInput,
 )
 
+from app.domain.bets.results.models import (
+    BetResultsUser,
+    BetResultsPoints,
+    BetResultsComponent,
+    BetOfficialResult,
+    BetResultAnswer,
+    BetResultScore,
+    BetResultEntry,
+    BetResultsVisibility,
+    BetResultsScope,
+    RaceEventBetResultsBlock,
+    RaceEventBetResultsSession,
+    RaceEventBetResults,
+    RaceEventSessionBetResults,
+
+)
+
 __all__ = [
     "BetAnswerResult",
     "BetContextDefinition",
@@ -63,4 +80,18 @@ __all__ = [
     "TestingEventBetAnswersResult",
     "TestingEventBetAnswersSessionResult",
     "BetAnswerInput",
+
+    "BetResultsUser",
+    "BetResultsPoints",
+    "BetResultsComponent",
+    "BetOfficialResult",
+    "BetResultAnswer",
+    "BetResultScore",
+    "BetResultEntry",
+    "BetResultsVisibility",
+    "BetResultsScope",
+    "RaceEventBetResultsBlock",
+    "RaceEventBetResultsSession",
+    "RaceEventBetResults",
+    "RaceEventSessionBetResults",
 ]

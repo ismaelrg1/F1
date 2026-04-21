@@ -17,6 +17,11 @@ from app.domain.bets.answers.use_cases import (
     SubmitSeasonBetAnswers
 )
 
+from app.domain.bets.results.use_cases import (
+    GetRaceEventBetResults,
+    GetRaceEventSessionBetResults,
+)
+
 __all__ = [
     "GetRaceEventBetQuestions",
     "GetSeasonBetQuestions",
@@ -33,4 +38,7 @@ __all__ = [
     "SubmitRaceEventBetAnswers",
     "SubmitTestingEventBetAnswers",
     "SubmitSeasonBetAnswers"
+
+    "GetRaceEventBetResults",
+    "GetRaceEventSessionBetResults",
 ]

@@ -53,3 +53,16 @@ class BetRequiredAnswerMissingError(BetsError):
 
 class BetModificationLimitReachedError(BetsError):
     pass
+
+# Results
+
+class RaceEventNotFoundForBetResultsError(BetsError):
+    pass
+
+
+class RaceEventSessionNotFoundForBetResultsError(BetsError):
+    pass
+
+
+class BetContextNotFoundForRaceEventResultsError(BetsError):
+    pass

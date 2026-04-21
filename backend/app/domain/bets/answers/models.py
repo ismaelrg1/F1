@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from app.domain.bets.shared.models import (
+from app.domain.bets.models import (
+    # Shared    
     BetAnswerResult,
 )
 

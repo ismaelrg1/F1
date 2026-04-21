@@ -40,6 +40,22 @@ from app.models.calendar import (
     CalendarResponse,
 )
 
+from app.models.bet_results import (
+    BetResultsScopeRead,
+    BetResultsVisibilityRead,
+    BetResultsUserRead,
+    BetResultsPointsRead,
+    BetResultsComponentRead,
+    BetOfficialResultRead,
+    BetResultAnswerRead,
+    BetResultScoreRead,
+    BetResultEntryRead,
+    RaceEventBetResultsBlockRead,
+    RaceEventBetResultsSessionRead,
+    RaceEventBetResultsResponse,
+    RaceEventSessionBetResultsResponse,
+)
+
 __all__ = [
         "LoginGoogleRequest",
         "LoginLocalRequest",
@@ -73,4 +89,18 @@ __all__ = [
         "CalendarTestingSessionRead",
         "CalendarEventRead",
         "CalendarResponse",
+
+        "BetResultsScopeRead",
+        "BetResultsVisibilityRead",
+        "BetResultsUserRead",
+        "BetResultsPointsRead",
+        "BetResultsComponentRead",
+        "BetOfficialResultRead",
+        "BetResultAnswerRead",
+        "BetResultScoreRead",
+        "BetResultEntryRead",
+        "RaceEventBetResultsBlockRead",
+        "RaceEventBetResultsSessionRead",
+        "RaceEventBetResultsResponse",
+        "RaceEventSessionBetResultsResponse",
 ]
