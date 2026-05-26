@@ -124,6 +124,7 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
         *,
         group_id: int,
         bet_context_id: int,
+        results_published: bool,
     ) -> list[BetResultEntry]:
         bets = self._list_season_scope_bets(
             group_id=group_id,
@@ -146,6 +147,7 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
                     pick=pick,
                     official_values_by_score_id=official_values_by_score_id,
                     components=question_components_by_score_code.get(pick.bet_score.code, []),
+                    results_published=results_published,
                 )
                 for pick in sorted(bet.bet_picks, key=lambda item: (item.bet_score.code, item.id))
             ]
@@ -168,7 +170,7 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
                             components=score_level_components,
                             computed_at=score.computed_at,
                         )
-                        if score is not None
+                        if results_published and score is not None
                         else None
                     ),
                 )
@@ -512,6 +514,7 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
         group_id: int,
         bet_context_id: int,
         event_session_id: int | None,
+        results_published: bool,
     ) -> list[BetResultEntry]:
         bets = self._list_scope_bets(
             group_id=group_id,
@@ -537,6 +540,7 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
                     pick=pick,
                     official_values_by_score_id=official_values_by_score_id,
                     components=question_components_by_score_code.get(pick.bet_score.code, []),
+                    results_published=results_published,
                 )
                 for pick in sorted(bet.bet_picks, key=lambda item: (item.bet_score.code, item.id))
             ]
@@ -559,7 +563,7 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
                             components=score_level_components,
                             computed_at=score.computed_at,
                         )
-                        if score is not None
+                        if results_published and score is not None
                         else None
                     ),
                 )
@@ -573,6 +577,7 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
         group_id: int,
         bet_context_id: int,
         testing_event_session_id: int | None,
+        results_published: bool,
     ) -> list[BetResultEntry]:
         bets = self._list_testing_scope_bets(
             group_id=group_id,
@@ -598,6 +603,7 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
                     pick=pick,
                     official_values_by_score_id=official_values_by_score_id,
                     components=question_components_by_score_code.get(pick.bet_score.code, []),
+                    results_published=results_published,
                 )
                 for pick in sorted(bet.bet_picks, key=lambda item: (item.bet_score.code, item.id))
             ]
@@ -620,7 +626,7 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
                             components=score_level_components,
                             computed_at=score.computed_at,
                         )
-                        if score is not None
+                        if results_published and score is not None
                         else None
                     ),
                 )
@@ -853,7 +859,21 @@ class SqlAlchemyBetResultsRepository(SqlAlchemyBetBaseRepository, BetResultsRepo
         pick: BetPick,
         official_values_by_score_id: dict[int, str],
         components: list[BetResultsComponent],
+        results_published: bool,
     ) -> BetResultAnswer:
+        if not results_published:
+            return BetResultAnswer(
+                bet_score_code=pick.bet_score.code,
+                label=pick.bet_score.label,
+                value=pick.value,
+                is_invalid=pick.is_invalid,
+                invalid_reason=pick.invalid_reason,
+                official_value=None,
+                is_correct=None,
+                points=BetResultsPoints(),
+                components=[],
+            )
+
         official_value = official_values_by_score_id.get(pick.bet_score_id)
 
         return BetResultAnswer(

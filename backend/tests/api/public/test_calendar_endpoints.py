@@ -156,7 +156,7 @@ def test_get_calendar_returns_single_ordered_list_with_testing_first(client, db_
 
     testing_item = payload["items"][0]
     assert testing_item["season_year"] == 2026
-    assert testing_item["round_number"] is None
+    assert "round_number" not in testing_item
     assert testing_item["name"] == "Pre-Season Testing 1"
     assert testing_item["is_up_next"] is True
     assert [session["session_order"] for session in testing_item["testing_sessions"]] == [1, 2]

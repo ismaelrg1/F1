@@ -144,7 +144,7 @@ def test_get_home_returns_next_event_of_active_season(client, db_session) -> Non
     assert payload["next_event"] is not None
     assert payload["next_event"]["event_kind"] == "TESTING"
     assert payload["next_event"]["season_year"] == 2026
-    assert payload["next_event"]["round_number"] is None
+    assert "round_number" not in payload["next_event"]
     assert payload["next_event"]["name"] == "Earlier Testing"
     assert payload["next_event"]["circuit_code"] == "albert-park"
     assert payload["next_event"]["circuit_name"] == "Albert Park"
@@ -195,7 +195,7 @@ def test_get_home_returns_null_when_no_upcoming_event_exists(client, db_session)
     response = client.get("/api/v1/home")
 
     assert response.status_code == 200
-    assert response.json() == {"next_event": None}
+    assert response.json() == {}
 
 
 import json

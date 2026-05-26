@@ -52,6 +52,7 @@ class BetResultsRepository(Protocol):
         *,
         group_id: int,
         bet_context_id: int,
+        results_published: bool,
     ) -> list[BetResultEntry]:
         ...
     
@@ -128,6 +129,7 @@ class BetResultsRepository(Protocol):
         group_id: int,
         bet_context_id: int,
         event_session_id: int | None,
+        results_published: bool,
     ) -> list[BetResultEntry]:
         ...
 
@@ -137,5 +139,6 @@ class BetResultsRepository(Protocol):
         group_id: int,
         bet_context_id: int,
         testing_event_session_id: int | None,
+        results_published: bool,
     ) -> list[BetResultEntry]:
         ...

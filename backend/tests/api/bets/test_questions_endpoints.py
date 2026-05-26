@@ -5419,19 +5419,21 @@ def test_get_race_event_bet_results_with_session_id_returns_only_session_results
         "session_type": "QUALY",
     }
     assert payload["visibility"]["can_view_group_results"] is True
-    assert payload["official_results"][0]["bet_score_code"] == pole_score.code
-    assert payload["official_results"][0]["value"] == "LEC"
+    assert payload["visibility"]["results_published"] is False
+    assert payload["official_results"] == []
     assert len(payload["entries"]) == 1
-    assert payload["entries"][0]["answers"][0]["value"] == "VER"
-    assert payload["entries"][0]["answers"][0]["official_value"] == "LEC"
-    assert payload["entries"][0]["answers"][0]["is_correct"] is False
-    assert payload["entries"][0]["score"]["points"] == {
+    answer = payload["entries"][0]["answers"][0]
+    assert answer["value"] == "VER"
+    assert "official_value" not in answer
+    assert "is_correct" not in answer
+    assert answer["points"] == {
         "base": 0.0,
         "powerup": 0.0,
         "extra": 0.0,
         "penalty": 0.0,
         "total": 0.0,
     }
+    assert "score" not in payload["entries"][0]
 
 
 def test_get_race_event_bet_results_hides_group_entries_when_submit_required_and_viewer_has_not_submitted(
@@ -6037,6 +6039,174 @@ def test_get_testing_event_bet_results_with_session_id_uses_submit_required_for_
         }
     ]
     assert entries_by_username[other_user.username]["answers"][0]["value"] == "LEC"
+    assert "official_value" not in entries_by_username[viewer.username]["answers"][0]
+    assert "is_correct" not in entries_by_username[viewer.username]["answers"][0]
+    assert "score" not in entries_by_username[viewer.username]
+    assert "score" not in entries_by_username[other_user.username]
+
+
+def test_get_season_bet_results_keeps_entries_visible_but_hides_scores_until_results_are_published(
+    client,
+    db_session,
+) -> None:
+    viewer = _create_user(
+        db_session,
+        username=f"viewer_{uuid4().hex[:8]}",
+        email=f"viewer_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    other_user = _create_user(
+        db_session,
+        username=f"other_{uuid4().hex[:8]}",
+        email=f"other_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=viewer.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    db_session.add(
+        GroupMembership(
+            group_id=group.id,
+            user_id=other_user.id,
+            role=GroupRole.MEMBER,
+        )
+    )
+    db_session.flush()
+
+    now = datetime.now(timezone.utc)
+    season = Season(
+        year=2036,
+        is_active=True,
+        betting_open_at=now - timedelta(days=10),
+        lock_cutoff=now + timedelta(days=30),
+        scheduled_lock_cutoff=now + timedelta(days=30),
+    )
+    db_session.add(season)
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.SEASON,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=None,
+        label="2036 Season",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    champion_score = BetScore(
+        code=f"SEASON_CHAMPION_{uuid4().hex[:8].upper()}",
+        label="World Champion",
+        base_points=10,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add_all([bet_context, champion_score])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetResultsVisibilityPolicy(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                visibility_mode=BetResultsVisibilityMode.ALWAYS_VISIBLE,
+            ),
+            OfficialResult(
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                bet_score_id=champion_score.id,
+                value="VER",
+                source=SourceType.MANUAL,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    submitted_at = now - timedelta(days=1)
+    bet = Bet(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        submitted_at=submitted_at,
+        last_modified_at=submitted_at,
+        locked_at=None,
+    )
+    db_session.add(bet)
+    db_session.flush()
+    db_session.add(
+        BetPick(
+            bet_id=bet.id,
+            bet_score_id=champion_score.id,
+            value="LEC",
+        )
+    )
+
+    score = Score(
+        user_id=other_user.id,
+        bet_context_id=bet_context.id,
+        base_points=0,
+        total_points=0,
+        computed_at=now,
+    )
+    db_session.add(score)
+    db_session.flush()
+    db_session.add(
+        ScoreComponent(
+            score_id=score.id,
+            component_type=ScoreComponentType.BASE,
+            code="SEASON_CHAMPION_BASE",
+            points=0,
+            details_json={
+                "applies_to": {
+                    "level": "QUESTION",
+                    "bet_score_code": champion_score.code,
+                },
+                "matched": False,
+            },
+        )
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": viewer.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/seasons/{season.year}/results",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["visibility"]["mode"] == "ALWAYS_VISIBLE"
+    assert payload["visibility"]["can_view_group_results"] is True
+    assert payload["visibility"]["results_published"] is False
+    assert payload["official_results"] == []
+    assert len(payload["entries"]) == 1
+
+    entry = payload["entries"][0]
+    answer = entry["answers"][0]
+    assert answer["bet_score_code"] == champion_score.code
+    assert answer["value"] == "LEC"
+    assert "official_value" not in answer
+    assert "is_correct" not in answer
+    assert answer["points"] == {
+        "base": 0.0,
+        "powerup": 0.0,
+        "extra": 0.0,
+        "penalty": 0.0,
+        "total": 0.0,
+    }
+    assert answer["components"] == []
+    assert "score" not in entry
 
 
 def test_get_season_bet_results_returns_group_results_when_always_visible(client, db_session) -> None:

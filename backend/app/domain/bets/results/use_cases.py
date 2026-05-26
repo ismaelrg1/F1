@@ -68,6 +68,7 @@ class GetRaceEventBetResults:
                 group_id=group_id,
                 bet_context_id=bet_context.id,
                 event_session_id=None,
+                results_published=event_visibility.results_published,
             )
             if event_visibility.can_view_group_results
             else []
@@ -86,7 +87,7 @@ class GetRaceEventBetResults:
                     bet_context_id=bet_context.id,
                     event_session_id=None,
                 )
-                if event_visibility.can_view_group_results
+                if event_visibility.results_published
                 else []
             ),
             entries=event_entries,
@@ -119,7 +120,7 @@ class GetRaceEventBetResults:
                             bet_context_id=bet_context.id,
                             event_session_id=session.id,
                         )
-                        if session_visibility.can_view_group_results
+                        if session_visibility.results_published
                         else []
                     ),
                     entries=(
@@ -127,6 +128,7 @@ class GetRaceEventBetResults:
                             group_id=group_id,
                             bet_context_id=bet_context.id,
                             event_session_id=session.id,
+                            results_published=session_visibility.results_published,
                         )
                         if session_visibility.can_view_group_results
                         else []
@@ -367,7 +369,7 @@ class GetTestingEventSessionBetResults:
                     bet_context_id=bet_context.id,
                     testing_event_session_id=session.id,
                 )
-                if visibility.can_view_group_results
+                if visibility.results_published
                 else []
             ),
             entries=(
@@ -375,6 +377,7 @@ class GetTestingEventSessionBetResults:
                     group_id=group_id,
                     bet_context_id=bet_context.id,
                     testing_event_session_id=session.id,
+                    results_published=visibility.results_published,
                 )
                 if visibility.can_view_group_results
                 else []
@@ -545,13 +548,14 @@ class GetSeasonBetResults:
                 self._repository.list_season_official_results(
                     bet_context_id=bet_context.id,
                 )
-                if visibility.can_view_group_results
+                if visibility.results_published
                 else []
             ),
             entries=(
                 self._repository.list_group_submitted_season_bet_entries(
                     group_id=group_id,
                     bet_context_id=bet_context.id,
+                    results_published=visibility.results_published,
                 )
                 if visibility.can_view_group_results
                 else []
