@@ -39,6 +39,11 @@ from app.domain.admin.teams import (
     CreateTeam,
 )
 
+from app.domain.admin.official_results import (
+    CreateOfficialResults,
+    UpdateOfficialResults,
+)
+
 from app.domain.admin.bet_contexts import GenerateBetContexts
 
 __all__ = [
@@ -71,6 +76,9 @@ __all__ = [
 
     "CreateSeasonTeam",
     "CreateTeam",
+
+    "CreateOfficialResults",
+    "UpdateOfficialResults",
 
     "GenerateBetContexts",
 ]

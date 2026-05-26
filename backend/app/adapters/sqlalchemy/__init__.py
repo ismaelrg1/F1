@@ -27,6 +27,7 @@ from app.adapters.sqlalchemy.admin.bet_context_repository import SqlAlchemyAdmin
 
 from app.adapters.sqlalchemy.ranking.ranking_repository import SqlAlchemyRankingRepository
 
+from app.adapters.sqlalchemy.admin.official_result_repository import SqlAlchemyAdminOfficialResultRepository
 
 __all__ = [
     "SqlAlchemyAccessRepository",
@@ -68,4 +69,6 @@ __all__ = [
     "SqlAlchemyAdminBetContextRepository",
 
     "SqlAlchemyRankingRepository",
+
+    "SqlAlchemyAdminOfficialResultRepository",
 ]
