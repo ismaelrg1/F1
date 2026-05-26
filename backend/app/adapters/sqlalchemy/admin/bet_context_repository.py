@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from app.db.betting import BetContext
 from app.db.competition import RaceEvent, Season, TestingEvent
 from app.db.enums import BetContextKind
-from app.db.social import Group
+from app.db.social import Group, GroupMembership
+from app.db.social.group_membership import GroupRole
 from app.domain.admin.bet_contexts.ports import (
     AdminBetContextRaceEvent,
     AdminBetContextRepository,
@@ -169,3 +170,15 @@ class SqlAlchemyAdminBetContextRepository(AdminBetContextRepository):
         self._session.add(context)
         self._session.flush()
         return True
+    
+    def get_group_role(
+        self,
+        *,
+        user_id: int,
+        group_id: int,
+    ) -> GroupRole | None:
+        stmt = select(GroupMembership.role).where(
+            GroupMembership.user_id == user_id,
+            GroupMembership.group_id == group_id,
+        )
+        return self._session.execute(stmt).scalar_one_or_none()

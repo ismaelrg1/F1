@@ -16,7 +16,8 @@ from app.db.enums import (
     RoleName,
     TestingEventStatus as CompetitionTestingEventStatus,
 )
-from app.db.social import Group
+from app.db.social import Group, GroupMembership
+from app.db.social.group_membership import GroupRole
 
 def _create_admin_user_with_permission(
     db_session,
@@ -64,6 +65,42 @@ def _create_admin_user_with_permission(
     )
 
     db_session.add(user)
+    db_session.flush()
+
+
+def _create_local_user(
+    db_session,
+    *,
+    username: str,
+    email: str,
+    password: str,
+) -> User:
+    hasher = PasslibPasswordHasher()
+    user = User(
+        username=username,
+        email=email,
+        password_hash=hasher.hash(password),
+        auth_provider="LOCAL",
+    )
+    db_session.add(user)
+    db_session.flush()
+    return user
+
+
+def _add_group_membership(
+    db_session,
+    *,
+    user_id: int,
+    group_id: int,
+    role: GroupRole,
+) -> None:
+    db_session.add(
+        GroupMembership(
+            user_id=user_id,
+            group_id=group_id,
+            role=role,
+        )
+    )
     db_session.flush()
 
 
@@ -319,9 +356,9 @@ def test_generate_bet_contexts_endpoint_creates_contexts_and_is_idempotent(clien
 
     response = client.post(
         "/api/v1/admin/bet-contexts/generate",
+        headers={"X-Group-Id": str(group.public_id)},
         json={
             "season_id": season.id,
-            "group_id": group.id,
             "include_season": True,
             "include_race_events": True,
             "include_testing_events": True,
@@ -366,9 +403,9 @@ def test_generate_bet_contexts_endpoint_creates_contexts_and_is_idempotent(clien
 
     second_response = client.post(
         "/api/v1/admin/bet-contexts/generate",
+        headers={"X-Group-Id": str(group.public_id)},
         json={
             "season_id": season.id,
-            "group_id": group.id,
             "include_season": True,
             "include_race_events": True,
             "include_testing_events": True,
@@ -389,6 +426,285 @@ def test_generate_bet_contexts_endpoint_creates_contexts_and_is_idempotent(clien
         select(BetContext).where(BetContext.group_id == group.id)
     ).scalars().all()
     assert len(total_contexts) == 3
+
+
+def test_generate_bet_contexts_endpoint_without_group_header_processes_all_groups_for_admin(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_generate_all_bet_contexts",
+        email="admin_generate_all_bet_contexts@example.com",
+        password="secret123",
+        permission_code="COMPETITION_MANAGE",
+    )
+
+    first_group = Group(
+        name="First Bet Context Group",
+        is_private=True,
+        teams_enabled=False,
+        max_team_size=None,
+    )
+    second_group = Group(
+        name="Second Bet Context Group",
+        is_private=True,
+        teams_enabled=False,
+        max_team_size=None,
+    )
+    season = Season(year=2031, is_active=False)
+    country = Country(
+        iso2="IT",
+        name="Italy",
+        flag_asset_url=None,
+    )
+    db_session.add_all([first_group, second_group, season, country])
+    db_session.flush()
+
+    circuit = Circuit(
+        code="monza",
+        name="Autodromo Nazionale Monza",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=1,
+        name="Italian Grand Prix",
+        status=RaceEventStatus.SCHEDULED,
+    )
+    testing_event = CompetitionTestingEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        name="Italian Pre-Season Testing",
+        status=CompetitionTestingEventStatus.SCHEDULED,
+    )
+    db_session.add_all([race_event, testing_event])
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_generate_all_bet_contexts", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/bet-contexts/generate",
+        json={
+            "season_id": season.id,
+            "include_season": True,
+            "include_race_events": True,
+            "include_testing_events": True,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "groups_processed": 2,
+        "created": 6,
+        "existing": 0,
+        "season_contexts_created": 2,
+        "race_event_contexts_created": 2,
+        "testing_event_contexts_created": 2,
+    }
+
+    contexts = db_session.execute(
+        select(BetContext).where(BetContext.season_id == season.id)
+    ).scalars().all()
+    assert len(contexts) == 6
+    assert {context.group_id for context in contexts} == {first_group.id, second_group.id}
+
+
+def test_generate_bet_contexts_endpoint_requires_group_header_for_non_admin(client, db_session) -> None:
+    user = _create_local_user(
+        db_session,
+        username="owner_without_group_scope",
+        email="owner_without_group_scope@example.com",
+        password="secret123",
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    season = Season(year=2032, is_active=False)
+    db_session.add(season)
+    db_session.flush()
+
+    response = client.post(
+        "/api/v1/admin/bet-contexts/generate",
+        json={
+            "season_id": season.id,
+            "include_season": True,
+            "include_race_events": False,
+            "include_testing_events": False,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"]["code"] == "admin.bet_context_generation_group_scope_required"
+
+
+def test_generate_bet_contexts_endpoint_allows_owner_for_current_group(client, db_session) -> None:
+    owner = _create_local_user(
+        db_session,
+        username="owner_generate_bet_contexts",
+        email="owner_generate_bet_contexts@example.com",
+        password="secret123",
+    )
+
+    group = Group(
+        name="Owner Managed Group",
+        is_private=True,
+        teams_enabled=False,
+        max_team_size=None,
+    )
+    season = Season(year=2033, is_active=False)
+    db_session.add_all([group, season])
+    db_session.flush()
+
+    _add_group_membership(
+        db_session,
+        user_id=owner.id,
+        group_id=group.id,
+        role=GroupRole.OWNER,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": owner.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/bet-contexts/generate",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "season_id": season.id,
+            "include_season": True,
+            "include_race_events": False,
+            "include_testing_events": False,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "groups_processed": 1,
+        "created": 1,
+        "existing": 0,
+        "season_contexts_created": 1,
+        "race_event_contexts_created": 0,
+        "testing_event_contexts_created": 0,
+    }
+
+    contexts = db_session.execute(
+        select(BetContext).where(BetContext.group_id == group.id)
+    ).scalars().all()
+    assert len(contexts) == 1
+    assert contexts[0].kind == BetContextKind.SEASON
+
+
+def test_generate_bet_contexts_endpoint_allows_moderator_for_current_group(client, db_session) -> None:
+    moderator = _create_local_user(
+        db_session,
+        username="moderator_generate_bet_contexts",
+        email="moderator_generate_bet_contexts@example.com",
+        password="secret123",
+    )
+
+    group = Group(
+        name="Moderator Managed Group",
+        is_private=True,
+        teams_enabled=False,
+        max_team_size=None,
+    )
+    season = Season(year=2035, is_active=False)
+    db_session.add_all([group, season])
+    db_session.flush()
+
+    _add_group_membership(
+        db_session,
+        user_id=moderator.id,
+        group_id=group.id,
+        role=GroupRole.MODERATOR,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": moderator.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/bet-contexts/generate",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "season_id": season.id,
+            "include_season": True,
+            "include_race_events": False,
+            "include_testing_events": False,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "groups_processed": 1,
+        "created": 1,
+        "existing": 0,
+        "season_contexts_created": 1,
+        "race_event_contexts_created": 0,
+        "testing_event_contexts_created": 0,
+    }
+
+
+def test_generate_bet_contexts_endpoint_forbids_member_role_for_group_scope(client, db_session) -> None:
+    member = _create_local_user(
+        db_session,
+        username="member_generate_bet_contexts",
+        email="member_generate_bet_contexts@example.com",
+        password="secret123",
+    )
+
+    group = Group(
+        name="Member Managed Group",
+        is_private=True,
+        teams_enabled=False,
+        max_team_size=None,
+    )
+    season = Season(year=2034, is_active=False)
+    db_session.add_all([group, season])
+    db_session.flush()
+
+    _add_group_membership(
+        db_session,
+        user_id=member.id,
+        group_id=group.id,
+        role=GroupRole.MEMBER,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": member.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/bet-contexts/generate",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "season_id": season.id,
+            "include_season": True,
+            "include_race_events": False,
+            "include_testing_events": False,
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["error"]["code"] == "admin.bet_context_generation_forbidden_group"
 
 
 def test_create_country_endpoint_creates_country(client, db_session) -> None:

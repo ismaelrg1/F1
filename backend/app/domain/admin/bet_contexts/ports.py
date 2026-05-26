@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Protocol
+from app.db.social.group_membership import GroupRole
 
 
 @dataclass(frozen=True)
@@ -59,4 +60,12 @@ class AdminBetContextRepository(Protocol):
         testing_event_id: int,
         label: str,
     ) -> bool:
+        ...
+
+    def get_group_role(
+        self,
+        *,
+        user_id: int,
+        group_id: int,
+    ) -> GroupRole | None:
         ...

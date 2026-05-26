@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     calendar,
     bets,
     ranking,
+    groups,
 )
 
 api_router = APIRouter()
@@ -19,5 +20,6 @@ api_router.include_router(calendar.router, tags=["calendar"])
 api_router.include_router(seasons.router, tags=["seasons"])
 api_router.include_router(bets.router, prefix="/bets", tags=["bets"])
 api_router.include_router(ranking.router, prefix="/ranking", tags=["ranking"])
+api_router.include_router(groups.router, tags=["groups"])
 
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])

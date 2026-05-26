@@ -5,7 +5,6 @@ class AdminBetContextGenerateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     season_id: int
-    group_id: int | None = None
     include_season: bool = True
     include_race_events: bool = True
     include_testing_events: bool = True

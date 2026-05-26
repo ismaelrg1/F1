@@ -27,3 +27,10 @@ class BetContextGenerationGroupNotFoundError(AdminError):
     @property
     def public_params(self) -> dict:
         return {"group_id": self.group_id}
+    
+class BetContextGenerationGroupScopeRequiredError(AdminError):
+    pass
+
+
+class BetContextGenerationForbiddenGroupError(AdminError):
+    pass

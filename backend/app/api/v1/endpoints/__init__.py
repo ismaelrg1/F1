@@ -1,4 +1,4 @@
-from . import admin, auth, bets, calendar, health, home, seasons, ranking
+from . import admin, auth, bets, calendar, health, home, seasons, ranking, groups
 
 __all__ = [
     "admin",
@@ -9,4 +9,5 @@ __all__ = [
     "home",
     "seasons",
     "ranking",
+    "groups",
 ]

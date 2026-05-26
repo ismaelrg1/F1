@@ -29,6 +29,8 @@ from app.adapters.sqlalchemy.ranking.ranking_repository import SqlAlchemyRanking
 
 from app.adapters.sqlalchemy.admin.official_result_repository import SqlAlchemyAdminOfficialResultRepository
 
+from app.adapters.sqlalchemy.groups_repository import SqlAlchemyGroupRepository
+
 __all__ = [
     "SqlAlchemyAccessRepository",
 
@@ -71,4 +73,6 @@ __all__ = [
     "SqlAlchemyRankingRepository",
 
     "SqlAlchemyAdminOfficialResultRepository",
+
+    "SqlAlchemyGroupRepository",
 ]
