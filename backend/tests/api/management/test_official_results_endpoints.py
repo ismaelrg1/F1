@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import Permission, Role, User
-from app.db.betting import BetContext, BetScore
+from app.db.betting import BetContext, BetScore, BetTemplate, BetTemplateItem
 from app.db.competition import (
     Circuit,
     Country,
@@ -19,6 +19,7 @@ from app.db.competition import (
 )
 from app.db.enums import (
     BetContextKind,
+    BetTemplateScope,
     BetValueType,
     RaceEventStatus,
     RoleName,
@@ -26,7 +27,7 @@ from app.db.enums import (
     SourceProvider,
     TestingEventStatus as CompetitionTestingEventStatus,
 )
-from app.db.scoring import OfficialResult
+from app.db.scoring import OfficialResult, ResultPublication
 from app.db.scoring.official_result import SourceType
 from app.db.social import Group, GroupMembership
 from app.db.social.group_membership import GroupRole
@@ -946,3 +947,379 @@ def test_patch_official_results_prints_payload(client, db_session) -> None:
 
     assert response.status_code == 200
     print(json.dumps(response.json(), indent=2, ensure_ascii=False))
+
+
+def _add_race_official_result_templates(db_session, data) -> None:
+    event_template = BetTemplate(
+        season_id=data["season"].id,
+        name=f"GP Event Template {uuid4().hex[:8]}",
+        context_kind=BetContextKind.GP,
+        scope=BetTemplateScope.EVENT,
+        session_type=None,
+    )
+    fp1_template = BetTemplate(
+        season_id=data["season"].id,
+        name=f"GP FP1 Template {uuid4().hex[:8]}",
+        context_kind=BetContextKind.GP,
+        scope=BetTemplateScope.SESSION,
+        session_type=SessionType.FP1,
+    )
+    db_session.add_all([event_template, fp1_template])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            BetTemplateItem(
+                template_id=event_template.id,
+                bet_score_id=data["winner_score"].id,
+                required=True,
+                display_order=0,
+            ),
+            BetTemplateItem(
+                template_id=fp1_template.id,
+                bet_score_id=data["fp1_fastest_score"].id,
+                required=True,
+                display_order=0,
+            ),
+        ]
+    )
+    db_session.flush()
+
+
+def _add_testing_official_result_templates(db_session, data) -> None:
+    template = BetTemplate(
+        season_id=data["season"].id,
+        name=f"Testing Template {uuid4().hex[:8]}",
+        context_kind=BetContextKind.PRETESTING,
+        scope=BetTemplateScope.EVENT,
+        session_type=None,
+    )
+    db_session.add(template)
+    db_session.flush()
+
+    db_session.add(
+        BetTemplateItem(
+            template_id=template.id,
+            bet_score_id=data["fastest_score"].id,
+            required=True,
+            display_order=0,
+        )
+    )
+    db_session.flush()
+
+
+def _add_season_official_result_templates(db_session, data) -> None:
+    template = BetTemplate(
+        season_id=data["season"].id,
+        name=f"Season Template {uuid4().hex[:8]}",
+        context_kind=BetContextKind.SEASON,
+        scope=BetTemplateScope.EVENT,
+        session_type=None,
+    )
+    db_session.add(template)
+    db_session.flush()
+
+    db_session.add(
+        BetTemplateItem(
+            template_id=template.id,
+            bet_score_id=data["champion_score"].id,
+            required=True,
+            display_order=0,
+        )
+    )
+    db_session.flush()
+
+
+def test_get_race_event_official_results_returns_questions_values_and_scope_status(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_official_results_get_race",
+        email="admin_official_results_get_race@example.com",
+        password="secret123",
+        permission_code="SCORING_MANAGE",
+    )
+    data = _create_race_bet_context_fixture(db_session)
+    _add_race_official_result_templates(db_session, data)
+
+    db_session.add_all(
+        [
+            OfficialResult(
+                bet_context_id=data["bet_context"].id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                bet_score_id=data["winner_score"].id,
+                value="VER",
+                source=SourceType.MANUAL,
+            ),
+            OfficialResult(
+                bet_context_id=data["bet_context"].id,
+                event_session_id=data["fp1_session"].id,
+                testing_event_session_id=None,
+                bet_score_id=data["fp1_fastest_score"].id,
+                value="LEC",
+                source=SourceType.FASTF1,
+            ),
+            ResultPublication(
+                bet_context_id=data["bet_context"].id,
+                event_session_id=data["fp1_session"].id,
+                testing_event_session_id=None,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_official_results_get_race", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert "bet_context_public_id" not in payload
+    assert payload["kind"] == "GP"
+    assert payload["race_event_public_id"] == str(data["race_event"].public_id)
+    assert payload["scope_status"] == {
+        "has_official_results": True,
+        "results_published": False,
+        "write_method": "PATCH",
+    }
+
+    assert len(payload["event_questions"]) == 1
+    event_question = payload["event_questions"][0]
+    assert event_question["code"] == data["winner_score"].code
+    assert event_question["label"] == "Race Winner"
+    assert event_question["official_value"] == "VER"
+    assert event_question["official_source"] == "MANUAL"
+    assert event_question["official_created_at"] is not None
+
+    assert len(payload["sessions"]) == 1
+    session = payload["sessions"][0]
+    assert session["event_session_public_id"] == str(data["fp1_session"].public_id)
+    assert session["scope_status"] == {
+        "has_official_results": True,
+        "results_published": True,
+        "write_method": "PATCH",
+    }
+    assert session["questions"][0]["code"] == data["fp1_fastest_score"].code
+    assert session["questions"][0]["official_value"] == "LEC"
+    assert session["questions"][0]["official_source"] == "FASTF1"
+
+
+def test_get_race_event_official_results_returns_post_status_when_no_results_exist(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_official_results_get_race_empty",
+        email="admin_official_results_get_race_empty@example.com",
+        password="secret123",
+        permission_code="SCORING_MANAGE",
+    )
+    data = _create_race_bet_context_fixture(db_session)
+    _add_race_official_result_templates(db_session, data)
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_official_results_get_race_empty", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["scope_status"] == {
+        "has_official_results": False,
+        "results_published": False,
+        "write_method": "POST",
+    }
+    assert "official_value" not in payload["event_questions"][0]
+    assert "official_source" not in payload["event_questions"][0]
+    assert "official_created_at" not in payload["event_questions"][0]
+
+
+def test_get_testing_event_official_results_returns_session_values(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_official_results_get_testing",
+        email="admin_official_results_get_testing@example.com",
+        password="secret123",
+        permission_code="SCORING_MANAGE",
+    )
+    data = _create_testing_bet_context_fixture(db_session)
+    _add_testing_official_result_templates(db_session, data)
+
+    db_session.add_all(
+        [
+            OfficialResult(
+                bet_context_id=data["bet_context"].id,
+                event_session_id=None,
+                testing_event_session_id=data["session"].id,
+                bet_score_id=data["fastest_score"].id,
+                value="NOR",
+                source=SourceType.MANUAL,
+            ),
+            ResultPublication(
+                bet_context_id=data["bet_context"].id,
+                event_session_id=None,
+                testing_event_session_id=data["session"].id,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_official_results_get_testing", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/management/official-results/testing-events/{data['testing_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert "bet_context_public_id" not in payload
+    assert payload["kind"] == "PRETESTING"
+    assert payload["testing_event_public_id"] == str(data["testing_event"].public_id)
+    assert payload["scope_status"]["write_method"] == "POST"
+    assert len(payload["sessions"]) == 1
+
+    session = payload["sessions"][0]
+    assert session["testing_event_session_public_id"] == str(data["session"].public_id)
+    assert session["scope_status"] == {
+        "has_official_results": True,
+        "results_published": True,
+        "write_method": "PATCH",
+    }
+    assert session["questions"][0]["code"] == data["fastest_score"].code
+    assert session["questions"][0]["official_value"] == "NOR"
+
+
+def test_get_season_official_results_returns_questions_values_and_publication_status(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_official_results_get_season",
+        email="admin_official_results_get_season@example.com",
+        password="secret123",
+        permission_code="SCORING_MANAGE",
+    )
+    data = _create_season_bet_context_fixture(db_session)
+    _add_season_official_result_templates(db_session, data)
+
+    db_session.add_all(
+        [
+            OfficialResult(
+                bet_context_id=data["bet_context"].id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                bet_score_id=data["champion_score"].id,
+                value="VER",
+                source=SourceType.MANUAL,
+            ),
+            ResultPublication(
+                bet_context_id=data["bet_context"].id,
+                event_session_id=None,
+                testing_event_session_id=None,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_official_results_get_season", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/management/official-results/seasons/{data['season'].year}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert "bet_context_public_id" not in payload
+    assert payload["kind"] == "SEASON"
+    assert payload["season_year"] == data["season"].year
+    assert payload["scope_status"] == {
+        "has_official_results": True,
+        "results_published": True,
+        "write_method": "PATCH",
+    }
+    assert payload["questions"][0]["code"] == data["champion_score"].code
+    assert payload["questions"][0]["official_value"] == "VER"
+
+
+def test_get_official_results_allows_group_owner(client, db_session) -> None:
+    user = _create_local_user(
+        db_session,
+        username="owner_official_results_get",
+        email="owner_official_results_get@example.com",
+        password="secret123",
+    )
+    data = _create_race_bet_context_fixture(db_session)
+    _add_race_official_result_templates(db_session, data)
+    _add_group_membership(
+        db_session,
+        group_id=data["group"].id,
+        user_id=user.id,
+        role=GroupRole.OWNER,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "owner_official_results_get", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["event_questions"][0]["code"] == data["winner_score"].code
+
+
+def test_get_official_results_forbids_group_member(client, db_session) -> None:
+    user = _create_local_user(
+        db_session,
+        username="member_official_results_get",
+        email="member_official_results_get@example.com",
+        password="secret123",
+    )
+    data = _create_race_bet_context_fixture(db_session)
+    _add_race_official_result_templates(db_session, data)
+    _add_group_membership(
+        db_session,
+        group_id=data["group"].id,
+        user_id=user.id,
+        role=GroupRole.MEMBER,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "member_official_results_get", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["error"]["code"] == "management.official_results.forbidden_group"

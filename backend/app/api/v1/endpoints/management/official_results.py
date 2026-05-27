@@ -3,14 +3,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
-from app.adapters.sqlalchemy import SqlAlchemyAccessRepository, SqlAlchemyOfficialResultRepository
-from app.api.deps import get_current_user, _translate_management_error
+from app.adapters.sqlalchemy import SqlAlchemyAccessRepository, SqlAlchemyOfficialResultRepository, SqlAlchemyBetQuestionsRepository
+from app.api.deps import get_current_user, _translate_management_error, _translate_bets_error
 from app.api.error_translators import get_preferred_locale
 from app.core.config import settings
 from app.db.auth import User
 from app.db.enums import RoleName
 from app.db.session import get_db
 from app.db.social.group_membership import GroupRole
+from app.domain.bets import BetsError
 from app.domain.access import ResolveCurrentGroup
 from app.domain.management import ManagementError
 from app.domain.management.official_results.answers import (
@@ -18,14 +19,23 @@ from app.domain.management.official_results.answers import (
     OfficialResultInput,
     UpdateOfficialResults,
 )
-from app.domain.management.official_results.errors import (
-    OfficialResultsBetContextNotFoundError,
-    OfficialResultsForbiddenGroupError,
+from app.domain.management.official_results.questions import (
+    GetRaceEventOfficialResultsForm,
+    GetSeasonOfficialResultsForm,
+    GetTestingEventOfficialResultsForm,
 )
 from app.models.management_official_results import (
     OfficialResultRead,
     OfficialResultsWriteRequest,
     OfficialResultsWriteResponse,
+    OfficialResultQuestionOptionRead,
+    OfficialResultQuestionRead,
+    OfficialResultScopeStatusRead,
+    RaceEventOfficialResultsResponse,
+    RaceEventOfficialResultsSessionRead,
+    SeasonOfficialResultsResponse,
+    TestingEventOfficialResultsResponse,
+    TestingEventOfficialResultsSessionRead,
 )
 
 router = APIRouter()
@@ -223,6 +233,190 @@ def update_season_official_results(
         db=db,
         bet_context_public_id=bet_context_public_id,
     )
+
+
+@router.get(
+    "/official-results/race-events/{race_event_public_id}",
+    response_model=RaceEventOfficialResultsResponse,
+    response_model_exclude_none=True,
+)
+def get_race_event_official_results(
+    race_event_public_id: UUID,
+    request: Request,
+    x_group_id: UUID | None = Header(default=None, alias="X-Group-Id"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> RaceEventOfficialResultsResponse:
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id)
+
+    use_case = GetRaceEventOfficialResultsForm(
+        SqlAlchemyBetQuestionsRepository(db),
+        SqlAlchemyOfficialResultRepository(db),
+    )
+
+    try:
+        result = use_case.execute(
+            race_event_public_id=race_event_public_id,
+            group_id=group_id,
+        )
+    except ManagementError as exc:
+        raise _translate_management_error(exc, locale=locale) from exc
+    except BetsError as exc:
+        raise _translate_bets_error(exc, locale=locale) from exc
+
+    return RaceEventOfficialResultsResponse(
+        kind=result.kind,
+        race_event_public_id=result.race_event_public_id,
+        label=result.label,
+        scope_status=_map_scope_status(result.scope_status),
+        event_questions=_map_questions(result.event_questions),
+        sessions=[
+            RaceEventOfficialResultsSessionRead(
+                event_session_public_id=session.event_session_public_id,
+                session_type=session.session_type,
+                start_datetime=session.start_datetime,
+                scheduled_start_datetime=session.scheduled_start_datetime,
+                lock_cutoff=session.lock_cutoff,
+                scheduled_lock_cutoff=session.scheduled_lock_cutoff,
+                status=session.status,
+                scope_status=_map_scope_status(session.scope_status),
+                questions=_map_questions(session.questions),
+            )
+            for session in result.sessions
+        ],
+    )
+
+
+@router.get(
+    "/official-results/testing-events/{testing_event_public_id}",
+    response_model=TestingEventOfficialResultsResponse,
+    response_model_exclude_none=True,
+)
+def get_testing_event_official_results(
+    testing_event_public_id: UUID,
+    request: Request,
+    x_group_id: UUID | None = Header(default=None, alias="X-Group-Id"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TestingEventOfficialResultsResponse:
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id)
+
+    use_case = GetTestingEventOfficialResultsForm(
+        SqlAlchemyBetQuestionsRepository(db),
+        SqlAlchemyOfficialResultRepository(db),
+    )
+
+    try:
+        result = use_case.execute(
+            testing_event_public_id=testing_event_public_id,
+            group_id=group_id,
+        )
+    except ManagementError as exc:
+        raise _translate_management_error(exc, locale=locale) from exc
+    except BetsError as exc:
+        raise _translate_bets_error(exc, locale=locale) from exc
+
+    return TestingEventOfficialResultsResponse(
+        kind=result.kind,
+        testing_event_public_id=result.testing_event_public_id,
+        label=result.label,
+        status=result.status,
+        scope_status=_map_scope_status(result.scope_status),
+        event_questions=_map_questions(result.event_questions),
+        sessions=[
+            TestingEventOfficialResultsSessionRead(
+                testing_event_session_public_id=session.testing_event_session_public_id,
+                session_order=session.session_order,
+                name=session.name,
+                start_datetime=session.start_datetime,
+                end_datetime=session.end_datetime,
+                scheduled_start_datetime=session.scheduled_start_datetime,
+                scheduled_end_datetime=session.scheduled_end_datetime,
+                scope_status=_map_scope_status(session.scope_status),
+                questions=_map_questions(session.questions),
+            )
+            for session in result.sessions
+        ],
+    )
+
+
+@router.get(
+    "/official-results/seasons/{season_year}",
+    response_model=SeasonOfficialResultsResponse,
+    response_model_exclude_none=True,
+)
+def get_season_official_results(
+    season_year: int,
+    request: Request,
+    x_group_id: UUID | None = Header(default=None, alias="X-Group-Id"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> SeasonOfficialResultsResponse:
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id)
+
+    use_case = GetSeasonOfficialResultsForm(
+        SqlAlchemyBetQuestionsRepository(db),
+        SqlAlchemyOfficialResultRepository(db),
+    )
+
+    try:
+        result = use_case.execute(
+            season_year=season_year,
+            group_id=group_id,
+        )
+    except ManagementError as exc:
+        raise _translate_management_error(exc, locale=locale) from exc
+    except BetsError as exc:
+        raise _translate_bets_error(exc, locale=locale) from exc
+
+    return SeasonOfficialResultsResponse(
+        kind=result.kind,
+        season_year=result.season_year,
+        label=result.label,
+        scope_status=_map_scope_status(result.scope_status),
+        questions=_map_questions(result.questions),
+    )
+
+
+def _map_scope_status(scope_status) -> OfficialResultScopeStatusRead:
+    return OfficialResultScopeStatusRead(
+        has_official_results=scope_status.has_official_results,
+        results_published=scope_status.results_published,
+        write_method=scope_status.write_method,
+    )
+
+
+def _map_questions(questions) -> list[OfficialResultQuestionRead]:
+    return [
+        OfficialResultQuestionRead(
+            code=question.code,
+            label=question.label,
+            value_type=question.value_type,
+            required=question.required,
+            display_order=question.display_order,
+            base_points=question.base_points,
+            constraints_json=question.constraints_json,
+            options=(
+                [
+                    OfficialResultQuestionOptionRead(
+                        value=option.value,
+                        label=option.label,
+                        meta=option.meta,
+                    )
+                    for option in question.options
+                ]
+                if question.options is not None
+                else None
+            ),
+            official_value=question.official_value,
+            official_source=question.official_source,
+            official_created_at=question.official_created_at,
+        )
+        for question in questions
+    ]
 
 
 def _resolve_management_group_id(

@@ -7,8 +7,10 @@ from app.db.social import GroupMembership
 from app.db.betting import BetContext, BetScore
 from app.db.competition import EventSession, TestingEventSession
 from app.db.scoring import OfficialResult as OfficialResultORM
+from app.db.scoring import ResultPublication
 from app.db.scoring.official_result import SourceType
 from app.domain.management.official_results.answers.models import OfficialResultInput
+from app.domain.management.official_results.questions.models import ExistingOfficialResult, OfficialResultScopeKey
 from app.domain.management.official_results.models import OfficialResult as OfficialResultDomain
 
 from app.db.competition import RaceEvent, Season, TestingEvent
@@ -276,6 +278,76 @@ class SqlAlchemyOfficialResultRepository(OfficialResultRepository):
             )
         )
         return self._session.execute(stmt).scalar_one_or_none()
+    
+    def list_official_results_for_context(
+        self,
+        *,
+        bet_context_id: int,
+    ) -> list[ExistingOfficialResult]:
+        stmt = (
+            select(OfficialResultORM)
+            .where(OfficialResultORM.bet_context_id == bet_context_id)
+            .options(
+                joinedload(OfficialResultORM.event_session),
+                joinedload(OfficialResultORM.testing_event_session),
+                joinedload(OfficialResultORM.bet_score),
+            )
+        )
+
+        rows = self._session.execute(stmt).scalars().all()
+
+        return [
+            ExistingOfficialResult(
+                event_session_public_id=(
+                    row.event_session.public_id
+                    if row.event_session is not None
+                    else None
+                ),
+                testing_event_session_public_id=(
+                    row.testing_event_session.public_id
+                    if row.testing_event_session is not None
+                    else None
+                ),
+                bet_score_code=row.bet_score.code,
+                value=row.value,
+                source=row.source,
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+
+
+    def list_result_publications_for_context(
+        self,
+        *,
+        bet_context_id: int,
+    ) -> set[OfficialResultScopeKey]:
+        stmt = (
+            select(ResultPublication)
+            .where(ResultPublication.bet_context_id == bet_context_id)
+            .options(
+                joinedload(ResultPublication.event_session),
+                joinedload(ResultPublication.testing_event_session),
+            )
+        )
+
+        rows = self._session.execute(stmt).scalars().all()
+
+        return {
+            OfficialResultScopeKey(
+                event_session_public_id=(
+                    row.event_session.public_id
+                    if row.event_session is not None
+                    else None
+                ),
+                testing_event_session_public_id=(
+                    row.testing_event_session.public_id
+                    if row.testing_event_session is not None
+                    else None
+                ),
+            )
+            for row in rows
+        }
 
     def _reload_results(
         self,
