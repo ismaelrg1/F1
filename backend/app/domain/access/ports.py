@@ -16,3 +16,6 @@ class AccessRepository(Protocol):
 
     def is_group_member(self, user_id: int, group_id: int) -> bool:
         ...
+
+    def get_group_role(self, *, user_id: int, group_id: int):
+        ...

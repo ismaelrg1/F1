@@ -57,3 +57,10 @@ class SqlAlchemyAccessRepository(AccessRepository):
         )
         membership_id = self._session.execute(stmt).scalar_one_or_none()
         return membership_id is not None
+
+    def get_group_role(self, *, user_id: int, group_id: int):
+        stmt = select(GroupMembership.role).where(
+            GroupMembership.user_id == user_id,
+            GroupMembership.group_id == group_id,
+        )
+        return self._session.execute(stmt).scalar_one_or_none()
