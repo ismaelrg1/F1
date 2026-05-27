@@ -1,4 +1,4 @@
-class RankingError(Exception):
+class ManagementError(Exception):
     @property
     def context(self) -> dict:
         return {}
@@ -10,7 +10,3 @@ class RankingError(Exception):
     @property
     def log_level(self) -> str:
         return "warning"
-
-
-class SeasonNotFoundForRankingError(RankingError):
-    pass

@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from app.db.scoring.official_result import SourceType
-from app.domain.admin.official_results.errors import (
+from app.domain.management.official_results.errors import (
     OfficialResultsAlreadyExistsError,
     OfficialResultsBetContextNotFoundError,
     OfficialResultsBetScoreNotFoundError,
@@ -10,15 +10,15 @@ from app.domain.admin.official_results.errors import (
     OfficialResultsNotFoundError,
     OfficialResultsTestingEventSessionNotFoundError,
 )
-from app.domain.admin.official_results.models import (
-    AdminOfficialResult,
-    AdminOfficialResultInput,
+from app.domain.management.official_results.models import (
+    OfficialResult,
+    OfficialResultInput,
 )
-from app.domain.admin.official_results.ports import AdminOfficialResultRepository
+from app.domain.management.official_results.ports import OfficialResultRepository
 
 
 class CreateOfficialResults:
-    def __init__(self, repository: AdminOfficialResultRepository):
+    def __init__(self, repository: OfficialResultRepository):
         self._repository = repository
 
     def execute(
@@ -28,8 +28,8 @@ class CreateOfficialResults:
         event_session_public_id: UUID | None,
         testing_event_session_public_id: UUID | None,
         source: SourceType,
-        results: list[AdminOfficialResultInput],
-    ) -> list[AdminOfficialResult]:
+        results: list[OfficialResultInput],
+    ) -> list[OfficialResult]:
         bet_context_id, _ = self._resolve_scope_ids(
             bet_context_public_id=bet_context_public_id,
             event_session_public_id=event_session_public_id,
@@ -56,7 +56,7 @@ class CreateOfficialResults:
             raise OfficialResultsAlreadyExistsError()
 
         normalized_results = [
-            AdminOfficialResultInput(
+            OfficialResultInput(
                 bet_score_code=item.bet_score_code.strip(),
                 value=item.value.strip(),
             )
@@ -118,7 +118,7 @@ class CreateOfficialResults:
 
 
 class UpdateOfficialResults:
-    def __init__(self, repository: AdminOfficialResultRepository):
+    def __init__(self, repository: OfficialResultRepository):
         self._repository = repository
 
     def execute(
@@ -128,8 +128,8 @@ class UpdateOfficialResults:
         event_session_public_id: UUID | None,
         testing_event_session_public_id: UUID | None,
         source: SourceType,
-        results: list[AdminOfficialResultInput],
-    ) -> list[AdminOfficialResult]:
+        results: list[OfficialResultInput],
+    ) -> list[OfficialResult]:
         creator = CreateOfficialResults(self._repository)
 
         bet_context_id, _ = creator._resolve_scope_ids(
@@ -158,7 +158,7 @@ class UpdateOfficialResults:
             raise OfficialResultsNotFoundError()
 
         normalized_results = [
-            AdminOfficialResultInput(
+            OfficialResultInput(
                 bet_score_code=item.bet_score_code.strip(),
                 value=item.value.strip(),
             )

@@ -25,7 +25,7 @@ class OfficialResultsWriteRequest(BaseModel):
         return self
 
 
-class AdminOfficialResultRead(BaseModel):
+class OfficialResultRead(BaseModel):
     bet_context_public_id: UUID
     event_session_public_id: UUID | None = None
     testing_event_session_public_id: UUID | None = None
@@ -37,4 +37,4 @@ class AdminOfficialResultRead(BaseModel):
 
 
 class OfficialResultsWriteResponse(BaseModel):
-    items: list[AdminOfficialResultRead]
+    items: list[OfficialResultRead]

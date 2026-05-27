@@ -2,13 +2,13 @@ from typing import Protocol
 from uuid import UUID
 
 from app.db.scoring.official_result import SourceType
-from app.domain.admin.official_results.models import (
-    AdminOfficialResult,
-    AdminOfficialResultInput,
+from app.domain.management.official_results.models import (
+    OfficialResult,
+    OfficialResultInput,
 )
 
 
-class AdminOfficialResultRepository(Protocol):
+class OfficialResultRepository(Protocol):
     def get_bet_context_scope(
         self,
         *,
@@ -66,9 +66,9 @@ class AdminOfficialResultRepository(Protocol):
         event_session_id: int | None,
         testing_event_session_id: int | None,
         source: SourceType,
-        results: list[AdminOfficialResultInput],
+        results: list[OfficialResultInput],
         score_ids_by_code: dict[str, int],
-    ) -> list[AdminOfficialResult]:
+    ) -> list[OfficialResult]:
         ...
 
     def update_official_results(
@@ -78,7 +78,22 @@ class AdminOfficialResultRepository(Protocol):
         event_session_id: int | None,
         testing_event_session_id: int | None,
         source: SourceType,
-        results: list[AdminOfficialResultInput],
+        results: list[OfficialResultInput],
         score_ids_by_code: dict[str, int],
-    ) -> list[AdminOfficialResult]:
+    ) -> list[OfficialResult]:
+        ...
+
+    def get_bet_context_group_id(
+        self,
+        *,
+        bet_context_public_id: UUID,
+    ) -> int | None:
+        ...
+
+    def get_group_role(
+        self,
+        *,
+        user_id: int,
+        group_id: int,
+    ) -> str | None:
         ...

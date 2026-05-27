@@ -3,18 +3,19 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.db.social import GroupMembership
 from app.db.betting import BetContext, BetScore
 from app.db.competition import EventSession, TestingEventSession
-from app.db.scoring import OfficialResult
+from app.db.scoring import OfficialResult as OfficialResultORM
 from app.db.scoring.official_result import SourceType
-from app.domain.admin.official_results.models import (
-    AdminOfficialResult,
-    AdminOfficialResultInput,
+from app.domain.management.official_results.models import (
+    OfficialResult as OfficialResultDomain,
+    OfficialResultInput,
 )
-from app.domain.admin.official_results.ports import AdminOfficialResultRepository
+from app.domain.management.official_results.ports import OfficialResultRepository
 
 
-class SqlAlchemyAdminOfficialResultRepository(AdminOfficialResultRepository):
+class SqlAlchemyOfficialResultRepository(OfficialResultRepository):
     def __init__(self, session: Session):
         self._session = session
 
@@ -103,7 +104,7 @@ class SqlAlchemyAdminOfficialResultRepository(AdminOfficialResultRepository):
             bet_context_id=bet_context_id,
             event_session_id=event_session_id,
             testing_event_session_id=testing_event_session_id,
-        ).where(OfficialResult.bet_score_id.in_(bet_score_ids))
+        ).where(OfficialResultORM.bet_score_id.in_(bet_score_ids))
 
         return self._session.execute(stmt).first() is not None
 
@@ -119,7 +120,7 @@ class SqlAlchemyAdminOfficialResultRepository(AdminOfficialResultRepository):
             bet_context_id=bet_context_id,
             event_session_id=event_session_id,
             testing_event_session_id=testing_event_session_id,
-        ).where(OfficialResult.bet_score_id.in_(bet_score_ids))
+        ).where(OfficialResultORM.bet_score_id.in_(bet_score_ids))
 
         existing_ids = {
             item.bet_score_id
@@ -135,13 +136,13 @@ class SqlAlchemyAdminOfficialResultRepository(AdminOfficialResultRepository):
         event_session_id: int | None,
         testing_event_session_id: int | None,
         source: SourceType,
-        results: list[AdminOfficialResultInput],
+        results: list[OfficialResultInput],
         score_ids_by_code: dict[str, int],
-    ) -> list[AdminOfficialResult]:
-        rows: list[OfficialResult] = []
+    ) -> list[OfficialResultDomain]:
+        rows: list[OfficialResultORM] = []
 
         for item in results:
-            row = OfficialResult(
+            row = OfficialResultORM(
                 bet_context_id=bet_context_id,
                 event_session_id=event_session_id,
                 testing_event_session_id=testing_event_session_id,
@@ -168,14 +169,14 @@ class SqlAlchemyAdminOfficialResultRepository(AdminOfficialResultRepository):
         event_session_id: int | None,
         testing_event_session_id: int | None,
         source: SourceType,
-        results: list[AdminOfficialResultInput],
+        results: list[OfficialResultInput],
         score_ids_by_code: dict[str, int],
-    ) -> list[AdminOfficialResult]:
+    ) -> list[OfficialResultDomain]:
         stmt = self._scope_stmt(
             bet_context_id=bet_context_id,
             event_session_id=event_session_id,
             testing_event_session_id=testing_event_session_id,
-        ).options(joinedload(OfficialResult.bet_score))
+        ).options(joinedload(OfficialResultORM.bet_score))
 
         existing = {
             row.bet_score_id: row
@@ -196,6 +197,30 @@ class SqlAlchemyAdminOfficialResultRepository(AdminOfficialResultRepository):
             testing_event_session_id=testing_event_session_id,
             bet_score_ids={score_ids_by_code[item.bet_score_code] for item in results},
         )
+    
+    def get_bet_context_group_id(
+        self,
+        *,
+        bet_context_public_id: UUID,
+    ) -> int | None:
+        stmt = select(BetContext.group_id).where(
+            BetContext.public_id == bet_context_public_id,
+        )
+        return self._session.execute(stmt).scalar_one_or_none()
+
+
+    def get_group_role(
+        self,
+        *,
+        user_id: int,
+        group_id: int,
+    ) -> str | None:
+        stmt = select(GroupMembership.role).where(
+            GroupMembership.user_id == user_id,
+            GroupMembership.group_id == group_id,
+        )
+        role = self._session.execute(stmt).scalar_one_or_none()
+        return None if role is None else role.value
 
     def _reload_results(
         self,
@@ -204,26 +229,26 @@ class SqlAlchemyAdminOfficialResultRepository(AdminOfficialResultRepository):
         event_session_id: int | None,
         testing_event_session_id: int | None,
         bet_score_ids: set[int],
-    ) -> list[AdminOfficialResult]:
+    ) -> list[OfficialResultDomain]:
         stmt = (
             self._scope_stmt(
                 bet_context_id=bet_context_id,
                 event_session_id=event_session_id,
                 testing_event_session_id=testing_event_session_id,
             )
-            .where(OfficialResult.bet_score_id.in_(bet_score_ids))
+            .where(OfficialResultORM.bet_score_id.in_(bet_score_ids))
             .options(
-                joinedload(OfficialResult.bet_context),
-                joinedload(OfficialResult.event_session),
-                joinedload(OfficialResult.testing_event_session),
-                joinedload(OfficialResult.bet_score),
+                joinedload(OfficialResultORM.bet_context),
+                joinedload(OfficialResultORM.event_session),
+                joinedload(OfficialResultORM.testing_event_session),
+                joinedload(OfficialResultORM.bet_score),
             )
         )
 
         rows = self._session.execute(stmt).scalars().all()
 
         return [
-            AdminOfficialResult(
+            OfficialResultDomain(
                 id=row.id,
                 bet_context_public_id=row.bet_context.public_id,
                 event_session_public_id=row.event_session.public_id if row.event_session is not None else None,
@@ -248,16 +273,16 @@ class SqlAlchemyAdminOfficialResultRepository(AdminOfficialResultRepository):
         event_session_id: int | None,
         testing_event_session_id: int | None,
     ):
-        stmt = select(OfficialResult).where(OfficialResult.bet_context_id == bet_context_id)
+        stmt = select(OfficialResultORM).where(OfficialResultORM.bet_context_id == bet_context_id)
 
         if event_session_id is None:
-            stmt = stmt.where(OfficialResult.event_session_id.is_(None))
+            stmt = stmt.where(OfficialResultORM.event_session_id.is_(None))
         else:
-            stmt = stmt.where(OfficialResult.event_session_id == event_session_id)
+            stmt = stmt.where(OfficialResultORM.event_session_id == event_session_id)
 
         if testing_event_session_id is None:
-            stmt = stmt.where(OfficialResult.testing_event_session_id.is_(None))
+            stmt = stmt.where(OfficialResultORM.testing_event_session_id.is_(None))
         else:
-            stmt = stmt.where(OfficialResult.testing_event_session_id == testing_event_session_id)
+            stmt = stmt.where(OfficialResultORM.testing_event_session_id == testing_event_session_id)
 
         return stmt

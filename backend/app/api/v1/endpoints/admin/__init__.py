@@ -11,7 +11,6 @@ from . import (
     seasons,
     teams,
     testing_events,
-    official_results,
 )
 
 router = APIRouter()
@@ -25,6 +24,5 @@ router.include_router(drivers.router)
 router.include_router(teams.router)
 router.include_router(engines.router)
 router.include_router(bet_contexts.router)
-router.include_router(official_results.router)
 
 __all__ = ["router"]

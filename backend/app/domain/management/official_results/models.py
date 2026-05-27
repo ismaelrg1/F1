@@ -6,7 +6,7 @@ from app.db.scoring.official_result import SourceType
 
 
 @dataclass(frozen=True)
-class AdminOfficialResult:
+class OfficialResult:
     id: int
     bet_context_public_id: UUID
     event_session_public_id: UUID | None
@@ -19,6 +19,6 @@ class AdminOfficialResult:
 
 
 @dataclass(frozen=True)
-class AdminOfficialResultInput:
+class OfficialResultInput:
     bet_score_code: str
     value: str

@@ -4,6 +4,7 @@ from app.api.i18n.messages.auth import MESSAGES_AUTH
 from app.api.i18n.messages.bets import MESSAGES_BETS
 from app.api.i18n.messages.errors import MESSAGES_ERRORS
 from app.api.i18n.messages.ranking import MESSAGES_RANKING
+from app.api.i18n.messages.management import MESSAGES_MANAGEMENT
 
 DEFAULT_LOCALE = "en"
 
@@ -15,6 +16,7 @@ MESSAGES = {
         **MESSAGES_BETS["en"],
         **MESSAGES_ERRORS["en"],
         **MESSAGES_RANKING["en"],
+        **MESSAGES_MANAGEMENT["en"],
     },
     "es": {
         **MESSAGES_ACCESS["es"],
@@ -22,7 +24,8 @@ MESSAGES = {
         **MESSAGES_ADMIN["es"],
         **MESSAGES_BETS["es"],
         **MESSAGES_ERRORS["es"],
-        **MESSAGES_RANKING["es"]
+        **MESSAGES_RANKING["es"],
+        **MESSAGES_MANAGEMENT["es"],
     },
 }
 

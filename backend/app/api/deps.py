@@ -9,7 +9,7 @@ from app.core.security import (
     ACCESS_TOKEN_COOKIE_NAME,
     get_access_token_subject,
 )
-from app.api.error_catalogs import ACCESS_ERROR_MAP, AUTH_ERROR_MAP, ADMIN_ERROR_MAP, BETS_ERROR_MAP, RANKING_ERROR_MAP
+from app.api.error_catalogs import ACCESS_ERROR_MAP, AUTH_ERROR_MAP, ADMIN_ERROR_MAP, BETS_ERROR_MAP, RANKING_ERROR_MAP, MANAGEMENT_ERROR_MAP
 from app.api.error_translators import get_preferred_locale, translate_domain_error
 from app.db.audit.context import set_audit_actor, set_audit_group
 from app.db.auth import User
@@ -26,6 +26,7 @@ from app.domain.auth import AuthError
 from app.domain.admin import AdminError
 from app.domain.bets import BetsError
 from app.domain.ranking import RankingError
+from app.domain.management import ManagementError
 
 
 def _build_access_repository(db: Session) -> SqlAlchemyAccessRepository:
@@ -46,6 +47,9 @@ def _translate_bets_error(exc: BetsError, *, locale: str | None) -> HTTPExceptio
 
 def _translate_ranking_error(exc: RankingError, *, locale: str | None) -> HTTPException:
     return translate_domain_error(exc, error_map=RANKING_ERROR_MAP, locale=locale)
+
+def _translate_management_error(exc: ManagementError, *, locale: str | None) -> HTTPException:
+    return translate_domain_error(exc, error_map=MANAGEMENT_ERROR_MAP, locale=locale)
 
 
 def _load_user_entity(db: Session, user_id: int) -> User:

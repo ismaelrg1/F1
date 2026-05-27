@@ -7,7 +7,6 @@ from app.api.i18n.messages.admin.seasons import MESSAGES_ADMIN_SEASONS
 from app.api.i18n.messages.admin.teams import MESSAGES_ADMIN_TEAMS
 from app.api.i18n.messages.admin.testing_events import MESSAGES_ADMIN_TESTING_EVENTS
 from app.api.i18n.messages.admin.bet_contexts import MESSAGES_ADMIN_BET_CONTEXTS
-from app.api.i18n.messages.admin.official_results import MESSAGES_ADMIN_OFFICIAL_RESULTS
 
 
 MESSAGES_ADMIN = {
@@ -20,7 +19,6 @@ MESSAGES_ADMIN = {
     **MESSAGES_ADMIN_TEAMS,
     **MESSAGES_ADMIN_ENGINES,
     **MESSAGES_ADMIN_BET_CONTEXTS,
-    **MESSAGES_ADMIN_OFFICIAL_RESULTS,
 }
 
 __all__ = ["MESSAGES_ADMIN"]
