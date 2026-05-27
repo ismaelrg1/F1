@@ -3,6 +3,7 @@ from datetime import datetime
 from uuid import UUID
 
 from app.db.scoring.official_result import SourceType
+from app.domain.management.official_results.answers.models import OfficialResultInput
 
 
 @dataclass(frozen=True)
@@ -16,9 +17,3 @@ class OfficialResult:
     value: str
     source: SourceType
     created_at: datetime
-
-
-@dataclass(frozen=True)
-class OfficialResultInput:
-    bet_score_code: str
-    value: str

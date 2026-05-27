@@ -73,7 +73,6 @@ def get_testing_event_questions(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return TestingEventBetQuestionsResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         testing_event_public_id=result.testing_event_public_id,
         label=result.label,
@@ -175,7 +174,6 @@ def get_testing_event_answers(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return TestingEventBetAnswersResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         testing_event_public_id=result.testing_event_public_id,
         label=result.label,
@@ -249,7 +247,6 @@ def patch_testing_event_answers(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return TestingEventBetAnswersResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         testing_event_public_id=result.testing_event_public_id,
         label=result.label,
@@ -325,7 +322,6 @@ def submit_testing_event_answers(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return TestingEventBetAnswersResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         testing_event_public_id=result.testing_event_public_id,
         label=result.label,
@@ -389,7 +385,6 @@ def get_testing_event_results(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return TestingEventSessionBetResultsResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         testing_event_public_id=result.testing_event_public_id,
         label=result.label,

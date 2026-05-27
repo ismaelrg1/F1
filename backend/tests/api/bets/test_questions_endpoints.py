@@ -465,7 +465,6 @@ def test_get_race_event_bet_questions_returns_event_and_session_questions(client
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "GP"
     assert payload["race_event_public_id"] == str(race_event.public_id)
     assert payload["label"] == "Bahrain GP"
@@ -1050,7 +1049,6 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "PRETESTING"
     assert payload["testing_event_public_id"] == str(testing_event.public_id)
     assert payload["label"] == "Bahrain Testing"
@@ -1528,7 +1526,6 @@ def test_get_season_bet_questions_returns_questions(client, db_session) -> None:
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "SEASON"
     assert payload["season_year"] == 2026
     assert payload["label"] == "Season 2026"
@@ -2002,7 +1999,6 @@ def test_get_race_event_bet_answers_returns_event_and_session_answers(client, db
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "GP"
     assert payload["race_event_public_id"] == str(race_event.public_id)
     assert payload["label"] == "Bahrain GP"
@@ -2198,7 +2194,6 @@ def test_get_testing_event_bet_answers_returns_event_and_filtered_session_answer
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "PRETESTING"
     assert payload["testing_event_public_id"] == str(testing_event.public_id)
     assert payload["label"] == "Bahrain Testing"
@@ -2238,7 +2233,6 @@ def test_get_testing_event_bet_answers_returns_event_and_filtered_session_answer
     assert filtered_response.status_code == 200
     filtered_payload = filtered_response.json()
 
-    assert filtered_payload["bet_context_public_id"] == str(bet_context.public_id)
     assert filtered_payload["kind"] == "PRETESTING"
     assert filtered_payload["testing_event_public_id"] == str(testing_event.public_id)
     assert filtered_payload["event_answers"] == []
@@ -2441,7 +2435,6 @@ def test_patch_race_event_bet_answers_saves_partial_event_draft(client, db_sessi
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(data["bet_context"].public_id)
     assert payload["kind"] == "GP"
     assert payload["race_event_public_id"] == str(data["race_event"].public_id)
     assert "submitted_at" not in payload
@@ -2921,7 +2914,6 @@ def test_submit_race_event_bet_answers_creates_first_submission(client, db_sessi
         for answer in payload["event_answers"]
     }
 
-    assert payload["bet_context_public_id"] == str(data["bet_context"].public_id)
     assert payload["kind"] == "GP"
     assert payload["race_event_public_id"] == str(data["race_event"].public_id)
     assert payload["submitted_at"] is not None
@@ -3623,7 +3615,6 @@ def test_patch_testing_event_bet_answers_saves_partial_event_draft(client, db_se
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(data["bet_context"].public_id)
     assert payload["kind"] == "PRETESTING"
     assert payload["testing_event_public_id"] == str(data["testing_event"].public_id)
     assert payload["label"] == "Bahrain Testing"
@@ -3948,7 +3939,6 @@ def test_submit_testing_event_bet_answers_creates_first_submission(client, db_se
         for answer in payload["event_answers"]
     }
 
-    assert payload["bet_context_public_id"] == str(data["bet_context"].public_id)
     assert payload["kind"] == "PRETESTING"
     assert payload["testing_event_public_id"] == str(data["testing_event"].public_id)
     assert payload["label"] == "Bahrain Testing"
@@ -4315,7 +4305,6 @@ def test_patch_season_bet_answers_saves_partial_draft(client, db_session) -> Non
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(data["bet_context"].public_id)
     assert payload["kind"] == "SEASON"
     assert payload["season_year"] == data["season"].year
     assert payload["label"] == f"{data['season'].year} Season"
@@ -4571,7 +4560,6 @@ def test_submit_season_bet_answers_creates_first_submission(client, db_session) 
         for answer in payload["answers"]
     }
 
-    assert payload["bet_context_public_id"] == str(data["bet_context"].public_id)
     assert payload["kind"] == "SEASON"
     assert payload["season_year"] == data["season"].year
     assert payload["label"] == f"{data['season'].year} Season"
@@ -4902,7 +4890,6 @@ def test_get_season_bet_answers_returns_answers(client, db_session) -> None:
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "SEASON"
     assert payload["season_year"] == 2026
     assert payload["label"] == "2026 Season"
@@ -5152,7 +5139,6 @@ def test_get_race_event_bet_results_returns_group_event_results_when_always_visi
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "GP"
     assert payload["race_event_public_id"] == str(race_event.public_id)
     assert payload["label"] == "Qatar GP"
@@ -5408,7 +5394,6 @@ def test_get_race_event_bet_results_with_session_id_returns_only_session_results
 
     assert "event_results" not in payload
     assert "sessions" not in payload
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "GP"
     assert payload["race_event_public_id"] == str(race_event.public_id)
     assert payload["label"] == "Japanese GP"
@@ -5750,7 +5735,6 @@ def test_get_testing_event_bet_results_with_session_id_returns_session_results_w
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "PRETESTING"
     assert payload["testing_event_public_id"] == str(testing_event.public_id)
     assert payload["label"] == "Jeddah Testing"
@@ -6361,7 +6345,6 @@ def test_get_season_bet_results_returns_group_results_when_always_visible(client
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "SEASON"
     assert payload["season_year"] == season.year
     assert payload["label"] == "2036 Season"
@@ -6539,7 +6522,6 @@ def test_get_season_bet_results_hides_group_entries_when_submit_required_and_vie
     assert response.status_code == 200
     payload = response.json()
 
-    assert payload["bet_context_public_id"] == str(bet_context.public_id)
     assert payload["kind"] == "SEASON"
     assert payload["season_year"] == season.year
     assert payload["label"] == "2037 Season"

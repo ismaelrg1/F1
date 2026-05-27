@@ -67,7 +67,6 @@ def get_season_questions(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return SeasonBetQuestionsResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         season_year=result.season_year,
         label=result.label,
@@ -123,7 +122,6 @@ def get_season_answers(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return SeasonBetAnswersResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         season_year=result.season_year,
         label=result.label,
@@ -176,7 +174,6 @@ def patch_season_answers(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return SeasonBetAnswersResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         season_year=result.season_year,
         label=result.label,
@@ -230,7 +227,6 @@ def submit_season_answers(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return SeasonBetAnswersResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         season_year=result.season_year,
         label=result.label,
@@ -274,7 +270,6 @@ def get_season_results(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return SeasonBetResultsResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         season_year=result.season_year,
         label=result.label,

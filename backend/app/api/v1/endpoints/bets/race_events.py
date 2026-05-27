@@ -85,7 +85,6 @@ def get_race_event_questions(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return RaceEventBetQuestionsResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         race_event_public_id=result.race_event_public_id,
         label=result.label,
@@ -187,7 +186,6 @@ def get_race_event_answers(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return RaceEventBetAnswersResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         race_event_public_id=result.race_event_public_id,
         label=result.label,
@@ -260,7 +258,6 @@ def patch_race_event_answers(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return RaceEventBetAnswersResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         race_event_public_id=result.race_event_public_id,
         label=result.label,
@@ -333,7 +330,6 @@ def submit_race_event_answers(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return RaceEventBetAnswersResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         race_event_public_id=result.race_event_public_id,
         label=result.label,
@@ -394,7 +390,6 @@ def get_race_event_results(
             )
 
             return RaceEventSessionBetResultsResponse(
-                bet_context_public_id=result.bet_context_public_id,
                 kind=result.kind,
                 race_event_public_id=result.race_event_public_id,
                 label=result.label,
@@ -426,7 +421,6 @@ def get_race_event_results(
         raise _translate_bets_error(exc, locale=locale) from exc
 
     return RaceEventBetResultsResponse(
-        bet_context_public_id=result.bet_context_public_id,
         kind=result.kind,
         race_event_public_id=result.race_event_public_id,
         label=result.label,

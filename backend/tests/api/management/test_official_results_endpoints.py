@@ -287,7 +287,6 @@ def _create_testing_bet_context_fixture(db_session):
 
 def _official_results_payload(data, *, value: str = "VER") -> dict:
     return {
-        "bet_context_public_id": str(data["bet_context"].public_id),
         "source": "MANUAL",
         "results": [
             {
@@ -295,6 +294,44 @@ def _official_results_payload(data, *, value: str = "VER") -> dict:
                 "value": value,
             }
         ],
+    }
+
+
+def _create_season_bet_context_fixture(db_session):
+    season = Season(year=2028, is_active=True)
+    db_session.add(season)
+    db_session.flush()
+
+    group = _create_group(db_session, name=f"group_{uuid4().hex[:8]}")
+
+    bet_context = BetContext(
+        kind=BetContextKind.SEASON,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=None,
+        label="Season 2028",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    champion_score = BetScore(
+        code=f"SEASON_CHAMPION_{uuid4().hex[:8].upper()}",
+        label="Season Champion",
+        base_points=15,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add(champion_score)
+    db_session.flush()
+
+    return {
+        "season": season,
+        "group": group,
+        "bet_context": bet_context,
+        "champion_score": champion_score,
     }
 
 
@@ -315,9 +352,9 @@ def test_create_official_results_for_event_scope(client, db_session) -> None:
     assert login_response.status_code == 200
 
     response = client.post(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
         json={
-            "bet_context_public_id": str(data["bet_context"].public_id),
             "source": "MANUAL",
             "results": [
                 {
@@ -333,7 +370,6 @@ def test_create_official_results_for_event_scope(client, db_session) -> None:
 
     assert len(payload["items"]) == 1
     item = payload["items"][0]
-    assert item["bet_context_public_id"] == str(data["bet_context"].public_id)
     assert item["bet_score_code"] == data["winner_score"].code
     assert item["label"] == "Race Winner"
     assert item["value"] == "VER"
@@ -371,10 +407,10 @@ def test_create_official_results_for_race_session_scope(client, db_session) -> N
     assert login_response.status_code == 200
 
     response = client.post(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        params={"session_id": str(data["fp1_session"].public_id)},
         json={
-            "bet_context_public_id": str(data["bet_context"].public_id),
-            "event_session_public_id": str(data["fp1_session"].public_id),
             "source": "FASTF1",
             "results": [
                 {
@@ -390,7 +426,6 @@ def test_create_official_results_for_race_session_scope(client, db_session) -> N
 
     assert len(payload["items"]) == 1
     item = payload["items"][0]
-    assert item["bet_context_public_id"] == str(data["bet_context"].public_id)
     assert item["event_session_public_id"] == str(data["fp1_session"].public_id)
     assert item["bet_score_code"] == data["fp1_fastest_score"].code
     assert item["value"] == "LEC"
@@ -426,10 +461,10 @@ def test_create_official_results_for_testing_session_scope(client, db_session) -
     assert login_response.status_code == 200
 
     response = client.post(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/testing-events/{data['testing_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        params={"session_id": str(data["session"].public_id)},
         json={
-            "bet_context_public_id": str(data["bet_context"].public_id),
-            "testing_event_session_public_id": str(data["session"].public_id),
             "source": "MANUAL",
             "results": [
                 {
@@ -461,6 +496,89 @@ def test_create_official_results_for_testing_session_scope(client, db_session) -
     assert row.value == "NOR"
 
 
+def test_create_official_results_for_season_scope(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_official_results_season",
+        email="admin_official_results_season@example.com",
+        password="secret123",
+        permission_code="SCORING_MANAGE",
+    )
+    data = _create_season_bet_context_fixture(db_session)
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_official_results_season", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/management/official-results/seasons/{data['season'].year}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        json={
+            "source": "MANUAL",
+            "results": [
+                {
+                    "bet_score_code": data["champion_score"].code,
+                    "value": "VER",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["items"][0]["bet_score_code"] == data["champion_score"].code
+    assert payload["items"][0]["value"] == "VER"
+
+
+def test_patch_official_results_for_season_scope(client, db_session) -> None:
+    _create_admin_user_with_permission(
+        db_session,
+        username="admin_official_results_season_patch",
+        email="admin_official_results_season_patch@example.com",
+        password="secret123",
+        permission_code="SCORING_MANAGE",
+    )
+    data = _create_season_bet_context_fixture(db_session)
+    existing = OfficialResult(
+        bet_context_id=data["bet_context"].id,
+        event_session_id=None,
+        testing_event_session_id=None,
+        bet_score_id=data["champion_score"].id,
+        value="LEC",
+        source=SourceType.MANUAL,
+    )
+    db_session.add(existing)
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": "admin_official_results_season_patch", "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.patch(
+        f"/api/v1/management/official-results/seasons/{data['season'].year}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        json={
+            "source": "FASTF1",
+            "results": [
+                {
+                    "bet_score_code": data["champion_score"].code,
+                    "value": "VER",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["value"] == "VER"
+    db_session.refresh(existing)
+    assert existing.value == "VER"
+    assert existing.source == SourceType.FASTF1
+
+
 def test_create_official_results_returns_conflict_when_scope_already_has_results(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
@@ -490,9 +608,9 @@ def test_create_official_results_returns_conflict_when_scope_already_has_results
     assert login_response.status_code == 200
 
     response = client.post(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
         json={
-            "bet_context_public_id": str(data["bet_context"].public_id),
             "source": "MANUAL",
             "results": [
                 {
@@ -535,9 +653,9 @@ def test_patch_official_results_updates_existing_scope_results(client, db_sessio
     assert login_response.status_code == 200
 
     response = client.patch(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
         json={
-            "bet_context_public_id": str(data["bet_context"].public_id),
             "source": "FASTF1",
             "results": [
                 {
@@ -579,9 +697,9 @@ def test_patch_official_results_returns_not_found_when_scope_has_no_existing_res
     assert login_response.status_code == 200
 
     response = client.patch(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
         json={
-            "bet_context_public_id": str(data["bet_context"].public_id),
             "source": "MANUAL",
             "results": [
                 {
@@ -630,7 +748,8 @@ def test_create_official_results_allows_group_managers(
     assert login_response.status_code == 200
 
     response = client.post(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
         json=_official_results_payload(data),
     )
 
@@ -671,7 +790,8 @@ def test_patch_official_results_allows_group_owner(client, db_session) -> None:
     assert login_response.status_code == 200
 
     response = client.patch(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
         json=_official_results_payload(data, value="HAM"),
     )
 
@@ -704,7 +824,8 @@ def test_create_official_results_forbids_group_member(client, db_session) -> Non
     assert login_response.status_code == 200
 
     response = client.post(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
         json=_official_results_payload(data),
     )
 
@@ -735,7 +856,8 @@ def test_create_official_results_forbids_user_from_other_group(client, db_sessio
     assert login_response.status_code == 200
 
     response = client.post(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
         json=_official_results_payload(data),
     )
 
@@ -761,10 +883,10 @@ def test_create_official_results_prints_payload(client, db_session) -> None:
     assert login_response.status_code == 200
 
     response = client.post(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        params={"session_id": str(data["fp1_session"].public_id)},
         json={
-            "bet_context_public_id": str(data["bet_context"].public_id),
-            "event_session_public_id": str(data["fp1_session"].public_id),
             "source": "MANUAL",
             "results": [
                 {
@@ -808,10 +930,10 @@ def test_patch_official_results_prints_payload(client, db_session) -> None:
     assert login_response.status_code == 200
 
     response = client.patch(
-        "/api/v1/management/official-results",
+        f"/api/v1/management/official-results/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        params={"session_id": str(data["fp1_session"].public_id)},
         json={
-            "bet_context_public_id": str(data["bet_context"].public_id),
-            "event_session_public_id": str(data["fp1_session"].public_id),
             "source": "FASTF1",
             "results": [
                 {

@@ -110,7 +110,6 @@ class RaceEventBetResultsSessionRead(BaseModel):
 
 
 class RaceEventBetResultsResponse(BaseModel):
-    bet_context_public_id: UUID
     kind: BetContextKind
     race_event_public_id: UUID
     label: str
@@ -119,7 +118,6 @@ class RaceEventBetResultsResponse(BaseModel):
 
 
 class RaceEventSessionBetResultsResponse(BaseModel):
-    bet_context_public_id: UUID
     kind: BetContextKind
     race_event_public_id: UUID
     label: str
@@ -129,7 +127,6 @@ class RaceEventSessionBetResultsResponse(BaseModel):
     entries: list[BetResultEntryRead]
 
 class TestingEventSessionBetResultsResponse(BaseModel):
-    bet_context_public_id: UUID
     kind: BetContextKind
     testing_event_public_id: UUID
     label: str
@@ -139,7 +136,6 @@ class TestingEventSessionBetResultsResponse(BaseModel):
     entries: list[BetResultEntryRead]
 
 class SeasonBetResultsResponse(BaseModel):
-    bet_context_public_id: UUID
     kind: BetContextKind
     season_year: int
     label: str

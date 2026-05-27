@@ -12,21 +12,11 @@ class OfficialResultWriteItem(BaseModel):
 
 
 class OfficialResultsWriteRequest(BaseModel):
-    bet_context_public_id: UUID
-    event_session_public_id: UUID | None = None
-    testing_event_session_public_id: UUID | None = None
     source: SourceType
     results: list[OfficialResultWriteItem] = Field(min_length=1)
 
-    @model_validator(mode="after")
-    def validate_scope(self):
-        if self.event_session_public_id is not None and self.testing_event_session_public_id is not None:
-            raise ValueError("Only one session scope can be provided")
-        return self
-
 
 class OfficialResultRead(BaseModel):
-    bet_context_public_id: UUID
     event_session_public_id: UUID | None = None
     testing_event_session_public_id: UUID | None = None
     bet_score_code: str

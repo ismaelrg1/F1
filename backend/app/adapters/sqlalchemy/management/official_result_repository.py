@@ -8,10 +8,12 @@ from app.db.betting import BetContext, BetScore
 from app.db.competition import EventSession, TestingEventSession
 from app.db.scoring import OfficialResult as OfficialResultORM
 from app.db.scoring.official_result import SourceType
-from app.domain.management.official_results.models import (
-    OfficialResult as OfficialResultDomain,
-    OfficialResultInput,
-)
+from app.domain.management.official_results.answers.models import OfficialResultInput
+from app.domain.management.official_results.models import OfficialResult as OfficialResultDomain
+
+from app.db.competition import RaceEvent, Season, TestingEvent
+from app.db.enums import BetContextKind
+
 from app.domain.management.official_results.ports import OfficialResultRepository
 
 
@@ -221,6 +223,59 @@ class SqlAlchemyOfficialResultRepository(OfficialResultRepository):
         )
         role = self._session.execute(stmt).scalar_one_or_none()
         return None if role is None else role.value
+    
+    def get_race_bet_context_public_id(
+        self,
+        *,
+        group_id: int,
+        race_event_public_id: UUID,
+    ) -> UUID | None:
+        stmt = (
+            select(BetContext.public_id)
+            .join(RaceEvent, RaceEvent.id == BetContext.race_event_id)
+            .where(
+                BetContext.group_id == group_id,
+                BetContext.kind == BetContextKind.GP,
+                RaceEvent.public_id == race_event_public_id,
+            )
+        )
+        return self._session.execute(stmt).scalar_one_or_none()
+
+    def get_testing_bet_context_public_id(
+        self,
+        *,
+        group_id: int,
+        testing_event_public_id: UUID,
+    ) -> UUID | None:
+        stmt = (
+            select(BetContext.public_id)
+            .join(TestingEvent, TestingEvent.id == BetContext.testing_event_id)
+            .where(
+                BetContext.group_id == group_id,
+                BetContext.kind == BetContextKind.PRETESTING,
+                TestingEvent.public_id == testing_event_public_id,
+            )
+        )
+        return self._session.execute(stmt).scalar_one_or_none()
+
+    def get_season_bet_context_public_id(
+        self,
+        *,
+        group_id: int,
+        season_year: int,
+    ) -> UUID | None:
+        stmt = (
+            select(BetContext.public_id)
+            .join(Season, Season.id == BetContext.season_id)
+            .where(
+                BetContext.group_id == group_id,
+                BetContext.kind == BetContextKind.SEASON,
+                BetContext.race_event_id.is_(None),
+                BetContext.testing_event_id.is_(None),
+                Season.year == season_year,
+            )
+        )
+        return self._session.execute(stmt).scalar_one_or_none()
 
     def _reload_results(
         self,
