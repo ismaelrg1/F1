@@ -7,6 +7,7 @@ from app.domain.management.result_publications.errors import (
     ResultPublicationNotFoundError,
     ResultPublicationOfficialResultsNotFoundError,
     ResultPublicationTestingEventSessionNotFoundError,
+    ResultPublicationScoringRequiredError,
 )
 from app.domain.management.result_publications.ports import ResultPublicationRepository
 
@@ -231,6 +232,13 @@ def _publish(
         testing_event_session_id=testing_event_session_id,
     ):
         raise ResultPublicationAlreadyExistsError()
+
+    if not repository.has_calculated_scores(
+        bet_context_id=bet_context_id,
+        event_session_id=event_session_id,
+        testing_event_session_id=testing_event_session_id,
+    ):
+        raise ResultPublicationScoringRequiredError()
 
     return repository.create_publication(
         bet_context_id=bet_context_id,

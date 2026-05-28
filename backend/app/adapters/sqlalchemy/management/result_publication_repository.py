@@ -1,12 +1,12 @@
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.betting import BetContext
 from app.db.competition import EventSession, RaceEvent, Season, TestingEvent, TestingEventSession
 from app.db.enums import BetContextKind
-from app.db.scoring import OfficialResult, ResultPublication
+from app.db.scoring import OfficialResult, ResultPublication, Score, ScoreSession
 from app.domain.management.result_publications.models import ResultPublicationResult
 
 
@@ -124,6 +124,35 @@ class SqlAlchemyResultPublicationRepository:
             bet_context_id=bet_context_id,
             event_session_id=event_session_id,
             testing_event_session_id=testing_event_session_id,
+        )
+        return self._session.execute(stmt).first() is not None
+
+
+    def has_calculated_scores(
+        self,
+        *,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+    ) -> bool:
+        if event_session_id is not None:
+            stmt = select(ScoreSession.id).where(
+                ScoreSession.bet_context_id == bet_context_id,
+                ScoreSession.event_session_id == event_session_id,
+                ScoreSession.testing_event_session_id.is_(None),
+            )
+            return self._session.execute(stmt).first() is not None
+
+        if testing_event_session_id is not None:
+            stmt = select(ScoreSession.id).where(
+                ScoreSession.bet_context_id == bet_context_id,
+                ScoreSession.testing_event_session_id == testing_event_session_id,
+                ScoreSession.event_session_id.is_(None),
+            )
+            return self._session.execute(stmt).first() is not None
+
+        stmt = select(Score.id).where(
+            Score.bet_context_id == bet_context_id,
         )
         return self._session.execute(stmt).first() is not None
 

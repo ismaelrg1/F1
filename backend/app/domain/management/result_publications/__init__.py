@@ -4,6 +4,7 @@ from .errors import (
     ResultPublicationEventSessionNotFoundError,
     ResultPublicationNotFoundError,
     ResultPublicationOfficialResultsNotFoundError,
+    ResultPublicationScoringRequiredError,
     ResultPublicationTestingEventSessionNotFoundError,
     ResultPublicationForbiddenGroupError,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "ResultPublicationEventSessionNotFoundError",
     "ResultPublicationNotFoundError",
     "ResultPublicationOfficialResultsNotFoundError",
+    "ResultPublicationScoringRequiredError",
     "ResultPublicationTestingEventSessionNotFoundError",
     "ResultPublicationForbiddenGroupError",
     "ResultPublicationResult",

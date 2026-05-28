@@ -7,6 +7,7 @@ MESSAGES_RESULT_PUBLICATIONS = {
         "management.result_publications.already_exists": "Results are already published for this scope.",
         "management.result_publications.not_found": "Results publication not found for this scope.",
         "management.result_publications.forbidden_group": "You are not allowed to publish results for this group.",
+        "management.result_publications.scoring_required": "Scores must be calculated before publishing results.",
     },
     "es": {
         "management.result_publications.bet_context_not_found": "No se ha encontrado el contexto de apuesta.",
@@ -16,5 +17,6 @@ MESSAGES_RESULT_PUBLICATIONS = {
         "management.result_publications.already_exists": "Los resultados ya están publicados para este scope.",
         "management.result_publications.not_found": "No existe publicación de resultados para este scope.",
         "management.result_publications.forbidden_group": "No puedes publicar resultados para este grupo.",
+        "management.result_publications.scoring_required": "Debes calcular las puntuaciones antes de publicar los resultados.",
     },
 }

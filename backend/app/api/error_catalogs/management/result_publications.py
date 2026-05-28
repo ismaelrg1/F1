@@ -9,6 +9,7 @@ from app.domain.management.result_publications.errors import (
     ResultPublicationOfficialResultsNotFoundError,
     ResultPublicationTestingEventSessionNotFoundError,
     ResultPublicationForbiddenGroupError,
+    ResultPublicationScoringRequiredError,
 )
 
 RESULT_PUBLICATIONS_ERROR_MAP = {
@@ -39,5 +40,9 @@ RESULT_PUBLICATIONS_ERROR_MAP = {
     ResultPublicationNotFoundError: ErrorCatalogEntry(
         status_code=status.HTTP_404_NOT_FOUND,
         error_code="management.result_publications.not_found",
+    ),
+    ResultPublicationScoringRequiredError: ErrorCatalogEntry(
+        status_code=status.HTTP_409_CONFLICT,
+        error_code="management.result_publications.scoring_required",
     ),
 }

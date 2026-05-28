@@ -26,3 +26,6 @@ class ResultPublicationNotFoundError(ManagementError):
 
 class ResultPublicationForbiddenGroupError(ManagementError):
     pass
+
+class ResultPublicationScoringRequiredError(ManagementError):
+    pass

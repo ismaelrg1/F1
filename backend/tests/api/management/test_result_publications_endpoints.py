@@ -24,7 +24,7 @@ from app.db.enums import (
     SourceProvider,
     TestingEventStatus as CompetitionTestingEventStatus,
 )
-from app.db.scoring import OfficialResult, ResultPublication
+from app.db.scoring import OfficialResult, ResultPublication, Score, ScoreSession
 from app.db.scoring.official_result import SourceType
 from app.db.social import Group, GroupMembership
 from app.db.social.group_membership import GroupRole
@@ -325,6 +325,44 @@ def _add_official_result(
     return row
 
 
+def _add_calculated_score(
+    db_session,
+    *,
+    bet_context_id: int,
+    user_id: int,
+) -> Score:
+    row = Score(
+        bet_context_id=bet_context_id,
+        user_id=user_id,
+        base_points=1,
+        total_points=1,
+    )
+    db_session.add(row)
+    db_session.flush()
+    return row
+
+
+def _add_calculated_session_score(
+    db_session,
+    *,
+    bet_context_id: int,
+    user_id: int,
+    event_session_id: int | None = None,
+    testing_event_session_id: int | None = None,
+) -> ScoreSession:
+    row = ScoreSession(
+        bet_context_id=bet_context_id,
+        user_id=user_id,
+        event_session_id=event_session_id,
+        testing_event_session_id=testing_event_session_id,
+        base_points=1,
+        total_points=1,
+    )
+    db_session.add(row)
+    db_session.flush()
+    return row
+
+
 def _login(client, username: str) -> None:
     response = client.post(
         "/api/v1/auth/login/local",
@@ -334,7 +372,7 @@ def _login(client, username: str) -> None:
 
 
 def test_publish_race_event_results_creates_publication(client, db_session) -> None:
-    _create_admin_user(
+    admin = _create_admin_user(
         db_session,
         username="admin_publish_race_event",
         email="admin_publish_race_event@example.com",
@@ -345,6 +383,11 @@ def test_publish_race_event_results_creates_publication(client, db_session) -> N
         db_session,
         bet_context_id=data["bet_context"].id,
         bet_score_id=data["event_score"].id,
+    )
+    _add_calculated_score(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        user_id=admin.id,
     )
     _login(client, "admin_publish_race_event")
 
@@ -372,7 +415,7 @@ def test_publish_race_event_results_creates_publication(client, db_session) -> N
 
 
 def test_publish_race_session_results_creates_publication(client, db_session) -> None:
-    _create_admin_user(
+    admin = _create_admin_user(
         db_session,
         username="admin_publish_race_session",
         email="admin_publish_race_session@example.com",
@@ -384,6 +427,12 @@ def test_publish_race_session_results_creates_publication(client, db_session) ->
         bet_context_id=data["bet_context"].id,
         event_session_id=data["session"].id,
         bet_score_id=data["session_score"].id,
+    )
+    _add_calculated_session_score(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=data["session"].id,
+        user_id=admin.id,
     )
     _login(client, "admin_publish_race_session")
 
@@ -410,7 +459,7 @@ def test_publish_race_session_results_creates_publication(client, db_session) ->
 
 
 def test_publish_testing_session_results_creates_publication(client, db_session) -> None:
-    _create_admin_user(
+    admin = _create_admin_user(
         db_session,
         username="admin_publish_testing_session",
         email="admin_publish_testing_session@example.com",
@@ -422,6 +471,12 @@ def test_publish_testing_session_results_creates_publication(client, db_session)
         bet_context_id=data["bet_context"].id,
         testing_event_session_id=data["session"].id,
         bet_score_id=data["score"].id,
+    )
+    _add_calculated_session_score(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        testing_event_session_id=data["session"].id,
+        user_id=admin.id,
     )
     _login(client, "admin_publish_testing_session")
 
@@ -448,7 +503,7 @@ def test_publish_testing_session_results_creates_publication(client, db_session)
 
 
 def test_publish_season_results_creates_publication(client, db_session) -> None:
-    _create_admin_user(
+    admin = _create_admin_user(
         db_session,
         username="admin_publish_season",
         email="admin_publish_season@example.com",
@@ -459,6 +514,11 @@ def test_publish_season_results_creates_publication(client, db_session) -> None:
         db_session,
         bet_context_id=data["bet_context"].id,
         bet_score_id=data["score"].id,
+    )
+    _add_calculated_score(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        user_id=admin.id,
     )
     _login(client, "admin_publish_season")
 
@@ -532,6 +592,31 @@ def test_publish_results_returns_conflict_when_official_results_do_not_exist(cli
     assert response.json()["detail"]["error"]["code"] == "management.result_publications.official_results_not_found"
 
 
+def test_publish_results_returns_conflict_when_scores_are_not_calculated(client, db_session) -> None:
+    _create_admin_user(
+        db_session,
+        username="admin_publish_without_scoring",
+        email="admin_publish_without_scoring@example.com",
+        password="secret123",
+    )
+    data = _create_race_fixture(db_session)
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["event_score"].id,
+    )
+    _login(client, "admin_publish_without_scoring")
+
+    response = client.post(
+        f"/api/v1/management/result-publications/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        json={},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error"]["code"] == "management.result_publications.scoring_required"
+
+
 def test_publish_results_returns_conflict_when_publication_exists(client, db_session) -> None:
     _create_admin_user(
         db_session,
@@ -602,6 +687,11 @@ def test_publish_results_allows_group_owner(client, db_session) -> None:
         db_session,
         bet_context_id=data["bet_context"].id,
         bet_score_id=data["event_score"].id,
+    )
+    _add_calculated_score(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        user_id=user.id,
     )
     _login(client, "owner_publish_results")
 

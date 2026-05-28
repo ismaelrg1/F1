@@ -82,3 +82,13 @@ class ResultPublicationRepository(Protocol):
         testing_event_session_id: int | None,
     ) -> None:
         ...
+
+    def has_calculated_scores(
+        self,
+        *,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+    ) -> bool:
+        ...
+    
