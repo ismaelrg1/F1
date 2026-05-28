@@ -10,3 +10,4 @@ class ManagementError(Exception):
     @property
     def log_level(self) -> str:
         return "warning"
+

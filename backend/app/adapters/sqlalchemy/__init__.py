@@ -31,6 +31,8 @@ from app.adapters.sqlalchemy.management.official_result_repository import SqlAlc
 
 from app.adapters.sqlalchemy.management.calendar_repository import SqlAlchemyManagementCalendarRepository
 
+from app.adapters.sqlalchemy.management.result_publication_repository import SqlAlchemyResultPublicationRepository
+
 from app.adapters.sqlalchemy.groups_repository import SqlAlchemyGroupRepository
 
 
@@ -79,6 +81,8 @@ __all__ = [
     "SqlAlchemyOfficialResultRepository",
 
     "SqlAlchemyManagementCalendarRepository",
+
+    "SqlAlchemyResultPublicationRepository",
 
     "SqlAlchemyGroupRepository",
 ]

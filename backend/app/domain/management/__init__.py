@@ -1,4 +1,8 @@
 from app.domain.management.errors import ManagementError
+from app.domain.management.group import (
+    ManagementForbiddenGroupError,
+    ManagementGroupRequiredError,
+)
 from app.domain.management.official_results import (
     OfficialResult,
     OfficialResultInput,
@@ -17,6 +21,8 @@ from app.domain.management.official_results import (
 
 __all__ = [
     "ManagementError",
+    "ManagementForbiddenGroupError",
+    "ManagementGroupRequiredError",
     "OfficialResult",
     "OfficialResultInput",
     "OfficialResultRepository",

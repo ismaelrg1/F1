@@ -1,20 +1,22 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, Query, Request
 from sqlalchemy.orm import Session
 
 from app.adapters.sqlalchemy import (
     SqlAlchemyAccessRepository,
     SqlAlchemyManagementCalendarRepository,
 )
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, _translate_management_error
 from app.core.config import settings
 from app.db.auth import User
 from app.db.enums import RoleName
 from app.db.session import get_db
 from app.db.social.group_membership import GroupRole
 from app.domain.access import ResolveCurrentGroup
+from app.api.error_translators import get_preferred_locale
 from app.domain.management.calendar import GetManagementCalendar
+from app.domain.management.group import ManagementForbiddenGroupError, ManagementGroupRequiredError
 from app.models.management_calendar import (
     ManagementCalendarCountryRead,
     ManagementCalendarEventRead,
@@ -37,16 +39,9 @@ def get_management_calendar(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> ManagementCalendarResponse:
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
     if x_group_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": {
-                    "code": "management.group_required",
-                    "message": "X-Group-Id is required.",
-                }
-            },
-        )
+        raise _translate_management_error(ManagementGroupRequiredError(), locale=locale)
 
     access_repository = SqlAlchemyAccessRepository(db)
     group_ref = ResolveCurrentGroup(
@@ -65,15 +60,7 @@ def get_management_calendar(
             group_id=group_ref.id,
         )
         if role not in {GroupRole.OWNER, GroupRole.MODERATOR}:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "error": {
-                        "code": "management.forbidden_group",
-                        "message": "You are not allowed to manage this group.",
-                    }
-                },
-            )
+            raise _translate_management_error(ManagementForbiddenGroupError(), locale=locale)
 
     use_case = GetManagementCalendar(repository)
     results = use_case.execute(

@@ -22,6 +22,7 @@ from app.domain.access import (
     ResolveCurrentGroup,
     ResolveCurrentUser,
 )
+from app.domain.access.errors import GroupNotFoundError, UserNotFoundError
 from app.domain.auth import AuthError
 from app.domain.admin import AdminError
 from app.domain.bets import BetsError
@@ -52,17 +53,17 @@ def _translate_management_error(exc: ManagementError, *, locale: str | None) -> 
     return translate_domain_error(exc, error_map=MANAGEMENT_ERROR_MAP, locale=locale)
 
 
-def _load_user_entity(db: Session, user_id: int) -> User:
+def _load_user_entity(db: Session, user_id: int, *, locale: str | None) -> User:
     user = db.get(User, user_id)
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise _translate_access_error(UserNotFoundError(), locale=locale)
     return user
 
 
-def _load_group_entity(db: Session, group_id: int) -> Group:
+def _load_group_entity(db: Session, group_id: int, *, locale: str | None) -> Group:
     group = db.get(Group, group_id)
     if group is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+        raise _translate_access_error(GroupNotFoundError(), locale=locale)
     return group
 
 
@@ -104,7 +105,7 @@ def get_current_user(
     except AccessError as exc:
         raise _translate_access_error(exc, locale=locale) from exc
 
-    user = _load_user_entity(db, auth_user.id)
+    user = _load_user_entity(db, auth_user.id, locale=locale)
     _apply_user_audit_context(db, request, user_id=user.id, role=auth_user.role)
     return user
 
@@ -122,7 +123,7 @@ def get_current_group(
         raise _translate_access_error(exc, locale=locale) from exc
 
     set_audit_group(db, group_id=group_ref.id)
-    return _load_group_entity(db, group_ref.id)
+    return _load_group_entity(db, group_ref.id, locale=locale)
 
 
 def require_group_member(
