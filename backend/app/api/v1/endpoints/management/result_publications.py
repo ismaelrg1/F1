@@ -3,20 +3,18 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Query, Request, status
 from sqlalchemy.orm import Session
 
-from app.adapters.sqlalchemy import SqlAlchemyAccessRepository
 from app.adapters.sqlalchemy.management.result_publication_repository import (
     SqlAlchemyResultPublicationRepository,
 )
-from app.api.deps import get_current_user, _translate_management_error
+from app.api.deps import (
+    get_current_user,
+    resolve_management_group_id,
+    _translate_management_error,
+)
 from app.api.error_translators import get_preferred_locale
-from app.core.config import settings
 from app.db.auth import User
-from app.db.enums import RoleName
 from app.db.session import get_db
-from app.db.social.group_membership import GroupRole
-from app.domain.access import ResolveCurrentGroup
 from app.domain.management import ManagementError
-from app.domain.management.group import ManagementGroupRequiredError
 from app.domain.management.result_publications import (
     PublishRaceEventResults,
     PublishSeasonResults,
@@ -51,8 +49,13 @@ def publish_race_event_results(
     user: User = Depends(get_current_user),
 ) -> ResultPublicationRead:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
-
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=ResultPublicationForbiddenGroupError(),
+    )
     repository = SqlAlchemyResultPublicationRepository(db)
     use_case = PublishRaceEventResults(repository)
 
@@ -86,7 +89,13 @@ def unpublish_race_event_results(
     user: User = Depends(get_current_user),
 ) -> ResultPublicationDeleteResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=ResultPublicationForbiddenGroupError(),
+    )
 
     repository = SqlAlchemyResultPublicationRepository(db)
     use_case = UnpublishRaceEventResults(repository)
@@ -121,8 +130,13 @@ def publish_testing_event_results(
     user: User = Depends(get_current_user),
 ) -> ResultPublicationRead:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
-
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=ResultPublicationForbiddenGroupError(),
+    )
     repository = SqlAlchemyResultPublicationRepository(db)
     use_case = PublishTestingEventResults(repository)
 
@@ -156,8 +170,13 @@ def unpublish_testing_event_results(
     user: User = Depends(get_current_user),
 ) -> ResultPublicationDeleteResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
-
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=ResultPublicationForbiddenGroupError(),
+    )
     repository = SqlAlchemyResultPublicationRepository(db)
     use_case = UnpublishTestingEventResults(repository)
 
@@ -190,7 +209,13 @@ def publish_season_results(
     user: User = Depends(get_current_user),
 ) -> ResultPublicationRead:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=ResultPublicationForbiddenGroupError(),
+    )
 
     repository = SqlAlchemyResultPublicationRepository(db)
     use_case = PublishSeasonResults(repository)
@@ -223,7 +248,13 @@ def unpublish_season_results(
     user: User = Depends(get_current_user),
 ) -> ResultPublicationDeleteResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=ResultPublicationForbiddenGroupError(),
+    )
 
     repository = SqlAlchemyResultPublicationRepository(db)
     use_case = UnpublishSeasonResults(repository)
@@ -251,34 +282,3 @@ def _map_response(result) -> ResultPublicationRead:
         published_at=result.published_at,
         note=result.note,
     )
-
-
-def _resolve_management_group_id(
-    *,
-    db: Session,
-    user: User,
-    x_group_id: UUID | None,
-    locale: str | None,
-) -> int:
-    if x_group_id is None:
-        raise _translate_management_error(ManagementGroupRequiredError(), locale=locale)
-
-    access_repository = SqlAlchemyAccessRepository(db)
-    group_ref = ResolveCurrentGroup(
-        access_repository,
-        default_group_id=settings.default_group_id,
-        default_group_public_id=getattr(settings, "default_group_public_id", None),
-    ).execute(str(x_group_id))
-
-    is_admin = any(role.name == RoleName.ADMIN for role in user.roles)
-    if is_admin:
-        return group_ref.id
-
-    group_role = access_repository.get_group_role(
-        user_id=user.id,
-        group_id=group_ref.id,
-    )
-    if group_role not in {GroupRole.OWNER, GroupRole.MODERATOR}:
-        raise _translate_management_error(ResultPublicationForbiddenGroupError(), locale=locale)
-
-    return group_ref.id

@@ -3,18 +3,17 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Query, Request, status
 from sqlalchemy.orm import Session
 
-from app.adapters.sqlalchemy import SqlAlchemyAccessRepository, SqlAlchemyOfficialResultRepository, SqlAlchemyBetQuestionsRepository
-from app.api.deps import get_current_user, _translate_management_error, _translate_bets_error
+from app.adapters.sqlalchemy import SqlAlchemyOfficialResultRepository, SqlAlchemyBetQuestionsRepository
+from app.api.deps import (
+    get_current_user,
+    resolve_management_group_id,
+    _translate_management_error,
+)
 from app.api.error_translators import get_preferred_locale
-from app.core.config import settings
 from app.db.auth import User
-from app.db.enums import RoleName
 from app.db.session import get_db
-from app.db.social.group_membership import GroupRole
 from app.domain.bets import BetsError
-from app.domain.access import ResolveCurrentGroup
 from app.domain.management import ManagementError
-from app.domain.management.group import ManagementGroupRequiredError
 from app.domain.management.official_results.errors import (
     OfficialResultsBetContextNotFoundError,
     OfficialResultsForbiddenGroupError,
@@ -63,7 +62,13 @@ def create_race_event_official_results(
 ) -> OfficialResultsWriteResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
     repository = SqlAlchemyOfficialResultRepository(db)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=OfficialResultsForbiddenGroupError(),
+    )
     bet_context_public_id = _require_bet_context_public_id(
         repository.get_race_bet_context_public_id(
             group_id=group_id,
@@ -98,7 +103,13 @@ def update_race_event_official_results(
 ) -> OfficialResultsWriteResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
     repository = SqlAlchemyOfficialResultRepository(db)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=OfficialResultsForbiddenGroupError(),
+    )
     bet_context_public_id = _require_bet_context_public_id(
         repository.get_race_bet_context_public_id(
             group_id=group_id,
@@ -133,7 +144,13 @@ def create_testing_event_official_results(
 ) -> OfficialResultsWriteResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
     repository = SqlAlchemyOfficialResultRepository(db)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=OfficialResultsForbiddenGroupError(),
+    )
     bet_context_public_id = _require_bet_context_public_id(
         repository.get_testing_bet_context_public_id(
             group_id=group_id,
@@ -168,7 +185,13 @@ def update_testing_event_official_results(
 ) -> OfficialResultsWriteResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
     repository = SqlAlchemyOfficialResultRepository(db)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=OfficialResultsForbiddenGroupError(),
+    )
     bet_context_public_id = _require_bet_context_public_id(
         repository.get_testing_bet_context_public_id(
             group_id=group_id,
@@ -202,7 +225,13 @@ def create_season_official_results(
 ) -> OfficialResultsWriteResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
     repository = SqlAlchemyOfficialResultRepository(db)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=OfficialResultsForbiddenGroupError(),
+    )
     bet_context_public_id = _require_bet_context_public_id(
         repository.get_season_bet_context_public_id(
             group_id=group_id,
@@ -235,7 +264,13 @@ def update_season_official_results(
 ) -> OfficialResultsWriteResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
     repository = SqlAlchemyOfficialResultRepository(db)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=OfficialResultsForbiddenGroupError(),
+    )
     bet_context_public_id = _require_bet_context_public_id(
         repository.get_season_bet_context_public_id(
             group_id=group_id,
@@ -265,8 +300,13 @@ def get_race_event_official_results(
     user: User = Depends(get_current_user),
 ) -> RaceEventOfficialResultsResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
-
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=OfficialResultsForbiddenGroupError(),
+    )
     use_case = GetRaceEventOfficialResultsForm(
         SqlAlchemyBetQuestionsRepository(db),
         SqlAlchemyOfficialResultRepository(db),
@@ -318,8 +358,13 @@ def get_testing_event_official_results(
     user: User = Depends(get_current_user),
 ) -> TestingEventOfficialResultsResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
-
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=OfficialResultsForbiddenGroupError(),
+    )
     use_case = GetTestingEventOfficialResultsForm(
         SqlAlchemyBetQuestionsRepository(db),
         SqlAlchemyOfficialResultRepository(db),
@@ -372,7 +417,13 @@ def get_season_official_results(
     user: User = Depends(get_current_user),
 ) -> SeasonOfficialResultsResponse:
     locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
-    group_id = _resolve_management_group_id(db=db, user=user, x_group_id=x_group_id, locale=locale)
+    group_id = resolve_management_group_id(
+        db=db,
+        user=user,
+        x_group_id=x_group_id,
+        locale=locale,
+        forbidden_error=OfficialResultsForbiddenGroupError(),
+    )
 
     use_case = GetSeasonOfficialResultsForm(
         SqlAlchemyBetQuestionsRepository(db),
@@ -434,37 +485,6 @@ def _map_questions(questions) -> list[OfficialResultQuestionRead]:
         )
         for question in questions
     ]
-
-
-def _resolve_management_group_id(
-    *,
-    db: Session,
-    user: User,
-    x_group_id: UUID | None,
-    locale: str | None,
-) -> int:
-    if x_group_id is None:
-        raise _translate_management_error(ManagementGroupRequiredError(), locale=locale)
-
-    access_repository = SqlAlchemyAccessRepository(db)
-    group_ref = ResolveCurrentGroup(
-        access_repository,
-        default_group_id=settings.default_group_id,
-        default_group_public_id=getattr(settings, "default_group_public_id", None),
-    ).execute(str(x_group_id))
-
-    is_admin = any(role.name == RoleName.ADMIN for role in user.roles)
-    if is_admin:
-        return group_ref.id
-
-    group_role = access_repository.get_group_role(
-        user_id=user.id,
-        group_id=group_ref.id,
-    )
-    if group_role not in {GroupRole.OWNER, GroupRole.MODERATOR}:
-        raise _translate_management_error(OfficialResultsForbiddenGroupError(), locale=locale)
-
-    return group_ref.id
 
 
 def _create_results_for_scope(

@@ -1,6 +1,7 @@
 from collections.abc import Callable
+from uuid import UUID
 
-from fastapi import Depends, Header, HTTPException, Request, status
+from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.adapters.sqlalchemy import SqlAlchemyAccessRepository
@@ -15,6 +16,8 @@ from app.db.audit.context import set_audit_actor, set_audit_group
 from app.db.auth import User
 from app.db.session import get_db
 from app.db.social import Group
+from app.db.enums import RoleName
+from app.db.social.group_membership import GroupRole
 from app.domain.access import (
     AccessError,
     EnsureGroupMember,
@@ -28,6 +31,10 @@ from app.domain.admin import AdminError
 from app.domain.bets import BetsError
 from app.domain.ranking import RankingError
 from app.domain.management import ManagementError
+from app.domain.management.group import (
+    ManagementForbiddenGroupError,
+    ManagementGroupRequiredError,
+)
 
 
 def _build_access_repository(db: Session) -> SqlAlchemyAccessRepository:
@@ -184,3 +191,37 @@ def require_permissions_any(*required: str) -> Callable[..., User]:
         return user
 
     return dependency
+
+def resolve_management_group_id(
+    *,
+    db: Session,
+    user: User,
+    x_group_id: UUID | None,
+    locale: str | None,
+    forbidden_error: ManagementError | None = None,
+) -> int:
+    if x_group_id is None:
+        raise _translate_management_error(ManagementGroupRequiredError(), locale=locale)
+
+    access_repository = SqlAlchemyAccessRepository(db)
+    group_ref = ResolveCurrentGroup(
+        access_repository,
+        default_group_id=settings.default_group_id,
+        default_group_public_id=getattr(settings, "default_group_public_id", None),
+    ).execute(str(x_group_id))
+
+    is_admin = any(role.name == RoleName.ADMIN for role in user.roles)
+    if is_admin:
+        return group_ref.id
+
+    group_role = access_repository.get_group_role(
+        user_id=user.id,
+        group_id=group_ref.id,
+    )
+    if group_role not in {GroupRole.OWNER, GroupRole.MODERATOR}:
+        raise _translate_management_error(
+            forbidden_error or ManagementForbiddenGroupError(),
+            locale=locale,
+        )
+
+    return group_ref.id
