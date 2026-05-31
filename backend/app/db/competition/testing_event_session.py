@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.db.competition import TestingEvent
     from app.db.betting import Bet, BetEditPermission, BetResultsVisibilityPolicy
     from app.db.scoring import OfficialResult, ResultPublication, ScoreSession
+    from app.db.powerups import PowerUpRestriction, PowerUpUse
 
 from app.db.enums import SourceProvider
 
@@ -140,5 +141,16 @@ class TestingEventSession(Base):
 
     score_sessions: Mapped[List["ScoreSession"]] = relationship(
         "ScoreSession",
+        back_populates="testing_event_session",
+    )
+
+    powerup_uses: Mapped[List["PowerUpUse"]] = relationship(
+        "PowerUpUse",
+        back_populates="testing_event_session",
+        cascade="all, delete-orphan",
+    )
+
+    powerup_restrictions: Mapped[List["PowerUpRestriction"]] = relationship(
+        "PowerUpRestriction",
         back_populates="testing_event_session",
     )

@@ -19,7 +19,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.db.auth import User
     from app.db.betting import BetContext
-    from app.db.competition import EventSession
+    from app.db.competition import EventSession, TestingEventSession
     from app.db.powerups import PowerUp
     from app.db.powerups import PowerUpUseTarget
     from app.db.social import Group
@@ -35,29 +35,54 @@ class PowerUpUse(Base):
             "bet_context_id",
             "powerup_id",
             unique=True,
-            postgresql_where=text("event_session_id IS NULL"),
+            postgresql_where=text(
+                "event_session_id IS NULL AND testing_event_session_id IS NULL"
+            ),
         ),
         Index(
-            "uq_powerup_uses_user_session_powerup",
+            "uq_powerup_uses_user_event_session_powerup",
             "user_id",
             "group_id",
             "bet_context_id",
             "event_session_id",
             "powerup_id",
             unique=True,
-            postgresql_where=text("event_session_id IS NOT NULL"),
+            postgresql_where=text(
+                "event_session_id IS NOT NULL AND testing_event_session_id IS NULL"
+            ),
+        ),
+        Index(
+            "uq_powerup_uses_user_testing_session_powerup",
+            "user_id",
+            "group_id",
+            "bet_context_id",
+            "testing_event_session_id",
+            "powerup_id",
+            unique=True,
+            postgresql_where=text(
+                "event_session_id IS NULL AND testing_event_session_id IS NOT NULL"
+            ),
         ),
         # Lookups importantes
         Index("ix_powerup_uses_user_id", "user_id"),
         Index("ix_powerup_uses_group_id", "group_id"),
         Index("ix_powerup_uses_bet_context_id", "bet_context_id"),
         Index("ix_powerup_uses_event_session_id", "event_session_id"),
+        Index("ix_powerup_uses_testing_event_session_id", "testing_event_session_id"),
         Index("ix_powerup_uses_powerup_id", "powerup_id"),
         Index("ix_powerup_uses_group_user", "group_id", "user_id"),
         Index("ix_powerup_uses_context_powerup", "bet_context_id", "powerup_id"),
         CheckConstraint(
             "event_session_id IS NULL OR bet_context_id IS NOT NULL",
             name="ck_powerup_uses_session_requires_context",
+        ),
+        CheckConstraint(
+            "testing_event_session_id IS NULL OR bet_context_id IS NOT NULL",
+            name="ck_powerup_uses_testing_session_requires_context",
+        ),
+        CheckConstraint(
+            "NOT (event_session_id IS NOT NULL AND testing_event_session_id IS NOT NULL)",
+            name="ck_powerup_uses_single_session_scope",
         ),
 
         {"schema": "powerups"},
@@ -86,6 +111,12 @@ class PowerUpUse(Base):
     # Opcional: sesión concreta
     event_session_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("competition.event_sessions.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+
+    # Opcional: sesion concreta de testing
+    testing_event_session_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("competition.testing_event_sessions.id", ondelete="CASCADE"),
         nullable=True,
     )
 
@@ -129,6 +160,11 @@ class PowerUpUse(Base):
 
     event_session: Mapped[Optional["EventSession"]] = relationship(
         "EventSession",
+        back_populates="powerup_uses",
+    )
+
+    testing_event_session: Mapped[Optional["TestingEventSession"]] = relationship(
+        "TestingEventSession",
         back_populates="powerup_uses",
     )
 

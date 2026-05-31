@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
     Text,
-    CheckConstraint,
     func,
     text,
 )
@@ -18,40 +18,55 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.db.powerups import PowerUp
     from app.db.betting import BetContext
-    from app.db.competition import EventSession
+    from app.db.competition import EventSession, TestingEventSession
+    from app.db.powerups import PowerUp
 
 
 class PowerUpRestriction(Base):
     __tablename__ = "powerup_restrictions"
     __table_args__ = (
-        # Evita duplicados:
-        # - si event_session_id IS NULL: una regla por (powerup, bet_context)
         Index(
             "uq_powerup_restrictions_ctx_nosession",
             "powerup_id",
             "bet_context_id",
             unique=True,
-            postgresql_where=text("event_session_id IS NULL"),
+            postgresql_where=text(
+                "event_session_id IS NULL AND testing_event_session_id IS NULL"
+            ),
         ),
-        # - si event_session_id IS NOT NULL: una regla por (powerup, bet_context, event_session)
         Index(
-            "uq_powerup_restrictions_ctx_session",
+            "uq_powerup_restrictions_ctx_event_session",
             "powerup_id",
             "bet_context_id",
             "event_session_id",
             unique=True,
-            postgresql_where=text("event_session_id IS NOT NULL"),
+            postgresql_where=text(
+                "event_session_id IS NOT NULL AND testing_event_session_id IS NULL"
+            ),
         ),
-        # Lookups típicos
+        Index(
+            "uq_powerup_restrictions_ctx_testing_session",
+            "powerup_id",
+            "bet_context_id",
+            "testing_event_session_id",
+            unique=True,
+            postgresql_where=text(
+                "event_session_id IS NULL AND testing_event_session_id IS NOT NULL"
+            ),
+        ),
         Index("ix_powerup_restrictions_powerup_id", "powerup_id"),
         Index("ix_powerup_restrictions_ctx_id", "bet_context_id"),
         Index("ix_powerup_restrictions_session_id", "event_session_id"),
+        Index("ix_powerup_restrictions_testing_session_id", "testing_event_session_id"),
         Index("ix_powerup_restrictions_is_disabled", "is_disabled"),
         CheckConstraint(
             "note IS NULL OR length(note) <= 5000",
             name="ck_powerup_restrictions_note_len",
+        ),
+        CheckConstraint(
+            "NOT (event_session_id IS NOT NULL AND testing_event_session_id IS NOT NULL)",
+            name="ck_powerup_restrictions_single_session_scope",
         ),
         {"schema": "powerups"},
     )
@@ -68,9 +83,15 @@ class PowerUpRestriction(Base):
         nullable=False,
     )
 
-    # NULL => restricción aplica al evento completo (no a una sesión concreta)
+    # NULL => aplica al contexto completo
     event_session_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("competition.event_sessions.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+
+    # NULL => aplica al contexto completo de testing
+    testing_event_session_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("competition.testing_event_sessions.id", ondelete="CASCADE"),
         nullable=True,
     )
 
@@ -91,9 +112,6 @@ class PowerUpRestriction(Base):
         server_default=func.now(),
     )
 
-    # --------------------
-    # Relationships
-    # --------------------
     powerup: Mapped["PowerUp"] = relationship(
         "PowerUp",
         back_populates="restrictions",
@@ -106,5 +124,10 @@ class PowerUpRestriction(Base):
 
     event_session: Mapped[Optional["EventSession"]] = relationship(
         "EventSession",
+        back_populates="powerup_restrictions",
+    )
+
+    testing_event_session: Mapped[Optional["TestingEventSession"]] = relationship(
+        "TestingEventSession",
         back_populates="powerup_restrictions",
     )
