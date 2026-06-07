@@ -34,8 +34,9 @@ htmlcov/
 # Generated docs / exports
 schemaspy-out/
 tbls-doc/
-backend/openapi/openapi.json
+backend/openapi/
 graph_db/
+docs/
 
 # Editors / OS
 .vscode/
