@@ -4,7 +4,15 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.db.enums import BetContextKind, BetValueType, RaceEventStatus, SessionType, TestingEventStatus, PowerUpTargetMode
+from app.db.enums import (
+    BetContextKind, 
+    BetValueType, 
+    RaceEventStatus, 
+    SessionType, 
+    TestingEventStatus, 
+    PowerUpTargetMode, 
+    PowerUpTargetType,
+)
 
 
 class BetQuestionOptionRead(BaseModel):
@@ -157,3 +165,24 @@ class TestingEventBetPowerUpsResponse(BaseModel):
 class SeasonBetPowerUpsResponse(BaseModel):
     season_year: int
     powerups: list[BetPowerUpRead]
+
+class BetPowerUpTargetWrite(BaseModel):
+    target_type: PowerUpTargetType
+    target_user_public_id: UUID | None = None
+    target_team_public_id: UUID | None = None
+    target_group_public_id: UUID | None = None
+    rule_json: dict[str, Any] | None = None
+
+
+class BetPowerUpUseWrite(BaseModel):
+    powerup_code: str
+    targets: list[BetPowerUpTargetWrite] = []
+    rule_json: dict[str, Any] | None = None
+
+class BetAnswersPatchRequest(BaseModel):
+    answers: list[BetAnswerWrite]
+
+
+class BetAnswersSubmitRequest(BaseModel):
+    answers: list[BetAnswerWrite]
+    powerups: list[BetPowerUpUseWrite] = []

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from app.domain.bets.answers.models import BetAnswerInput
+from app.domain.bets.answers.models import BetAnswerInput, BetPowerUpUseInput, BetPowerUpAssignmentDefinition, ResolvedBetPowerUpUse
 from app.domain.bets.shared.models import (
     BetContextDefinition,
     BetEditPermissionDefinition,
@@ -84,5 +84,76 @@ class BetAnswersRepository(Protocol):
         testing_event_session_id: int | None,
         answers: list[BetAnswerInput],
         submitted_at: datetime,
+    ) -> None:
+        ...
+
+    def user_has_any_submitted_bet_for_context(
+        self,
+        *,
+        user_id: int,
+        bet_context_id: int,
+    ) -> bool:
+        ...
+
+    def get_powerup_assignment_for_submission(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        bet_context_id: int,
+        powerup_code: str,
+    ) -> BetPowerUpAssignmentDefinition | None:
+        ...
+
+    def powerup_already_used(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        bet_context_id: int,
+        powerup_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+    ) -> bool:
+        ...
+
+    def powerup_is_restricted(
+        self,
+        *,
+        powerup_id: int,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+    ) -> bool:
+        ...
+
+    def get_user_id_by_public_id(self, public_id: UUID) -> int | None:
+        ...
+
+    def get_team_id_by_public_id(self, public_id: UUID) -> int | None:
+        ...
+
+    def get_group_id_by_public_id(self, public_id: UUID) -> int | None:
+        ...
+
+    def count_distinct_contexts_where_user_received_powerup(
+        self,
+        *,
+        group_id: int,
+        target_user_id: int,
+        powerup_id: int,
+        excluding_bet_context_id: int,
+    ) -> int:
+        ...
+
+    def create_powerup_uses_for_submission(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+        powerups: list[ResolvedBetPowerUpUse],
     ) -> None:
         ...

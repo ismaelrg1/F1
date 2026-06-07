@@ -106,3 +106,38 @@ class TestingEventNotFoundForBetAnswersError(BetsError):
 
 class SeasonNotFoundForBetAnswersError(BetsError):
     pass
+
+class BetPowerUpsCannotBeUsedAfterSubmitError(BetsError):
+    pass
+
+
+class BetPowerUpNotFoundError(BetsError):
+    pass
+
+
+class BetPowerUpDisabledError(BetsError):
+    pass
+
+
+class BetPowerUpNotAssignedError(BetsError):
+    pass
+
+
+class BetPowerUpRestrictedError(BetsError):
+    pass
+
+
+class BetPowerUpAlreadyUsedError(BetsError):
+    pass
+
+
+class BetPowerUpTargetRequiredError(BetsError):
+    pass
+
+
+class BetPowerUpTargetNotAllowedError(BetsError):
+    pass
+
+
+class BetPowerUpPenaltyLimitReachedError(BetsError):
+    pass

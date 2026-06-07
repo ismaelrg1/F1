@@ -9,6 +9,8 @@ from app.domain.bets.models import (
     BetAnswerResult,
 )
 
+from app.db.enums import PowerUpTargetType
+
 @dataclass(frozen=True)
 class RaceEventBetAnswersSessionResult:
     event_session_public_id: UUID
@@ -69,3 +71,42 @@ class SeasonBetAnswersResult:
 class BetAnswerInput:
     bet_score_code: str
     value: str
+
+@dataclass(frozen=True)
+class BetPowerUpTargetInput:
+    target_type: str
+    target_user_public_id: UUID | None = None
+    target_team_public_id: UUID | None = None
+    target_group_public_id: UUID | None = None
+    rule_json: dict | None = None
+
+@dataclass(frozen=True)
+class BetPowerUpUseInput:
+    powerup_code: str
+    targets: list[BetPowerUpTargetInput]
+    rule_json: dict | None = None
+
+@dataclass(frozen=True)
+class BetPowerUpAssignmentDefinition:
+    powerup_id: int
+    code: str
+    name: str
+    is_enabled: bool
+    target_mode: str
+    quantity: int
+
+
+@dataclass(frozen=True)
+class ResolvedBetPowerUpTarget:
+    target_type: str
+    target_user_id: int | None = None
+    target_team_id: int | None = None
+    target_group_id: int | None = None
+    rule_json: dict | None = None
+
+
+@dataclass(frozen=True)
+class ResolvedBetPowerUpUse:
+    powerup_id: int
+    rule_json: dict | None
+    targets: list[ResolvedBetPowerUpTarget]

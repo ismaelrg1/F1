@@ -22,6 +22,13 @@ from app.domain.bets.models import (
     TestingEventBetAnswersSessionResult,
     BetAnswerInput,
 )
+from app.domain.bets.answers.models import (
+    BetPowerUpUseInput,
+    BetPowerUpAssignmentDefinition,
+    BetPowerUpTargetInput,
+    ResolvedBetPowerUpTarget,
+    ResolvedBetPowerUpUse,
+)
 from app.domain.bets.errors import (
     BetContextNotFoundForRaceEventError,
     BetContextNotFoundForSeasonError,
@@ -37,6 +44,15 @@ from app.domain.bets.errors import (
     BetAnswersNotOpenError,
     BetModificationLimitReachedError,
     BetRequiredAnswerMissingError,
+    BetPowerUpsCannotBeUsedAfterSubmitError,
+
+    BetPowerUpAlreadyUsedError,
+    BetPowerUpDisabledError,
+    BetPowerUpNotAssignedError,
+    BetPowerUpPenaltyLimitReachedError,
+    BetPowerUpRestrictedError,
+    BetPowerUpTargetNotAllowedError,
+    BetPowerUpTargetRequiredError,
 )
 
 
@@ -850,6 +866,7 @@ class SubmitRaceEventBetAnswers:
         user_id: int,
         team_ids: set[int],
         answers: list[BetAnswerInput],
+        powerups: list[BetPowerUpUseInput],
     ) -> RaceEventBetAnswersResult:
         race_event = self._repository.get_race_event_by_public_id(race_event_public_id)
         if race_event is None:
@@ -881,6 +898,12 @@ class SubmitRaceEventBetAnswers:
             user_id=user_id,
             bet_context_id=bet_context.id,
         )
+
+        if powerups and self._repository.user_has_any_submitted_bet_for_context(
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+        ):
+            raise BetPowerUpsCannotBeUsedAfterSubmitError()
 
         current_bet = next(
             (
@@ -970,6 +993,15 @@ class SubmitRaceEventBetAnswers:
         )
         if set(score_ids_by_code) != received_codes:
             raise BetAnswerQuestionNotFoundError()
+        
+        resolved_powerups = BetPowerUpSubmissionValidator(self._repository).resolve(
+            group_id=group_id,
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+            event_session_id=session.id if session is not None else None,
+            testing_event_session_id=None,
+            powerups=powerups,
+        )
 
         self._repository.upsert_user_bet_submission(
             user_id=user_id,
@@ -979,6 +1011,16 @@ class SubmitRaceEventBetAnswers:
             answers=answers,
             submitted_at=now,
         )
+
+        if resolved_powerups:
+            self._repository.create_powerup_uses_for_submission(
+                group_id=group_id,
+                user_id=user_id,
+                bet_context_id=bet_context.id,
+                event_session_id=session.id if session is not None else None,
+                testing_event_session_id=None,
+                powerups=resolved_powerups,
+            )
 
         if session is not None:
             return GetRaceEventSessionBetAnswers(self._repository).execute(
@@ -1127,6 +1169,7 @@ class SubmitTestingEventBetAnswers:
         user_id: int,
         team_ids: set[int],
         answers: list[BetAnswerInput],
+        powerups: list[BetPowerUpUseInput],
     ) -> TestingEventBetAnswersResult:
         testing_event = self._repository.get_testing_event_by_public_id(
             testing_event_public_id
@@ -1160,6 +1203,12 @@ class SubmitTestingEventBetAnswers:
             user_id=user_id,
             bet_context_id=bet_context.id,
         )
+
+        if powerups and self._repository.user_has_any_submitted_bet_for_context(
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+        ):
+            raise BetPowerUpsCannotBeUsedAfterSubmitError()
 
         current_bet = next(
             (
@@ -1255,6 +1304,15 @@ class SubmitTestingEventBetAnswers:
         )
         if set(score_ids_by_code) != received_codes:
             raise BetAnswerQuestionNotFoundError()
+        
+        resolved_powerups = BetPowerUpSubmissionValidator(self._repository).resolve(
+            group_id=group_id,
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+            event_session_id=None,
+            testing_event_session_id=session.id if session is not None else None,
+            powerups=powerups,
+        )
 
         self._repository.upsert_user_bet_submission(
             user_id=user_id,
@@ -1264,6 +1322,16 @@ class SubmitTestingEventBetAnswers:
             answers=answers,
             submitted_at=now,
         )
+
+        if resolved_powerups:
+            self._repository.create_powerup_uses_for_submission(
+                group_id=group_id,
+                user_id=user_id,
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=session.id if session is not None else None,
+                powerups=resolved_powerups,
+            )
 
         if session is not None:
             return GetTestingEventSessionBetAnswers(self._repository).execute(
@@ -1387,6 +1455,7 @@ class SubmitSeasonBetAnswers:
         user_id: int,
         team_ids: set[int],
         answers: list[BetAnswerInput],
+        powerups: list[BetPowerUpUseInput],
     ) -> SeasonBetAnswersResult:
         season = self._repository.get_season_by_year(season_year)
         if season is None:
@@ -1406,6 +1475,12 @@ class SubmitSeasonBetAnswers:
             user_id=user_id,
             bet_context_id=bet_context.id,
         )
+
+        if powerups and self._repository.user_has_any_submitted_bet_for_context(
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+        ):
+            raise BetPowerUpsCannotBeUsedAfterSubmitError()
 
         current_bet = next(
             (
@@ -1499,6 +1574,15 @@ class SubmitSeasonBetAnswers:
         )
         if set(score_ids_by_code) != received_codes:
             raise BetAnswerQuestionNotFoundError()
+        
+        resolved_powerups = BetPowerUpSubmissionValidator(self._repository).resolve(
+            group_id=group_id,
+            user_id=user_id,
+            bet_context_id=bet_context.id,
+            event_session_id=None,
+            testing_event_session_id=None,
+            powerups=powerups,
+        )
 
         self._repository.upsert_user_bet_submission(
             user_id=user_id,
@@ -1508,6 +1592,16 @@ class SubmitSeasonBetAnswers:
             answers=answers,
             submitted_at=now,
         )
+
+        if resolved_powerups:
+            self._repository.create_powerup_uses_for_submission(
+                group_id=group_id,
+                user_id=user_id,
+                bet_context_id=bet_context.id,
+                event_session_id=None,
+                testing_event_session_id=None,
+                powerups=resolved_powerups,
+            )
 
         return GetSeasonBetAnswers(self._repository).execute(
             season_year=season_year,
@@ -1597,3 +1691,131 @@ class SubmitSeasonBetAnswers:
                 if score_id_by_code[code] not in disabled_score_ids
             },
         )
+
+
+class BetPowerUpSubmissionValidator:
+    def __init__(self, repository: BetAnswersRepository):
+        self._repository = repository
+
+    def resolve(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+        powerups: list[BetPowerUpUseInput],
+    ) -> list[ResolvedBetPowerUpUse]:
+        resolved: list[ResolvedBetPowerUpUse] = []
+
+        for requested in powerups:
+            assignment = self._repository.get_powerup_assignment_for_submission(
+                group_id=group_id,
+                user_id=user_id,
+                bet_context_id=bet_context_id,
+                powerup_code=requested.powerup_code,
+            )
+
+            if assignment is None:
+                raise BetPowerUpNotAssignedError()
+
+            if not assignment.is_enabled:
+                raise BetPowerUpDisabledError()
+
+            if assignment.quantity <= 0:
+                raise BetPowerUpNotAssignedError()
+
+            if self._repository.powerup_already_used(
+                group_id=group_id,
+                user_id=user_id,
+                bet_context_id=bet_context_id,
+                powerup_id=assignment.powerup_id,
+                event_session_id=event_session_id,
+                testing_event_session_id=testing_event_session_id,
+            ):
+                raise BetPowerUpAlreadyUsedError()
+
+            if self._repository.powerup_is_restricted(
+                powerup_id=assignment.powerup_id,
+                bet_context_id=bet_context_id,
+                event_session_id=event_session_id,
+                testing_event_session_id=testing_event_session_id,
+            ):
+                raise BetPowerUpRestrictedError()
+
+            targets = self._resolve_targets(
+                group_id=group_id,
+                actor_user_id=user_id,
+                bet_context_id=bet_context_id,
+                assignment=assignment,
+                requested_targets=requested.targets,
+            )
+
+            resolved.append(
+                ResolvedBetPowerUpUse(
+                    powerup_id=assignment.powerup_id,
+                    rule_json=requested.rule_json,
+                    targets=targets,
+                )
+            )
+
+        return resolved
+
+    def _resolve_targets(
+        self,
+        *,
+        group_id: int,
+        actor_user_id: int,
+        bet_context_id: int,
+        assignment: BetPowerUpAssignmentDefinition,
+        requested_targets: list[BetPowerUpTargetInput],
+    ) -> list[ResolvedBetPowerUpTarget]:
+        if assignment.code.startswith("HALVE_POINTS") and not requested_targets:
+            raise BetPowerUpTargetRequiredError()
+
+        if assignment.target_mode == "SINGLE" and len(requested_targets) > 1:
+            raise BetPowerUpTargetNotAllowedError()
+
+        if assignment.code.startswith("DOUBLE_POINTS") and requested_targets:
+            raise BetPowerUpTargetNotAllowedError()
+
+        resolved: list[ResolvedBetPowerUpTarget] = []
+
+        for target in requested_targets:
+            if assignment.code.startswith("HALVE_POINTS"):
+                if target.target_type != "USER":
+                    raise BetPowerUpTargetNotAllowedError()
+
+                if target.target_user_public_id is None:
+                    raise BetPowerUpTargetNotAllowedError()
+
+                target_user_id = self._repository.get_user_id_by_public_id(
+                    target.target_user_public_id,
+                )
+
+                if target_user_id is None or target_user_id == actor_user_id:
+                    raise BetPowerUpTargetNotAllowedError()
+
+                received_contexts = self._repository.count_distinct_contexts_where_user_received_powerup(
+                    group_id=group_id,
+                    target_user_id=target_user_id,
+                    powerup_id=assignment.powerup_id,
+                    excluding_bet_context_id=bet_context_id,
+                )
+
+                if received_contexts >= 2:
+                    raise BetPowerUpPenaltyLimitReachedError()
+
+                resolved.append(
+                    ResolvedBetPowerUpTarget(
+                        target_type=target.target_type,
+                        target_user_id=target_user_id,
+                        rule_json=target.rule_json,
+                    )
+                )
+                continue
+
+            raise BetPowerUpTargetNotAllowedError()
+
+        return resolved

@@ -12,6 +12,7 @@ from app.db.social import Group
 
 from app.domain.bets import BetsError
 from app.domain.bets.models import BetAnswerInput
+from app.domain.bets.answers.models import BetPowerUpTargetInput, BetPowerUpUseInput
 from app.domain.bets.powerups import GetTestingEventPowerUps
 from app.domain.bets.use_cases import (
     GetTestingEventBetQuestions,
@@ -24,6 +25,7 @@ from app.domain.bets.use_cases import (
 from app.models.bets import (
     BetAnswerRead,
     BetAnswersPatchRequest,
+    BetAnswersSubmitRequest,
     BetQuestionRead,
     BetQuestionOptionRead,
     TestingEventBetQuestionsResponse,
@@ -292,7 +294,7 @@ def patch_testing_event_answers(
 )
 def submit_testing_event_answers(
     testing_event_public_id: UUID,
-    payload: BetAnswersPatchRequest,
+    payload: BetAnswersSubmitRequest,
     request: Request,
     session_id: UUID | None = Query(default=None),
     db: Session = Depends(get_db),
@@ -317,6 +319,23 @@ def submit_testing_event_answers(
                     value=answer.value,
                 )
                 for answer in payload.answers
+            ],
+            powerups=[
+                BetPowerUpUseInput(
+                    powerup_code=powerup.powerup_code,
+                    targets=[
+                        BetPowerUpTargetInput(
+                            target_type=target.target_type,
+                            target_user_public_id=target.target_user_public_id,
+                            target_team_public_id=target.target_team_public_id,
+                            target_group_public_id=target.target_group_public_id,
+                            rule_json=target.rule_json,
+                        )
+                        for target in powerup.targets
+                    ],
+                    rule_json=powerup.rule_json,
+                )
+                for powerup in payload.powerups
             ],
         )
         db.commit()

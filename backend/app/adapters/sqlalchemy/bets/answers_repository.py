@@ -1,15 +1,25 @@
 from datetime import datetime
+from uuid import UUID
 
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload, selectinload
+
 
 from app.adapters.sqlalchemy.bets.base_repository import SqlAlchemyBetBaseRepository
+from app.db.auth import User
+from app.db.powerups import PowerUp, PowerUpAssignment, PowerUpRestriction, PowerUpUse, PowerUpUseTarget
+from app.db.social import Group, Team
+from app.db.enums import PowerUpTargetMode, PowerUpTargetType
 from app.db.betting import Bet, BetEditPermission, BetPick, BetScore, BetSubmissionRevision
 from app.domain.bets.models import (
     BetAnswerInput,
     BetAnswerResult,
     BetEditPermissionDefinition,
     UserBetDefinition,
+)
+from app.domain.bets.answers.models import (
+    BetPowerUpAssignmentDefinition,
+    ResolvedBetPowerUpUse,
 )
 from app.domain.bets.ports import BetAnswersRepository
 
@@ -256,3 +266,173 @@ class SqlAlchemyBetAnswersRepository(SqlAlchemyBetBaseRepository, BetAnswersRepo
 
         self._session.flush()
         self._session.expire(bet, ["bet_picks", "submission_revisions"])
+
+    def get_powerup_assignment_for_submission(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        bet_context_id: int,
+        powerup_code: str,
+    ) -> BetPowerUpAssignmentDefinition | None:
+        assignment = self._session.scalar(
+            select(PowerUpAssignment)
+            .join(PowerUp, PowerUp.id == PowerUpAssignment.powerup_id)
+            .where(
+                PowerUpAssignment.group_id == group_id,
+                PowerUpAssignment.user_id == user_id,
+                PowerUpAssignment.bet_context_id == bet_context_id,
+                PowerUp.code == powerup_code,
+                PowerUpAssignment.is_active.is_(True),
+            )
+            .options(joinedload(PowerUpAssignment.powerup))
+        )
+
+        if assignment is None:
+            return None
+
+        return BetPowerUpAssignmentDefinition(
+            powerup_id=assignment.powerup_id,
+            code=assignment.powerup.code,
+            name=assignment.powerup.name,
+            is_enabled=assignment.powerup.is_enabled,
+            target_mode=assignment.powerup.target_mode.value,
+            quantity=assignment.quantity,
+        )
+    
+    def user_has_any_submitted_bet_for_context(
+        self,
+        *,
+        user_id: int,
+        bet_context_id: int,
+    ) -> bool:
+        return self._session.execute(
+            select(Bet.id).where(
+                Bet.user_id == user_id,
+                Bet.bet_context_id == bet_context_id,
+                Bet.submitted_at.is_not(None),
+            )
+        ).first() is not None
+    
+    def powerup_already_used(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        bet_context_id: int,
+        powerup_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+    ) -> bool:
+        return self._session.execute(
+            select(PowerUpUse.id).where(
+                PowerUpUse.group_id == group_id,
+                PowerUpUse.user_id == user_id,
+                PowerUpUse.bet_context_id == bet_context_id,
+                PowerUpUse.powerup_id == powerup_id,
+                PowerUpUse.event_session_id == event_session_id,
+                PowerUpUse.testing_event_session_id == testing_event_session_id,
+            )
+        ).first() is not None
+    
+    def powerup_is_restricted(
+        self,
+        *,
+        powerup_id: int,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+    ) -> bool:
+        return self._session.execute(
+            select(PowerUpRestriction.id).where(
+                PowerUpRestriction.powerup_id == powerup_id,
+                PowerUpRestriction.bet_context_id == bet_context_id,
+                PowerUpRestriction.event_session_id == event_session_id,
+                PowerUpRestriction.testing_event_session_id == testing_event_session_id,
+                PowerUpRestriction.is_disabled.is_(True),
+            )
+        ).first() is not None
+    
+    def get_user_id_by_public_id(self, public_id: UUID) -> int | None:
+        return self._session.scalar(
+            select(User.id).where(User.public_id == public_id)
+        )
+    
+    def get_team_id_by_public_id(self, public_id: UUID) -> int | None:
+        return self._session.scalar(
+            select(Team.id).where(Team.public_id == public_id)
+        )
+    
+    def get_group_id_by_public_id(self, public_id: UUID) -> int | None:
+        return self._session.scalar(
+            select(Group.id).where(Group.public_id == public_id)
+        )
+    
+    def count_distinct_contexts_where_user_received_powerup(
+        self,
+        *,
+        group_id: int,
+        target_user_id: int,
+        powerup_id: int,
+        excluding_bet_context_id: int,
+    ) -> int:
+        return self._session.scalar(
+            select(func.count(func.distinct(PowerUpUse.bet_context_id)))
+            .join(PowerUpUseTarget, PowerUpUseTarget.powerup_use_id == PowerUpUse.id)
+            .where(
+                PowerUpUse.group_id == group_id,
+                PowerUpUse.powerup_id == powerup_id,
+                PowerUpUseTarget.target_user_id == target_user_id,
+                PowerUpUse.bet_context_id != excluding_bet_context_id,
+            )
+        ) or 0
+    
+    def create_powerup_uses_for_submission(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        bet_context_id: int,
+        event_session_id: int | None,
+        testing_event_session_id: int | None,
+        powerups: list[ResolvedBetPowerUpUse],
+    ) -> None:
+        for requested in powerups:
+            use = PowerUpUse(
+                group_id=group_id,
+                user_id=user_id,
+                bet_context_id=bet_context_id,
+                event_session_id=event_session_id,
+                testing_event_session_id=testing_event_session_id,
+                powerup_id=requested.powerup_id,
+                rule_json=requested.rule_json,
+            )
+            self._session.add(use)
+            self._session.flush()
+
+            for target in requested.targets:
+                self._session.add(
+                    PowerUpUseTarget(
+                        powerup_use_id=use.id,
+                        target_type=target.target_type,
+                        target_user_id=target.target_user_id,
+                        target_team_id=target.target_team_id,
+                        target_group_id=target.target_group_id,
+                        rule_json=target.rule_json,
+                    )
+                )
+
+            assignment = self._session.scalar(
+                select(PowerUpAssignment).where(
+                    PowerUpAssignment.group_id == group_id,
+                    PowerUpAssignment.user_id == user_id,
+                    PowerUpAssignment.bet_context_id == bet_context_id,
+                    PowerUpAssignment.powerup_id == requested.powerup_id,
+                    PowerUpAssignment.is_active.is_(True),
+                )
+            )
+
+            if assignment is not None:
+                assignment.quantity -= 1
+
+        self._session.flush()

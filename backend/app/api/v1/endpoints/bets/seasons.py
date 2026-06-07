@@ -10,6 +10,7 @@ from app.db.social import Group
 
 from app.domain.bets import BetsError
 from app.domain.bets.models import BetAnswerInput
+from app.domain.bets.answers.models import BetPowerUpTargetInput, BetPowerUpUseInput
 from app.domain.bets.powerups import GetSeasonPowerUps
 from app.domain.bets.use_cases import (
     GetSeasonBetQuestions,
@@ -21,6 +22,7 @@ from app.domain.bets.use_cases import (
 from app.models.bets import (
     BetAnswerRead,
     BetAnswersPatchRequest,
+    BetAnswersSubmitRequest,
     BetQuestionRead,
     BetQuestionOptionRead,
     SeasonBetQuestionsResponse,
@@ -199,7 +201,7 @@ def patch_season_answers(
 )
 def submit_season_answers(
     season_year: int,
-    payload: BetAnswersPatchRequest,
+    payload: BetAnswersSubmitRequest,
     request: Request,
     db: Session = Depends(get_db),
     user_group: tuple[User, Group] = Depends(require_group_member),
@@ -222,6 +224,23 @@ def submit_season_answers(
                     value=answer.value,
                 )
                 for answer in payload.answers
+            ],
+            powerups=[
+                BetPowerUpUseInput(
+                    powerup_code=powerup.powerup_code,
+                    targets=[
+                        BetPowerUpTargetInput(
+                            target_type=target.target_type,
+                            target_user_public_id=target.target_user_public_id,
+                            target_team_public_id=target.target_team_public_id,
+                            target_group_public_id=target.target_group_public_id,
+                            rule_json=target.rule_json,
+                        )
+                        for target in powerup.targets
+                    ],
+                    rule_json=powerup.rule_json,
+                )
+                for powerup in payload.powerups
             ],
         )
         db.commit()
