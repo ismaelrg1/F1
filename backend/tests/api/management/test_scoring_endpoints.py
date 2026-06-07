@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import Role, User
-from app.db.betting import Bet, BetContext, BetPick, BetScore
+from app.db.betting import Bet, BetContext, BetPick, BetScore, BetTemplate, BetTemplateItem
 from app.db.competition import (
     Circuit,
     Country,
@@ -18,6 +18,7 @@ from app.db.competition import (
 )
 from app.db.enums import (
     BetContextKind,
+    BetTemplateScope,
     BetValueType,
     PowerUpTargetType,
     RaceEventStatus,
@@ -28,7 +29,7 @@ from app.db.enums import (
     SourceProvider,
     TestingEventStatus as CompetitionTestingEventStatus,
 )
-from app.db.powerups import PowerUp, PowerUpRestriction, PowerUpUse, PowerUpUseTarget
+from app.db.powerups import PowerUp, PowerUpAssignment, PowerUpRestriction, PowerUpUse, PowerUpUseTarget
 from app.db.scoring import OfficialResult, Score, ScoreComponent, ScoreSession, ScoreSessionComponent
 from app.db.scoring import ScoringRule
 from app.db.scoring.official_result import SourceType
@@ -377,6 +378,34 @@ def _add_scoring_rule(
     return rule
 
 
+def _add_season_template(
+    db_session,
+    *,
+    season_id: int,
+    bet_score_id: int,
+) -> BetTemplate:
+    template = BetTemplate(
+        season_id=season_id,
+        name=f"Season template {uuid4().hex[:8]}",
+        context_kind=BetContextKind.SEASON,
+        scope=BetTemplateScope.EVENT,
+        session_type=None,
+    )
+    db_session.add(template)
+    db_session.flush()
+
+    db_session.add(
+        BetTemplateItem(
+            template_id=template.id,
+            bet_score_id=bet_score_id,
+            required=True,
+            display_order=0,
+        )
+    )
+    db_session.flush()
+    return template
+
+
 def _add_powerup(db_session, *, code: str, name: str | None = None) -> PowerUp:
     powerup = PowerUp(
         code=code,
@@ -386,6 +415,29 @@ def _add_powerup(db_session, *, code: str, name: str | None = None) -> PowerUp:
     db_session.add(powerup)
     db_session.flush()
     return powerup
+
+
+def _add_powerup_assignment(
+    db_session,
+    *,
+    group_id: int,
+    user_id: int,
+    bet_context_id: int,
+    powerup_id: int,
+    quantity: int = 1,
+) -> PowerUpAssignment:
+    assignment = PowerUpAssignment(
+        group_id=group_id,
+        user_id=user_id,
+        season_id=None,
+        bet_context_id=bet_context_id,
+        powerup_id=powerup_id,
+        quantity=quantity,
+        is_active=True,
+    )
+    db_session.add(assignment)
+    db_session.flush()
+    return assignment
 
 
 def _add_powerup_use(
@@ -1189,6 +1241,106 @@ def test_calculate_scoring_applies_double_points_powerup(client, db_session) -> 
     ).scalar_one()
     assert score.base_points == Decimal("15.00000000")
     assert score.total_points == Decimal("30.00000000")
+
+    powerup_component = db_session.execute(
+        select(ScoreComponent).where(
+            ScoreComponent.score_id == score.id,
+            ScoreComponent.component_type == ScoreComponentType.POWERUP,
+        )
+    ).scalar_one()
+    assert powerup_component.points == Decimal("15.00000000")
+    assert powerup_component.details_json["powerup_code"] == "DOUBLE_POINTS"
+
+
+def test_calculate_scoring_applies_powerup_submitted_with_season_bet(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username=f"admin_submit_powerup_{uuid4().hex[:8]}",
+        email=f"admin_submit_powerup_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    player = _create_local_user(
+        db_session,
+        username=f"player_submit_powerup_{uuid4().hex[:8]}",
+        email=f"player_submit_powerup_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    data = _create_season_fixture(db_session)
+    _add_group_membership(
+        db_session,
+        group_id=data["group"].id,
+        user_id=player.id,
+        role=GroupRole.MEMBER,
+    )
+    _add_season_template(
+        db_session,
+        season_id=data["season"].id,
+        bet_score_id=data["score"].id,
+    )
+    powerup = _add_powerup(db_session, code="DOUBLE_POINTS")
+    assignment = _add_powerup_assignment(
+        db_session,
+        group_id=data["group"].id,
+        user_id=player.id,
+        bet_context_id=data["bet_context"].id,
+        powerup_id=powerup.id,
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["score"].id,
+        value="VER",
+    )
+
+    _login(client, player.username)
+    submit_response = client.post(
+        f"/api/v1/bets/seasons/{data['season'].year}/answers",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["score"].code,
+                    "value": "VER",
+                }
+            ],
+            "powerups": [
+                {
+                    "powerup_code": powerup.code,
+                    "targets": [],
+                }
+            ],
+        },
+    )
+    assert submit_response.status_code == 200
+    db_session.refresh(assignment)
+    assert assignment.quantity == 0
+
+    _login(client, admin.username)
+    calculate_response = client.post(
+        f"/api/v1/management/scoring/seasons/{data['season'].year}/calculate",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert calculate_response.status_code == 200
+    score = db_session.execute(
+        select(Score).where(
+            Score.user_id == player.id,
+            Score.bet_context_id == data["bet_context"].id,
+        )
+    ).scalar_one()
+    assert score.base_points == Decimal("15.00000000")
+    assert score.total_points == Decimal("30.00000000")
+
+    powerup_use = db_session.execute(
+        select(PowerUpUse).where(
+            PowerUpUse.group_id == data["group"].id,
+            PowerUpUse.user_id == player.id,
+            PowerUpUse.bet_context_id == data["bet_context"].id,
+            PowerUpUse.powerup_id == powerup.id,
+        )
+    ).scalar_one()
+    assert powerup_use.event_session_id is None
+    assert powerup_use.testing_event_session_id is None
 
     powerup_component = db_session.execute(
         select(ScoreComponent).where(
