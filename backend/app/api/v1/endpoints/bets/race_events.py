@@ -45,6 +45,7 @@ from app.models.bets import (
     RaceEventBetQuestionsSessionRead,
     BetPowerUpRead,
     RaceEventBetPowerUpsResponse,
+    BetPowerUpTargetOptionRead,
 )
 from app.models.bet_results import (
     BetOfficialResultRead,
@@ -526,6 +527,18 @@ def get_race_event_powerups(
                 is_enabled=powerup.is_enabled,
                 is_restricted=powerup.is_restricted,
                 already_used=powerup.already_used,
+                target_options=[
+                    BetPowerUpTargetOptionRead(
+                        target_type=target.target_type,
+                        target_user_public_id=target.target_user_public_id,
+                        target_team_public_id=target.target_team_public_id,
+                        target_group_public_id=target.target_group_public_id,
+                        label=target.label,
+                        is_available=target.is_available,
+                        unavailable_reason=target.unavailable_reason,
+                    )
+                    for target in powerup.target_options
+                ],
             )
             for powerup in result.powerups
         ],

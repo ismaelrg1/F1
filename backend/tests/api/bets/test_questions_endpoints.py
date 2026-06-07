@@ -3,6 +3,8 @@
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+from sqlalchemy import select
+
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import User
 from app.db.betting import (
@@ -37,6 +39,7 @@ from app.db.enums import (
     BetTemplateScope,
     BetValueType,
     PowerUpTargetMode,
+    PowerUpTargetType,
     RaceEventStatus,
     SeasonDriverStatus,
     ScoreComponentType,
@@ -44,7 +47,7 @@ from app.db.enums import (
     SourceProvider,
     TestingEventStatus as CompetitionTestingEventStatus,
 )
-from app.db.powerups import PowerUp, PowerUpAssignment, PowerUpRestriction, PowerUpUse
+from app.db.powerups import PowerUp, PowerUpAssignment, PowerUpRestriction, PowerUpUse, PowerUpUseTarget
 from app.db.scoring import (
     OfficialResult,
     ResultPublication,
@@ -158,6 +161,22 @@ def _add_powerup_use(
     db_session.add(use)
     db_session.flush()
     return use
+
+
+def _add_powerup_use_target(
+    db_session,
+    *,
+    powerup_use_id: int,
+    target_user_id: int,
+) -> PowerUpUseTarget:
+    target = PowerUpUseTarget(
+        powerup_use_id=powerup_use_id,
+        target_type=PowerUpTargetType.USER,
+        target_user_id=target_user_id,
+    )
+    db_session.add(target)
+    db_session.flush()
+    return target
 
 
 def _add_powerup_restriction(
@@ -2521,6 +2540,7 @@ def test_get_race_event_powerups_returns_user_assignments(client, db_session) ->
             "is_enabled": True,
             "is_restricted": False,
             "already_used": False,
+            "target_options": [],
         }
     ]
 
@@ -2614,6 +2634,107 @@ def test_get_race_event_powerups_returns_404_when_session_is_missing(client, db_
 
     assert response.status_code == 404
     assert response.json()["detail"]["error"]["code"] == "bets.powerups.race_event_session_not_found"
+
+
+def test_get_race_event_powerups_returns_user_target_options_with_penalty_limit(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"actor_{uuid4().hex[:8]}",
+        email=f"actor_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    available_target = _create_user(
+        db_session,
+        username=f"available_{uuid4().hex[:8]}",
+        email=f"available_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    blocked_target = _create_user(
+        db_session,
+        username=f"blocked_{uuid4().hex[:8]}",
+        email=f"blocked_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    db_session.add_all(
+        [
+            GroupMembership(group_id=group.id, user_id=available_target.id, role=GroupRole.MEMBER),
+            GroupMembership(group_id=group.id, user_id=blocked_target.id, role=GroupRole.MEMBER),
+        ]
+    )
+    db_session.flush()
+    data = _create_patch_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+    assignment = _create_powerup_assignment(
+        db_session,
+        group_id=group.id,
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        code="HALVE_POINTS",
+    )
+    first_previous_context = _create_patch_season_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+    second_previous_context = _create_patch_season_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+    for previous_context in [first_previous_context, second_previous_context]:
+        previous_use = _add_powerup_use(
+            db_session,
+            group_id=group.id,
+            user_id=user.id,
+            bet_context_id=previous_context["bet_context"].id,
+            powerup_id=assignment.powerup_id,
+        )
+        _add_powerup_use_target(
+            db_session,
+            powerup_use_id=previous_use.id,
+            target_user_id=blocked_target.id,
+        )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/powerups",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    target_options = response.json()["powerups"][0]["target_options"]
+    options_by_user = {option["target_user_public_id"]: option for option in target_options}
+    assert options_by_user[str(available_target.public_id)] == {
+        "target_type": "USER",
+        "target_user_public_id": str(available_target.public_id),
+        "target_team_public_id": None,
+        "target_group_public_id": None,
+        "label": available_target.username,
+        "is_available": True,
+        "unavailable_reason": None,
+    }
+    assert options_by_user[str(blocked_target.public_id)] == {
+        "target_type": "USER",
+        "target_user_public_id": str(blocked_target.public_id),
+        "target_team_public_id": None,
+        "target_group_public_id": None,
+        "label": blocked_target.username,
+        "is_available": False,
+        "unavailable_reason": "penalty_limit_reached",
+    }
 
 
 def test_patch_race_event_bet_answers_saves_partial_event_draft(client, db_session) -> None:
@@ -3156,6 +3277,151 @@ def test_submit_race_event_bet_answers_creates_first_submission(client, db_sessi
     assert saved_bet.submit_order_int is None
     assert len(saved_bet.submission_revisions) == 1
     assert saved_bet.submission_revisions[0].revision_number == 1
+
+
+def test_submit_race_event_bet_answers_creates_powerup_use(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_submit_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+    assignment = _create_powerup_assignment(
+        db_session,
+        group_id=group.id,
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        code="DOUBLE_POINTS",
+        quantity=1,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["safety_car_score"].code,
+                    "value": "true",
+                },
+                {
+                    "bet_score_code": data["pole_score"].code,
+                    "value": "VER",
+                },
+            ],
+            "powerups": [
+                {
+                    "powerup_code": assignment.powerup.code,
+                    "targets": [],
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    db_session.refresh(assignment)
+    powerup_use = db_session.execute(
+        select(PowerUpUse).where(
+            PowerUpUse.group_id == group.id,
+            PowerUpUse.user_id == user.id,
+            PowerUpUse.bet_context_id == data["bet_context"].id,
+            PowerUpUse.powerup_id == assignment.powerup_id,
+        )
+    ).scalar_one()
+    assert powerup_use.event_session_id is None
+    assert powerup_use.testing_event_session_id is None
+    assert assignment.quantity == 0
+
+
+def test_submit_race_event_bet_answers_rejects_powerup_after_any_context_submission(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_submit_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+    assignment = _create_powerup_assignment(
+        db_session,
+        group_id=group.id,
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        code="DOUBLE_POINTS",
+        quantity=1,
+    )
+    db_session.add(
+        Bet(
+            user_id=user.id,
+            bet_context_id=data["bet_context"].id,
+            event_session_id=None,
+            testing_event_session_id=None,
+            submitted_at=datetime.now(timezone.utc) - timedelta(minutes=5),
+            locked_at=None,
+        )
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"session_id": str(data["fp1_session"].public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["fp1_score"].code,
+                    "value": "VER",
+                }
+            ],
+            "powerups": [
+                {
+                    "powerup_code": assignment.powerup.code,
+                    "targets": [],
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error"]["code"] == "bets.powerups.cannot_be_used_after_submit"
+    assert db_session.execute(
+        select(PowerUpUse).where(
+            PowerUpUse.group_id == group.id,
+            PowerUpUse.user_id == user.id,
+            PowerUpUse.bet_context_id == data["bet_context"].id,
+            PowerUpUse.powerup_id == assignment.powerup_id,
+        )
+    ).first() is None
 
 
 def test_submit_race_event_bet_answers_merges_existing_draft(client, db_session) -> None:
@@ -3854,6 +4120,7 @@ def test_get_testing_event_powerups_returns_session_state(client, db_session) ->
             "is_enabled": True,
             "is_restricted": False,
             "already_used": True,
+            "target_options": [],
         }
     ]
 
@@ -4607,6 +4874,7 @@ def test_get_season_powerups_returns_assigned_powerups(client, db_session) -> No
         "is_enabled": True,
         "is_restricted": False,
         "already_used": False,
+        "target_options": [],
     }
     assert powerups_by_code[disabled_assignment.powerup.code] == {
         "code": disabled_assignment.powerup.code,
@@ -4616,6 +4884,7 @@ def test_get_season_powerups_returns_assigned_powerups(client, db_session) -> No
         "is_enabled": False,
         "is_restricted": False,
         "already_used": False,
+        "target_options": [],
     }
 
 

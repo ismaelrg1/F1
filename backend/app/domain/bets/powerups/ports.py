@@ -1,7 +1,11 @@
 from typing import Protocol
 from uuid import UUID
 
-from app.domain.bets.powerups.models import BetPowerUpAvailability
+from app.domain.bets.powerups.models import (
+    BetPowerUpAvailability,
+    BetPowerUpTargetTeamDefinition,
+    BetPowerUpTargetUserDefinition,
+)
 from app.domain.bets.shared.models import BetRaceEvent, BetSeason, BetTestingEvent
 
 
@@ -64,4 +68,29 @@ class BetPowerUpsRepository(Protocol):
         event_session_id: int | None,
         testing_event_session_id: int | None,
     ) -> list[BetPowerUpAvailability]:
+        ...
+
+    def list_group_user_targets(
+        self,
+        *,
+        group_id: int,
+        actor_user_id: int,
+    ) -> list[BetPowerUpTargetUserDefinition]:
+        ...
+
+    def list_group_team_targets(
+        self,
+        *,
+        group_id: int,
+    ) -> list[BetPowerUpTargetTeamDefinition]:
+        ...
+
+    def count_distinct_contexts_where_user_received_powerup(
+        self,
+        *,
+        group_id: int,
+        target_user_id: int,
+        powerup_id: int,
+        excluding_bet_context_id: int,
+    ) -> int:
         ...

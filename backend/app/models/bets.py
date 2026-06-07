@@ -142,6 +142,15 @@ class BetAnswerWrite(BaseModel):
 class BetAnswersPatchRequest(BaseModel):
     answers: list[BetAnswerWrite]
 
+class BetPowerUpTargetOptionRead(BaseModel):
+    target_type: PowerUpTargetType
+    target_user_public_id: UUID | None = None
+    target_team_public_id: UUID | None = None
+    target_group_public_id: UUID | None = None
+    label: str
+    is_available: bool
+    unavailable_reason: str | None = None
+
 class BetPowerUpRead(BaseModel):
     code: str
     name: str
@@ -150,6 +159,7 @@ class BetPowerUpRead(BaseModel):
     is_enabled: bool
     is_restricted: bool
     already_used: bool
+    target_options: list[BetPowerUpTargetOptionRead]
 
 
 class RaceEventBetPowerUpsResponse(BaseModel):
