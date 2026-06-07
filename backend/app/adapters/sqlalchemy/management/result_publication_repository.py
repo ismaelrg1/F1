@@ -9,8 +9,10 @@ from app.db.enums import BetContextKind
 from app.db.scoring import OfficialResult, ResultPublication, Score, ScoreSession
 from app.domain.management.result_publications.models import ResultPublicationResult
 
+from app.domain.management.result_publications.ports import ResultPublicationRepository
 
-class SqlAlchemyResultPublicationRepository:
+
+class SqlAlchemyResultPublicationRepository(ResultPublicationRepository):
     def __init__(self, session: Session):
         self._session = session
 

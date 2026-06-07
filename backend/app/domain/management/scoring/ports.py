@@ -40,6 +40,3 @@ class ManagementScoringRepository(Protocol):
 
     def calculate_scores(self, scope: ScoringScope) -> ScoringCalculationResult:
         ...
-
-    def recalculate_season_aggregates(self, scope: ScoringScope) -> None:
-        ...

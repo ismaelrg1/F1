@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from app.domain.management.scoring.errors import ScoringEvaluatorNotFoundError
 
-
 @dataclass(frozen=True)
 class EvaluationResult:
     points: Decimal
@@ -27,5 +26,5 @@ class BaseEvaluator:
             raise ScoringEvaluatorNotFoundError(evaluator_key)
         return evaluator_cls()
 
-    def evaluate(self, *, pick, official_result, bet_score, rule) -> EvaluationResult:
+    def evaluate(self, *, pick, official_result, bet_score, rule, relations=None, related_picks=None) -> EvaluationResult:
         raise NotImplementedError

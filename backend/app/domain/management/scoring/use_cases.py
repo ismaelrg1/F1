@@ -78,6 +78,5 @@ def _calculate(
 
     repository.delete_existing_scores(scope)
     result = repository.calculate_scores(scope)
-    repository.recalculate_season_aggregates(scope)
 
     return result
