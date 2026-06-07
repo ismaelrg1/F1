@@ -22,6 +22,8 @@ from app.adapters.sqlalchemy.admin.testing_event_repository import SqlAlchemyAdm
 from app.adapters.sqlalchemy.bets.questions_repository import SqlAlchemyBetQuestionsRepository
 from app.adapters.sqlalchemy.bets.results_repository import SqlAlchemyBetResultsRepository
 from app.adapters.sqlalchemy.bets.answers_repository import SqlAlchemyBetAnswersRepository
+from app.adapters.sqlalchemy.bets.powerups_repository import SqlAlchemyBetPowerUpsRepository
+
 
 from app.adapters.sqlalchemy.admin.bet_context_repository import SqlAlchemyAdminBetContextRepository
 
@@ -36,6 +38,7 @@ from app.adapters.sqlalchemy.management.result_publication_repository import Sql
 from app.adapters.sqlalchemy.management.scoring_repository import SqlAlchemyManagementScoringRepository
 
 from app.adapters.sqlalchemy.groups_repository import SqlAlchemyGroupRepository
+
 
 
 
@@ -75,6 +78,8 @@ __all__ = [
     "SqlAlchemyBetResultsRepository",
 
     "SqlAlchemyBetAnswersRepository",
+
+    "SqlAlchemyBetPowerUpsRepository",
 
     "SqlAlchemyAdminBetContextRepository",
 

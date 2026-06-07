@@ -95,3 +95,14 @@ class SeasonNotFoundForBetResultsError(BetsError):
 
 class BetContextNotFoundForSeasonResultsError(BetsError):
     pass
+
+class RaceEventNotFoundForBetAnswersError(BetsError):
+    pass
+
+
+class TestingEventNotFoundForBetAnswersError(BetsError):
+    pass
+
+
+class SeasonNotFoundForBetAnswersError(BetsError):
+    pass

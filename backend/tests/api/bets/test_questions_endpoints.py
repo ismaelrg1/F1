@@ -36,6 +36,7 @@ from app.db.enums import (
     BetResultsVisibilityMode,
     BetTemplateScope,
     BetValueType,
+    PowerUpTargetMode,
     RaceEventStatus,
     SeasonDriverStatus,
     ScoreComponentType,
@@ -43,6 +44,7 @@ from app.db.enums import (
     SourceProvider,
     TestingEventStatus as CompetitionTestingEventStatus,
 )
+from app.db.powerups import PowerUp, PowerUpAssignment, PowerUpRestriction, PowerUpUse
 from app.db.scoring import (
     OfficialResult,
     ResultPublication,
@@ -100,6 +102,82 @@ def _create_group_with_membership(
     db_session.flush()
 
     return group
+
+
+def _create_powerup_assignment(
+    db_session,
+    *,
+    group_id: int,
+    user_id: int,
+    bet_context_id: int,
+    code: str = "DOUBLE_POINTS",
+    quantity: int = 1,
+    is_enabled: bool = True,
+    target_mode: PowerUpTargetMode = PowerUpTargetMode.SINGLE,
+) -> PowerUpAssignment:
+    powerup = PowerUp(
+        code=f"{code}_{uuid4().hex[:8].upper()}",
+        name=code.replace("_", " ").title(),
+        is_enabled=is_enabled,
+        target_mode=target_mode,
+    )
+    db_session.add(powerup)
+    db_session.flush()
+
+    assignment = PowerUpAssignment(
+        group_id=group_id,
+        user_id=user_id,
+        bet_context_id=bet_context_id,
+        powerup_id=powerup.id,
+        quantity=quantity,
+        is_active=True,
+    )
+    db_session.add(assignment)
+    db_session.flush()
+    return assignment
+
+
+def _add_powerup_use(
+    db_session,
+    *,
+    group_id: int,
+    user_id: int,
+    bet_context_id: int,
+    powerup_id: int,
+    event_session_id: int | None = None,
+    testing_event_session_id: int | None = None,
+) -> PowerUpUse:
+    use = PowerUpUse(
+        group_id=group_id,
+        user_id=user_id,
+        bet_context_id=bet_context_id,
+        powerup_id=powerup_id,
+        event_session_id=event_session_id,
+        testing_event_session_id=testing_event_session_id,
+    )
+    db_session.add(use)
+    db_session.flush()
+    return use
+
+
+def _add_powerup_restriction(
+    db_session,
+    *,
+    bet_context_id: int,
+    powerup_id: int,
+    event_session_id: int | None = None,
+    testing_event_session_id: int | None = None,
+) -> PowerUpRestriction:
+    restriction = PowerUpRestriction(
+        bet_context_id=bet_context_id,
+        powerup_id=powerup_id,
+        event_session_id=event_session_id,
+        testing_event_session_id=testing_event_session_id,
+        is_disabled=True,
+    )
+    db_session.add(restriction)
+    db_session.flush()
+    return restriction
 
 
 def _create_race_event_roster(db_session, *, season_id: int, race_event: RaceEvent, fp1_session: EventSession) -> None:
@@ -2395,6 +2473,149 @@ def _create_patch_race_event_answers_fixture(db_session, *, user_id: int, group_
     }
 
 
+def test_get_race_event_powerups_returns_user_assignments(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_patch_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+    assignment = _create_powerup_assignment(
+        db_session,
+        group_id=group.id,
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        quantity=2,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/powerups",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["race_event_public_id"] == str(data["race_event"].public_id)
+    assert payload["powerups"] == [
+        {
+            "code": assignment.powerup.code,
+            "name": assignment.powerup.name,
+            "target_mode": "SINGLE",
+            "quantity": 2,
+            "is_enabled": True,
+            "is_restricted": False,
+            "already_used": False,
+        }
+    ]
+
+
+def test_get_race_event_powerups_marks_session_restricted_and_already_used(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_patch_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+    assignment = _create_powerup_assignment(
+        db_session,
+        group_id=group.id,
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+    )
+    _add_powerup_use(
+        db_session,
+        group_id=group.id,
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        powerup_id=assignment.powerup_id,
+        event_session_id=data["fp1_session"].id,
+    )
+    _add_powerup_restriction(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        powerup_id=assignment.powerup_id,
+        event_session_id=data["fp1_session"].id,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/powerups",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"session_id": str(data["fp1_session"].public_id)},
+    )
+
+    assert response.status_code == 200
+    powerup = response.json()["powerups"][0]
+    assert powerup["code"] == assignment.powerup.code
+    assert powerup["is_restricted"] is True
+    assert powerup["already_used"] is True
+
+
+def test_get_race_event_powerups_returns_404_when_session_is_missing(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_patch_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/powerups",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"session_id": str(uuid4())},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["error"]["code"] == "bets.powerups.race_event_session_not_found"
+
+
 def test_patch_race_event_bet_answers_saves_partial_event_draft(client, db_session) -> None:
     user = _create_user(
         db_session,
@@ -2566,7 +2787,7 @@ def test_patch_race_event_bet_answers_returns_409_when_session_is_closed(client,
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"]["code"] == "bets.answers_closed"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.closed"
 
 
 def test_patch_race_event_bet_answers_returns_409_when_event_is_not_open(client, db_session) -> None:
@@ -2610,7 +2831,7 @@ def test_patch_race_event_bet_answers_returns_409_when_event_is_not_open(client,
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"]["code"] == "bets.answers_not_open"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.not_open"
 
 
 def test_patch_race_event_bet_answers_returns_400_when_answer_is_not_in_scope(client, db_session) -> None:
@@ -2650,8 +2871,8 @@ def test_patch_race_event_bet_answers_returns_400_when_answer_is_not_in_scope(cl
         },
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"]["error"]["code"] == "bets.answer_question_not_found"
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.question_not_found"
 
 
 def test_patch_race_event_bet_answers_returns_409_when_bet_is_already_submitted(client, db_session) -> None:
@@ -2703,7 +2924,7 @@ def test_patch_race_event_bet_answers_returns_409_when_bet_is_already_submitted(
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"]["code"] == "bets.already_submitted"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.already_submitted"
 
 
 def _create_submit_race_event_answers_fixture(db_session, *, user_id: int, group_id: int):
@@ -3208,8 +3429,8 @@ def test_submit_race_event_bet_answers_returns_400_when_required_answer_is_missi
         },
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"]["error"]["code"] == "bets.required_answer_missing"
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.required_answer_missing"
 
 
 def test_submit_race_event_bet_answers_allows_modification_with_active_permission(client, db_session) -> None:
@@ -3396,7 +3617,7 @@ def test_submit_race_event_bet_answers_returns_409_when_modification_limit_is_re
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"]["code"] == "bets.modification_limit_reached"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.modification_limit_reached"
 
 
 def _create_patch_testing_event_answers_fixture(db_session, *, user_id: int, group_id: int):
@@ -3575,6 +3796,68 @@ def _create_patch_testing_event_answers_fixture(db_session, *, user_id: int, gro
     }
 
 
+def test_get_testing_event_powerups_returns_session_state(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_patch_testing_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+    assignment = _create_powerup_assignment(
+        db_session,
+        group_id=group.id,
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        code="HALVE_POINTS",
+        target_mode=PowerUpTargetMode.MULTI,
+    )
+    _add_powerup_use(
+        db_session,
+        group_id=group.id,
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        powerup_id=assignment.powerup_id,
+        testing_event_session_id=data["day_1"].id,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/testing-events/{data['testing_event'].public_id}/powerups",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"session_id": str(data["day_1"].public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["testing_event_public_id"] == str(data["testing_event"].public_id)
+    assert payload["powerups"] == [
+        {
+            "code": assignment.powerup.code,
+            "name": assignment.powerup.name,
+            "target_mode": "MULTI",
+            "quantity": 1,
+            "is_enabled": True,
+            "is_restricted": False,
+            "already_used": True,
+        }
+    ]
+
+
 def test_patch_testing_event_bet_answers_saves_partial_event_draft(client, db_session) -> None:
     user = _create_user(
         db_session,
@@ -3751,7 +4034,7 @@ def test_patch_testing_event_bet_answers_returns_409_when_session_is_closed(clie
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"]["code"] == "bets.answers_closed"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.closed"
 
 
 def test_patch_testing_event_bet_answers_returns_409_when_event_is_not_open(client, db_session) -> None:
@@ -3795,7 +4078,7 @@ def test_patch_testing_event_bet_answers_returns_409_when_event_is_not_open(clie
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"]["code"] == "bets.answers_not_open"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.not_open"
 
 
 def test_patch_testing_event_bet_answers_returns_400_when_answer_is_not_in_scope(client, db_session) -> None:
@@ -3835,8 +4118,8 @@ def test_patch_testing_event_bet_answers_returns_400_when_answer_is_not_in_scope
         },
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"]["error"]["code"] == "bets.answer_question_not_found"
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.question_not_found"
 
 
 def test_patch_testing_event_bet_answers_returns_409_when_bet_is_already_submitted(client, db_session) -> None:
@@ -3888,7 +4171,7 @@ def test_patch_testing_event_bet_answers_returns_409_when_bet_is_already_submitt
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"]["code"] == "bets.already_submitted"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.already_submitted"
 
 
 def test_submit_testing_event_bet_answers_creates_first_submission(client, db_session) -> None:
@@ -4153,8 +4436,8 @@ def test_submit_testing_event_bet_answers_returns_400_when_required_answer_is_mi
         },
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"]["error"]["code"] == "bets.required_answer_missing"
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.required_answer_missing"
 
 
 def _create_patch_season_answers_fixture(db_session, *, user_id: int, group_id: int):
@@ -4265,6 +4548,108 @@ def _create_patch_season_answers_fixture(db_session, *, user_id: int, group_id: 
     }
 
 
+def test_get_season_powerups_returns_assigned_powerups(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_patch_season_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+    enabled_assignment = _create_powerup_assignment(
+        db_session,
+        group_id=group.id,
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        code="DOUBLE_POINTS",
+        quantity=1,
+        is_enabled=True,
+    )
+    disabled_assignment = _create_powerup_assignment(
+        db_session,
+        group_id=group.id,
+        user_id=user.id,
+        bet_context_id=data["bet_context"].id,
+        code="HALVE_POINTS",
+        quantity=0,
+        is_enabled=False,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/seasons/{data['season'].year}/powerups",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["season_year"] == data["season"].year
+    powerups_by_code = {powerup["code"]: powerup for powerup in payload["powerups"]}
+    assert powerups_by_code[enabled_assignment.powerup.code] == {
+        "code": enabled_assignment.powerup.code,
+        "name": enabled_assignment.powerup.name,
+        "target_mode": "SINGLE",
+        "quantity": 1,
+        "is_enabled": True,
+        "is_restricted": False,
+        "already_used": False,
+    }
+    assert powerups_by_code[disabled_assignment.powerup.code] == {
+        "code": disabled_assignment.powerup.code,
+        "name": disabled_assignment.powerup.name,
+        "target_mode": "SINGLE",
+        "quantity": 0,
+        "is_enabled": False,
+        "is_restricted": False,
+        "already_used": False,
+    }
+
+
+def test_get_season_powerups_returns_404_when_bet_context_is_missing(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex[:8]}@example.com",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    season = Season(year=2098, is_active=False)
+    db_session.add(season)
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/seasons/{season.year}/powerups",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["error"]["code"] == "bets.powerups.bet_context_not_found"
+
+
 def test_patch_season_bet_answers_saves_partial_draft(client, db_session) -> None:
     user = _create_user(
         db_session,
@@ -4372,7 +4757,7 @@ def test_patch_season_bet_answers_returns_409_when_season_is_closed(client, db_s
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"]["code"] == "bets.answers_closed"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.closed"
 
 
 def test_patch_season_bet_answers_returns_409_when_season_is_not_open(client, db_session) -> None:
@@ -4416,7 +4801,7 @@ def test_patch_season_bet_answers_returns_409_when_season_is_not_open(client, db
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"]["code"] == "bets.answers_not_open"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.not_open"
 
 
 def test_patch_season_bet_answers_returns_400_when_answer_is_not_in_scope(client, db_session) -> None:
@@ -4456,8 +4841,8 @@ def test_patch_season_bet_answers_returns_400_when_answer_is_not_in_scope(client
         },
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"]["error"]["code"] == "bets.answer_question_not_found"
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.question_not_found"
 
 
 def test_patch_season_bet_answers_returns_409_when_bet_is_already_submitted(client, db_session) -> None:
@@ -4509,7 +4894,7 @@ def test_patch_season_bet_answers_returns_409_when_bet_is_already_submitted(clie
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["error"]["code"] == "bets.already_submitted"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.already_submitted"
 
 
 def test_submit_season_bet_answers_creates_first_submission(client, db_session) -> None:
@@ -4798,8 +5183,8 @@ def test_submit_season_bet_answers_returns_400_when_required_answer_is_missing(c
         },
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"]["error"]["code"] == "bets.required_answer_missing"
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.required_answer_missing"
 
 
 def test_get_season_bet_answers_returns_answers(client, db_session) -> None:
@@ -4931,7 +5316,7 @@ def test_get_season_bet_answers_returns_404_when_season_is_missing(client, db_se
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"]["error"]["code"] == "bets.season_not_found"
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.season_not_found"
 
 
 def test_get_season_bet_answers_returns_404_when_bet_context_is_missing(client, db_session) -> None:
@@ -4963,7 +5348,7 @@ def test_get_season_bet_answers_returns_404_when_bet_context_is_missing(client, 
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"]["error"]["code"] == "bets.bet_context_not_found_for_season"
+    assert response.json()["detail"]["error"]["code"] == "bets.generic.season_bet_context_not_found"
 
 
 def test_get_race_event_bet_results_returns_group_event_results_when_always_visible(client, db_session) -> None:

@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
-from app.adapters.sqlalchemy import SqlAlchemyBetAnswersRepository, SqlAlchemyBetQuestionsRepository, SqlAlchemyBetResultsRepository
+from app.adapters.sqlalchemy import SqlAlchemyBetAnswersRepository, SqlAlchemyBetQuestionsRepository, SqlAlchemyBetResultsRepository, SqlAlchemyBetPowerUpsRepository
 from app.api.deps import require_group_member, _translate_bets_error
 from app.api.error_translators import get_preferred_locale
 from app.db.auth import User
@@ -12,6 +12,7 @@ from app.db.social import Group
 
 from app.domain.bets import BetsError
 from app.domain.bets.models import BetAnswerInput
+from app.domain.bets.powerups import GetTestingEventPowerUps
 from app.domain.bets.use_cases import (
     GetTestingEventBetQuestions,
     GetTestingEventBetAnswers,
@@ -29,6 +30,8 @@ from app.models.bets import (
     TestingEventBetQuestionsSessionRead,
     TestingEventBetAnswersResponse,
     TestingEventBetAnswersSessionResponse,
+    BetPowerUpRead,
+    TestingEventBetPowerUpsResponse,
 )
 
 from app.models.bet_results import (
@@ -403,6 +406,49 @@ def get_testing_event_results(
         entries=[
             _map_entry(entry)
             for entry in result.entries
+        ],
+    )
+
+@router.get(
+    "/testing-events/{testing_event_public_id}/powerups",
+    response_model=TestingEventBetPowerUpsResponse,
+)
+def get_testing_event_powerups(
+    testing_event_public_id: UUID,
+    request: Request,
+    session_id: UUID | None = Query(default=None),
+    db: Session = Depends(get_db),
+    user_group: tuple[User, Group] = Depends(require_group_member),
+) -> TestingEventBetPowerUpsResponse:
+    user, group = user_group
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
+    repository = SqlAlchemyBetPowerUpsRepository(db)
+    use_case = GetTestingEventPowerUps(repository)
+
+    try:
+        result = use_case.execute(
+            group_id=group.id,
+            user_id=user.id,
+            testing_event_public_id=testing_event_public_id,
+            testing_event_session_public_id=session_id,
+        )
+    except BetsError as exc:
+        raise _translate_bets_error(exc, locale=locale) from exc
+
+    return TestingEventBetPowerUpsResponse(
+        testing_event_public_id=result.testing_event_public_id,
+        powerups=[
+            BetPowerUpRead(
+                code=powerup.code,
+                name=powerup.name,
+                target_mode=powerup.target_mode,
+                quantity=powerup.quantity,
+                is_enabled=powerup.is_enabled,
+                is_restricted=powerup.is_restricted,
+                already_used=powerup.already_used,
+            )
+            for powerup in result.powerups
         ],
     )
 

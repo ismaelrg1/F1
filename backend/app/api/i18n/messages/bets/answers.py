@@ -1,0 +1,28 @@
+MESSAGES_BET_ANSWERS = {
+    "en": {
+        "bets.answers.race_event_not_found": "Race event not found.",
+        "bets.answers.testing_event_not_found": "Testing event not found.",
+        "bets.answers.season_not_found": "Season not found.",
+        "bets.answers.race_event_session_not_found": "Race event session not found.",
+        "bets.answers.testing_event_session_not_found": "Testing event session not found.",
+        "bets.answers.not_open": "Bet answers are not open yet.",
+        "bets.answers.closed": "Bet answers are already closed.",
+        "bets.answers.already_submitted": "Bet answers have already been submitted.",
+        "bets.answers.question_not_found": "One or more bet questions were not found.",
+        "bets.answers.required_answer_missing": "A required answer is missing.",
+        "bets.answers.modification_limit_reached": "The modification limit has been reached.",
+    },
+    "es": {
+        "bets.answers.race_event_not_found": "No se ha encontrado el evento de carrera.",
+        "bets.answers.testing_event_not_found": "No se ha encontrado el evento de testing.",
+        "bets.answers.season_not_found": "No se ha encontrado la temporada.",
+        "bets.answers.race_event_session_not_found": "No se ha encontrado la sesión del evento de carrera.",
+        "bets.answers.testing_event_session_not_found": "No se ha encontrado la sesión del evento de testing.",
+        "bets.answers.not_open": "Las apuestas todavía no están abiertas.",
+        "bets.answers.closed": "Las apuestas ya están cerradas.",
+        "bets.answers.already_submitted": "Las apuestas ya han sido enviadas.",
+        "bets.answers.question_not_found": "Una o más preguntas de apuesta no existen.",
+        "bets.answers.required_answer_missing": "Falta una respuesta obligatoria.",
+        "bets.answers.modification_limit_reached": "Se ha alcanzado el límite de modificaciones.",
+    },
+}

@@ -7,6 +7,7 @@ from app.adapters.sqlalchemy import (
     SqlAlchemyBetAnswersRepository,
     SqlAlchemyBetQuestionsRepository,
     SqlAlchemyBetResultsRepository,
+    SqlAlchemyBetPowerUpsRepository
 )
 from app.api.deps import require_group_member, _translate_bets_error
 from app.api.error_translators import get_preferred_locale
@@ -15,6 +16,7 @@ from app.db.session import get_db
 from app.db.social import Group
 
 from app.domain.bets import BetsError
+from app.domain.bets.powerups import GetRaceEventPowerUps
 from app.domain.bets.models import BetAnswerInput
 from app.domain.bets.use_cases import (
     # Answers
@@ -39,6 +41,8 @@ from app.models.bets import (
     RaceEventBetAnswersSessionResponse,
     RaceEventBetQuestionsResponse,
     RaceEventBetQuestionsSessionRead,
+    BetPowerUpRead,
+    RaceEventBetPowerUpsResponse,
 )
 from app.models.bet_results import (
     BetOfficialResultRead,
@@ -461,6 +465,50 @@ def get_race_event_results(
                 ],
             )
             for session in result.sessions
+        ],
+    )
+
+
+@router.get(
+    "/race-events/{race_event_public_id}/powerups",
+    response_model=RaceEventBetPowerUpsResponse,
+)
+def get_race_event_powerups(
+    race_event_public_id: UUID,
+    request: Request,
+    session_id: UUID | None = Query(default=None),
+    db: Session = Depends(get_db),
+    user_group: tuple[User, Group] = Depends(require_group_member),
+) -> RaceEventBetPowerUpsResponse:
+    user, group = user_group
+    locale = get_preferred_locale(request.headers.get("accept-language") if request else None)
+
+    repository = SqlAlchemyBetPowerUpsRepository(db)
+    use_case = GetRaceEventPowerUps(repository)
+
+    try:
+        result = use_case.execute(
+            group_id=group.id,
+            user_id=user.id,
+            race_event_public_id=race_event_public_id,
+            event_session_public_id=session_id,
+        )
+    except BetsError as exc:
+        raise _translate_bets_error(exc, locale=locale) from exc
+
+    return RaceEventBetPowerUpsResponse(
+        race_event_public_id=result.race_event_public_id,
+        powerups=[
+            BetPowerUpRead(
+                code=powerup.code,
+                name=powerup.name,
+                target_mode=powerup.target_mode,
+                quantity=powerup.quantity,
+                is_enabled=powerup.is_enabled,
+                is_restricted=powerup.is_restricted,
+                already_used=powerup.already_used,
+            )
+            for powerup in result.powerups
         ],
     )
 

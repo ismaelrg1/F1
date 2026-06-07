@@ -26,10 +26,10 @@ from app.domain.bets.errors import (
     BetContextNotFoundForRaceEventError,
     BetContextNotFoundForSeasonError,
     BetContextNotFoundForTestingEventError,
-    RaceEventNotFoundForBetQuestionsError,
+    RaceEventNotFoundForBetAnswersError,
     RaceEventSessionNotFoundForBetAnswersError,
-    SeasonNotFoundForBetQuestionsError,
-    TestingEventNotFoundForBetQuestionsError,
+    SeasonNotFoundForBetAnswersError,
+    TestingEventNotFoundForBetAnswersError,
     TestingEventSessionNotFoundForBetAnswersError,
     BetAlreadySubmittedError,
     BetAnswerQuestionNotFoundError,
@@ -47,7 +47,7 @@ class GetRaceEventBetAnswers:
     def execute(self, *, race_event_public_id: UUID, group_id: int, user_id: int) -> RaceEventBetAnswersResult:
         race_event = self._repository.get_race_event_by_public_id(race_event_public_id)
         if race_event is None:
-            raise RaceEventNotFoundForBetQuestionsError()
+            raise RaceEventNotFoundForBetAnswersError()
 
         bet_context = self._repository.get_gp_bet_context(
             group_id=group_id,
@@ -113,7 +113,7 @@ class GetRaceEventSessionBetAnswers:
     ) -> RaceEventBetAnswersResult:
         race_event = self._repository.get_race_event_by_public_id(race_event_public_id)
         if race_event is None:
-            raise RaceEventNotFoundForBetQuestionsError()
+            raise RaceEventNotFoundForBetAnswersError()
 
         session = next(
             (
@@ -175,7 +175,7 @@ class GetTestingEventBetAnswers:
     def execute(self, *, testing_event_public_id: UUID, group_id: int, user_id: int) -> TestingEventBetAnswersResult:
         testing_event = self._repository.get_testing_event_by_public_id(testing_event_public_id)
         if testing_event is None:
-            raise TestingEventNotFoundForBetQuestionsError()
+            raise TestingEventNotFoundForBetAnswersError()
 
         bet_context = self._repository.get_pretesting_bet_context(
             group_id=group_id,
@@ -248,7 +248,7 @@ class GetTestingEventSessionBetAnswers:
     ) -> TestingEventBetAnswersResult:
         testing_event = self._repository.get_testing_event_by_public_id(testing_event_public_id)
         if testing_event is None:
-            raise TestingEventNotFoundForBetQuestionsError()
+            raise TestingEventNotFoundForBetAnswersError()
 
         session = next(
             (
@@ -313,7 +313,8 @@ class GetSeasonBetAnswers:
     def execute(self, *, season_year: int, group_id: int, user_id: int) -> SeasonBetAnswersResult:
         season = self._repository.get_season_by_year(season_year)
         if season is None:
-            raise SeasonNotFoundForBetQuestionsError()
+            raise SeasonNotFoundForBetAnswersError()
+
 
         bet_context = self._repository.get_season_bet_context(
             group_id=group_id,
@@ -362,7 +363,7 @@ class PatchRaceEventBetAnswers:
     ) -> RaceEventBetAnswersResult:
         race_event = self._repository.get_race_event_by_public_id(race_event_public_id)
         if race_event is None:
-            raise RaceEventNotFoundForBetQuestionsError()
+            raise RaceEventNotFoundForBetAnswersError()
 
         session = None
         if event_session_public_id is not None:
@@ -554,7 +555,7 @@ class PatchTestingEventBetAnswers:
             testing_event_public_id
         )
         if testing_event is None:
-            raise TestingEventNotFoundForBetQuestionsError()
+            raise TestingEventNotFoundForBetAnswersError()
 
         session = None
         if testing_event_session_public_id is not None:
@@ -721,7 +722,8 @@ class PatchSeasonBetAnswers:
     ) -> SeasonBetAnswersResult:
         season = self._repository.get_season_by_year(season_year)
         if season is None:
-            raise SeasonNotFoundForBetQuestionsError()
+            raise SeasonNotFoundForBetAnswersError()
+
 
         bet_context = self._repository.get_season_bet_context(
             group_id=group_id,
@@ -851,7 +853,7 @@ class SubmitRaceEventBetAnswers:
     ) -> RaceEventBetAnswersResult:
         race_event = self._repository.get_race_event_by_public_id(race_event_public_id)
         if race_event is None:
-            raise RaceEventNotFoundForBetQuestionsError()
+            raise RaceEventNotFoundForBetAnswersError()
 
         session = None
         if event_session_public_id is not None:
@@ -1130,7 +1132,7 @@ class SubmitTestingEventBetAnswers:
             testing_event_public_id
         )
         if testing_event is None:
-            raise TestingEventNotFoundForBetQuestionsError()
+            raise TestingEventNotFoundForBetAnswersError()
 
         session = None
         if testing_event_session_public_id is not None:
@@ -1388,7 +1390,8 @@ class SubmitSeasonBetAnswers:
     ) -> SeasonBetAnswersResult:
         season = self._repository.get_season_by_year(season_year)
         if season is None:
-            raise SeasonNotFoundForBetQuestionsError()
+            raise SeasonNotFoundForBetAnswersError()
+
 
         bet_context = self._repository.get_season_bet_context(
             group_id=group_id,
