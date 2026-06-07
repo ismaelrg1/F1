@@ -19,12 +19,22 @@ from app.db.enums import (
     BetContextKind,
     BetValueType,
     RaceEventStatus,
+    RankingEventType,
     RoleName,
+    ScoreComponentType,
     SessionType,
     SourceProvider,
     TestingEventStatus as CompetitionTestingEventStatus,
 )
-from app.db.scoring import OfficialResult, ResultPublication, Score, ScoreSession
+from app.db.scoring import (
+    OfficialResult,
+    ResultPublication,
+    Score,
+    ScoreComponent,
+    ScoreSeasonAggregate,
+    ScoreSession,
+    ScoreSessionComponent,
+)
 from app.db.scoring.official_result import SourceType
 from app.db.social import Group, GroupMembership
 from app.db.social.group_membership import GroupRole
@@ -330,12 +340,14 @@ def _add_calculated_score(
     *,
     bet_context_id: int,
     user_id: int,
+    base_points: int | float = 1,
+    total_points: int | float = 1,
 ) -> Score:
     row = Score(
         bet_context_id=bet_context_id,
         user_id=user_id,
-        base_points=1,
-        total_points=1,
+        base_points=base_points,
+        total_points=total_points,
     )
     db_session.add(row)
     db_session.flush()
@@ -349,18 +361,124 @@ def _add_calculated_session_score(
     user_id: int,
     event_session_id: int | None = None,
     testing_event_session_id: int | None = None,
+    base_points: int | float = 1,
+    total_points: int | float = 1,
 ) -> ScoreSession:
     row = ScoreSession(
         bet_context_id=bet_context_id,
         user_id=user_id,
         event_session_id=event_session_id,
         testing_event_session_id=testing_event_session_id,
-        base_points=1,
-        total_points=1,
+        base_points=base_points,
+        total_points=total_points,
     )
     db_session.add(row)
     db_session.flush()
     return row
+
+
+def _add_score_component(
+    db_session,
+    *,
+    score_id: int,
+    component_type: ScoreComponentType,
+    code: str,
+    points: int | float,
+) -> ScoreComponent:
+    row = ScoreComponent(
+        score_id=score_id,
+        component_type=component_type,
+        code=code,
+        points=points,
+        details_json=None,
+    )
+    db_session.add(row)
+    db_session.flush()
+    return row
+
+
+def _add_score_session_component(
+    db_session,
+    *,
+    score_session_id: int,
+    component_type: ScoreComponentType,
+    code: str,
+    points: int | float,
+) -> ScoreSessionComponent:
+    row = ScoreSessionComponent(
+        score_session_id=score_session_id,
+        component_type=component_type,
+        code=code,
+        points=points,
+        details_json=None,
+    )
+    db_session.add(row)
+    db_session.flush()
+    return row
+
+
+def _create_race_context_for_existing_group(
+    db_session,
+    *,
+    season: Season,
+    group: Group,
+    round_number: int,
+    name: str,
+):
+    _, circuit = _create_country_and_circuit(db_session)
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=round_number,
+        name=name,
+        source_provider=SourceProvider.MANUAL,
+        status=RaceEventStatus.SCHEDULED,
+        scheduled_event_start=datetime(2026, 4, round_number, 8, 0, tzinfo=timezone.utc),
+        scheduled_event_end=datetime(2026, 4, round_number, 18, 0, tzinfo=timezone.utc),
+    )
+    race_event.event_sessions = [
+        EventSession(
+            session_type=SessionType.RACE,
+            source_provider=SourceProvider.MANUAL,
+            status=RaceEventStatus.SCHEDULED,
+            start_datetime=datetime(2026, 4, round_number, 14, 0, tzinfo=timezone.utc),
+            scheduled_start_datetime=datetime(2026, 4, round_number, 14, 0, tzinfo=timezone.utc),
+            lock_cutoff=datetime(2026, 4, round_number, 13, 55, tzinfo=timezone.utc),
+            scheduled_lock_cutoff=datetime(2026, 4, round_number, 13, 55, tzinfo=timezone.utc),
+        )
+    ]
+    db_session.add(race_event)
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.GP,
+        season_id=season.id,
+        race_event_id=race_event.id,
+        testing_event_id=None,
+        label=name,
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    score = BetScore(
+        code=f"RACE_WINNER_{uuid4().hex[:8].upper()}",
+        label="Race Winner",
+        base_points=10,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add(score)
+    db_session.flush()
+
+    return {
+        "race_event": race_event,
+        "session": race_event.event_sessions[0],
+        "bet_context": bet_context,
+        "score": score,
+    }
 
 
 def _login(client, username: str) -> None:
@@ -734,3 +852,217 @@ def test_publish_results_forbids_group_member(client, db_session) -> None:
 
     assert response.status_code == 403
     assert response.json()["detail"]["error"]["code"] == "management.result_publications.forbidden_group"
+
+
+def test_publish_results_recalculates_season_aggregate_for_published_scores(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username="admin_publish_aggregate",
+        email="admin_publish_aggregate@example.com",
+        password="secret123",
+    )
+    player = _create_local_user(
+        db_session,
+        username="player_publish_aggregate",
+        email="player_publish_aggregate@example.com",
+        password="secret123",
+    )
+    data = _create_race_fixture(db_session)
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["event_score"].id,
+    )
+    score = _add_calculated_score(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        user_id=player.id,
+        base_points=10,
+        total_points=12,
+    )
+    _add_score_component(
+        db_session,
+        score_id=score.id,
+        component_type=ScoreComponentType.EXTRA,
+        code="BONUS_EXTRA",
+        points=2,
+    )
+    _login(client, admin.username)
+
+    response = client.post(
+        f"/api/v1/management/result-publications/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        json={},
+    )
+
+    assert response.status_code == 201
+    aggregate = db_session.execute(
+        select(ScoreSeasonAggregate).where(
+            ScoreSeasonAggregate.group_id == data["group"].id,
+            ScoreSeasonAggregate.season_id == data["season"].id,
+            ScoreSeasonAggregate.user_id == player.id,
+        )
+    ).scalar_one()
+    assert aggregate.total_points == 12
+    assert aggregate.race_points == 12
+    assert aggregate.testing_points == 0
+    assert aggregate.season_points == 0
+    assert aggregate.extra_points == 2
+    assert aggregate.penalty_points == 0
+    assert aggregate.position == 1
+    assert aggregate.previous_position is None
+    assert aggregate.last_event_type == RankingEventType.RACE_EVENT
+    assert aggregate.last_event_label == data["bet_context"].label
+    assert aggregate.last_event_order == data["race_event"].round_number
+
+
+def test_unpublish_results_recalculates_aggregate_excluding_unpublished_scope(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username="admin_unpublish_aggregate",
+        email="admin_unpublish_aggregate@example.com",
+        password="secret123",
+    )
+    player = _create_local_user(
+        db_session,
+        username="player_unpublish_aggregate",
+        email="player_unpublish_aggregate@example.com",
+        password="secret123",
+    )
+    first = _create_race_fixture(db_session)
+    second = _create_race_context_for_existing_group(
+        db_session,
+        season=first["season"],
+        group=first["group"],
+        round_number=2,
+        name="Saudi Arabian GP",
+    )
+    _add_calculated_score(
+        db_session,
+        bet_context_id=first["bet_context"].id,
+        user_id=player.id,
+        base_points=10,
+        total_points=10,
+    )
+    _add_calculated_score(
+        db_session,
+        bet_context_id=second["bet_context"].id,
+        user_id=player.id,
+        base_points=7,
+        total_points=7,
+    )
+    db_session.add_all(
+        [
+            ResultPublication(bet_context_id=first["bet_context"].id),
+            ResultPublication(bet_context_id=second["bet_context"].id),
+        ]
+    )
+    db_session.flush()
+    from app.adapters.sqlalchemy.management.result_publication_repository import (
+        SqlAlchemyResultPublicationRepository,
+    )
+
+    SqlAlchemyResultPublicationRepository(db_session).recalculate_season_aggregates_for_bet_context(
+        bet_context_id=first["bet_context"].id,
+    )
+    aggregate_before = db_session.execute(
+        select(ScoreSeasonAggregate).where(
+            ScoreSeasonAggregate.group_id == first["group"].id,
+            ScoreSeasonAggregate.season_id == first["season"].id,
+            ScoreSeasonAggregate.user_id == player.id,
+        )
+    ).scalar_one()
+    assert aggregate_before.total_points == 17
+
+    _login(client, admin.username)
+    response = client.delete(
+        f"/api/v1/management/result-publications/race-events/{second['race_event'].public_id}",
+        headers={"X-Group-Id": str(first["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+    aggregate_after = db_session.execute(
+        select(ScoreSeasonAggregate).where(
+            ScoreSeasonAggregate.group_id == first["group"].id,
+            ScoreSeasonAggregate.season_id == first["season"].id,
+            ScoreSeasonAggregate.user_id == player.id,
+        )
+    ).scalar_one()
+    assert aggregate_after.total_points == 10
+    assert aggregate_after.race_points == 10
+    assert aggregate_after.previous_position == 1
+    assert aggregate_after.last_event_label == first["bet_context"].label
+    assert aggregate_after.last_event_order == first["race_event"].round_number
+
+
+def test_published_aggregate_last_event_uses_calendar_order_not_publication_order(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username="admin_calendar_order_aggregate",
+        email="admin_calendar_order_aggregate@example.com",
+        password="secret123",
+    )
+    player = _create_local_user(
+        db_session,
+        username="player_calendar_order_aggregate",
+        email="player_calendar_order_aggregate@example.com",
+        password="secret123",
+    )
+    first = _create_race_fixture(db_session)
+    second = _create_race_context_for_existing_group(
+        db_session,
+        season=first["season"],
+        group=first["group"],
+        round_number=2,
+        name="Saudi Arabian GP",
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=first["bet_context"].id,
+        bet_score_id=first["event_score"].id,
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=second["bet_context"].id,
+        bet_score_id=second["score"].id,
+    )
+    _add_calculated_score(
+        db_session,
+        bet_context_id=first["bet_context"].id,
+        user_id=player.id,
+        base_points=5,
+        total_points=5,
+    )
+    _add_calculated_score(
+        db_session,
+        bet_context_id=second["bet_context"].id,
+        user_id=player.id,
+        base_points=7,
+        total_points=7,
+    )
+    _login(client, admin.username)
+
+    second_response = client.post(
+        f"/api/v1/management/result-publications/race-events/{second['race_event'].public_id}",
+        headers={"X-Group-Id": str(first["group"].public_id)},
+        json={},
+    )
+    first_response = client.post(
+        f"/api/v1/management/result-publications/race-events/{first['race_event'].public_id}",
+        headers={"X-Group-Id": str(first["group"].public_id)},
+        json={},
+    )
+
+    assert second_response.status_code == 201
+    assert first_response.status_code == 201
+    aggregate = db_session.execute(
+        select(ScoreSeasonAggregate).where(
+            ScoreSeasonAggregate.group_id == first["group"].id,
+            ScoreSeasonAggregate.season_id == first["season"].id,
+            ScoreSeasonAggregate.user_id == player.id,
+        )
+    ).scalar_one()
+    assert aggregate.total_points == 12
+    assert aggregate.last_event_type == RankingEventType.RACE_EVENT
+    assert aggregate.last_event_label == second["bet_context"].label
+    assert aggregate.last_event_order == 2

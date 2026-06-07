@@ -240,13 +240,19 @@ def _publish(
     ):
         raise ResultPublicationScoringRequiredError()
 
-    return repository.create_publication(
+    result = repository.create_publication(
         bet_context_id=bet_context_id,
         event_session_id=event_session_id,
         testing_event_session_id=testing_event_session_id,
         published_by_user_id=published_by_user_id,
         note=note,
     )
+
+    repository.recalculate_season_aggregates_for_bet_context(
+        bet_context_id=bet_context_id,
+    )
+
+    return result
 
 
 def _unpublish(
@@ -267,4 +273,8 @@ def _unpublish(
         bet_context_id=bet_context_id,
         event_session_id=event_session_id,
         testing_event_session_id=testing_event_session_id,
+    )
+
+    repository.recalculate_season_aggregates_for_bet_context(
+        bet_context_id=bet_context_id,
     )

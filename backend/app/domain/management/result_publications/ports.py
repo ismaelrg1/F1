@@ -91,4 +91,11 @@ class ResultPublicationRepository(Protocol):
         testing_event_session_id: int | None,
     ) -> bool:
         ...
+
+    def recalculate_season_aggregates_for_bet_context(
+        self,
+        *,
+        bet_context_id: int,
+    ) -> None:
+        ...
     
