@@ -23,7 +23,6 @@ def _create_admin_user_with_permission(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
     permission_code: str,
 ) -> None:
@@ -57,8 +56,7 @@ def _create_admin_user_with_permission(
         role.permissions.append(permission)
 
     user = User(
-        username=username,
-        email=email,
+        username=username,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[role],
@@ -72,13 +70,11 @@ def _create_local_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
 ) -> User:
     hasher = PasslibPasswordHasher()
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
     )
@@ -107,8 +103,7 @@ def _add_group_membership(
 def test_create_season_endpoint_creates_season(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_create_season",
-        email="admin_create_season@example.com",
+        username="admin_create_season",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -138,8 +133,7 @@ def test_create_season_endpoint_creates_season(client, db_session) -> None:
 def test_create_season_endpoint_returns_conflict_for_duplicate_year(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_duplicate_season",
-        email="admin_duplicate_season@example.com",
+        username="admin_duplicate_season",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -166,7 +160,6 @@ def test_create_season_endpoint_returns_conflict_when_active_season_exists(clien
     _create_admin_user_with_permission(
         db_session,
         username="admin_active_season",
-        email="admin_active_season@example.com",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -193,7 +186,6 @@ def test_get_seasons_endpoint_lists_seasons_and_filters_by_is_active(client, db_
     _create_admin_user_with_permission(
         db_session,
         username="admin_list_seasons",
-        email="admin_list_seasons@example.com",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -235,7 +227,6 @@ def test_patch_season_endpoint_activates_requested_season_and_deactivates_previo
     _create_admin_user_with_permission(
         db_session,
         username="admin_patch_season",
-        email="admin_patch_season@example.com",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -278,7 +269,6 @@ def test_patch_season_endpoint_returns_not_found_for_missing_season(client, db_s
     _create_admin_user_with_permission(
         db_session,
         username="admin_patch_missing_season",
-        email="admin_patch_missing_season@example.com",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -302,7 +292,6 @@ def test_generate_bet_contexts_endpoint_creates_contexts_and_is_idempotent(clien
     _create_admin_user_with_permission(
         db_session,
         username="admin_generate_bet_contexts",
-        email="admin_generate_bet_contexts@example.com",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -432,7 +421,6 @@ def test_generate_bet_contexts_endpoint_without_group_header_processes_all_group
     _create_admin_user_with_permission(
         db_session,
         username="admin_generate_all_bet_contexts",
-        email="admin_generate_all_bet_contexts@example.com",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -521,7 +509,6 @@ def test_generate_bet_contexts_endpoint_requires_group_header_for_non_admin(clie
     user = _create_local_user(
         db_session,
         username="owner_without_group_scope",
-        email="owner_without_group_scope@example.com",
         password="secret123",
     )
 
@@ -553,7 +540,6 @@ def test_generate_bet_contexts_endpoint_allows_owner_for_current_group(client, d
     owner = _create_local_user(
         db_session,
         username="owner_generate_bet_contexts",
-        email="owner_generate_bet_contexts@example.com",
         password="secret123",
     )
 
@@ -612,7 +598,6 @@ def test_generate_bet_contexts_endpoint_allows_moderator_for_current_group(clien
     moderator = _create_local_user(
         db_session,
         username="moderator_generate_bet_contexts",
-        email="moderator_generate_bet_contexts@example.com",
         password="secret123",
     )
 
@@ -665,7 +650,6 @@ def test_generate_bet_contexts_endpoint_forbids_member_role_for_group_scope(clie
     member = _create_local_user(
         db_session,
         username="member_generate_bet_contexts",
-        email="member_generate_bet_contexts@example.com",
         password="secret123",
     )
 
@@ -711,7 +695,6 @@ def test_create_country_endpoint_creates_country(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
         username="admin_create_country",
-        email="admin_create_country@example.com",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -744,8 +727,7 @@ def test_create_country_endpoint_creates_country(client, db_session) -> None:
 def test_create_country_endpoint_returns_conflict_for_duplicate_iso2(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_duplicate_country",
-        email="admin_duplicate_country@example.com",
+        username="admin_duplicate_country",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -784,8 +766,7 @@ def test_create_country_endpoint_returns_conflict_for_duplicate_iso2(client, db_
 def test_create_circuit_endpoint_creates_circuit(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_create_circuit",
-        email="admin_create_circuit@example.com",
+        username="admin_create_circuit",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -828,8 +809,7 @@ def test_create_circuit_endpoint_creates_circuit(client, db_session) -> None:
 def test_create_circuit_endpoint_returns_conflict_for_duplicate_code(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_duplicate_circuit",
-        email="admin_duplicate_circuit@example.com",
+        username="admin_duplicate_circuit",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -874,8 +854,7 @@ def test_create_circuit_endpoint_returns_conflict_for_duplicate_code(client, db_
 def test_create_circuit_endpoint_returns_not_found_for_missing_country(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_missing_country_circuit",
-        email="admin_missing_country_circuit@example.com",
+        username="admin_missing_country_circuit",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )

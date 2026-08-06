@@ -44,7 +44,6 @@ def _create_admin_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
 ) -> User:
     hasher = PasslibPasswordHasher()
@@ -58,7 +57,6 @@ def _create_admin_user(
 
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[role],
@@ -72,13 +70,11 @@ def _create_local_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
 ) -> User:
     hasher = PasslibPasswordHasher()
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[],
@@ -493,7 +489,6 @@ def test_publish_race_event_results_creates_publication(client, db_session) -> N
     admin = _create_admin_user(
         db_session,
         username="admin_publish_race_event",
-        email="admin_publish_race_event@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -536,7 +531,6 @@ def test_publish_race_session_results_creates_publication(client, db_session) ->
     admin = _create_admin_user(
         db_session,
         username="admin_publish_race_session",
-        email="admin_publish_race_session@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -580,7 +574,6 @@ def test_publish_testing_session_results_creates_publication(client, db_session)
     admin = _create_admin_user(
         db_session,
         username="admin_publish_testing_session",
-        email="admin_publish_testing_session@example.com",
         password="secret123",
     )
     data = _create_testing_fixture(db_session)
@@ -624,7 +617,6 @@ def test_publish_season_results_creates_publication(client, db_session) -> None:
     admin = _create_admin_user(
         db_session,
         username="admin_publish_season",
-        email="admin_publish_season@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -665,7 +657,6 @@ def test_unpublish_race_event_results_deletes_publication(client, db_session) ->
     _create_admin_user(
         db_session,
         username="admin_unpublish_race_event",
-        email="admin_unpublish_race_event@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -694,7 +685,6 @@ def test_publish_results_returns_conflict_when_official_results_do_not_exist(cli
     _create_admin_user(
         db_session,
         username="admin_publish_without_results",
-        email="admin_publish_without_results@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -714,7 +704,6 @@ def test_publish_results_returns_conflict_when_scores_are_not_calculated(client,
     _create_admin_user(
         db_session,
         username="admin_publish_without_scoring",
-        email="admin_publish_without_scoring@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -739,7 +728,6 @@ def test_publish_results_returns_conflict_when_publication_exists(client, db_ses
     _create_admin_user(
         db_session,
         username="admin_publish_duplicate",
-        email="admin_publish_duplicate@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -772,7 +760,6 @@ def test_unpublish_results_returns_not_found_when_publication_does_not_exist(cli
     _create_admin_user(
         db_session,
         username="admin_unpublish_missing",
-        email="admin_unpublish_missing@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -791,7 +778,6 @@ def test_publish_results_allows_group_owner(client, db_session) -> None:
     user = _create_local_user(
         db_session,
         username="owner_publish_results",
-        email="owner_publish_results@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -827,7 +813,6 @@ def test_publish_results_forbids_group_member(client, db_session) -> None:
     user = _create_local_user(
         db_session,
         username="member_publish_results",
-        email="member_publish_results@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -858,13 +843,11 @@ def test_publish_results_recalculates_season_aggregate_for_published_scores(clie
     admin = _create_admin_user(
         db_session,
         username="admin_publish_aggregate",
-        email="admin_publish_aggregate@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username="player_publish_aggregate",
-        email="player_publish_aggregate@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -920,13 +903,11 @@ def test_unpublish_results_recalculates_aggregate_excluding_unpublished_scope(cl
     admin = _create_admin_user(
         db_session,
         username="admin_unpublish_aggregate",
-        email="admin_unpublish_aggregate@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username="player_unpublish_aggregate",
-        email="player_unpublish_aggregate@example.com",
         password="secret123",
     )
     first = _create_race_fixture(db_session)
@@ -999,13 +980,11 @@ def test_published_aggregate_last_event_uses_calendar_order_not_publication_orde
     admin = _create_admin_user(
         db_session,
         username="admin_calendar_order_aggregate",
-        email="admin_calendar_order_aggregate@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username="player_calendar_order_aggregate",
-        email="player_calendar_order_aggregate@example.com",
         password="secret123",
     )
     first = _create_race_fixture(db_session)

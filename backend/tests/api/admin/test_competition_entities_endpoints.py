@@ -10,7 +10,6 @@ def _create_admin_user_with_permission(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
     permission_code: str,
 ) -> None:
@@ -36,8 +35,7 @@ def _create_admin_user_with_permission(
         role.permissions.append(permission)
 
     user = User(
-        username=username,
-        email=email,
+        username=username,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[role],
@@ -49,8 +47,7 @@ def _create_admin_user_with_permission(
 def test_create_driver(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_driver",
-        email="admin_driver@example.com",
+        username="admin_driver",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -75,8 +72,7 @@ def test_create_driver(client, db_session) -> None:
 def test_create_season_driver(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_season_driver",
-        email="admin_season_driver@example.com",
+        username="admin_season_driver",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -110,8 +106,7 @@ def test_create_season_driver(client, db_session) -> None:
 def test_create_team(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_team",
-        email="admin_team@example.com",
+        username="admin_team",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -137,8 +132,7 @@ def test_create_team(client, db_session) -> None:
 def test_create_season_team(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_season_team",
-        email="admin_season_team@example.com",
+        username="admin_season_team",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -175,8 +169,7 @@ def test_create_season_team(client, db_session) -> None:
 def test_create_engine(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_engine",
-        email="admin_engine@example.com",
+        username="admin_engine",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -201,8 +194,7 @@ def test_create_engine(client, db_session) -> None:
 def test_create_season_engine(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_season_engine",
-        email="admin_season_engine@example.com",
+        username="admin_season_engine",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )

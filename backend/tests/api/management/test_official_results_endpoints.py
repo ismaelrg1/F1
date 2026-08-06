@@ -37,7 +37,6 @@ def _create_admin_user_with_permission(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
     permission_code: str,
 ) -> None:
@@ -64,7 +63,6 @@ def _create_admin_user_with_permission(
 
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[role],
@@ -77,13 +75,11 @@ def _create_local_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
 ) -> User:
     hasher = PasslibPasswordHasher()
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[],
@@ -340,7 +336,6 @@ def test_create_official_results_for_event_scope(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_create",
-        email="admin_official_results_create@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -395,7 +390,6 @@ def test_create_official_results_for_race_session_scope(client, db_session) -> N
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_session",
-        email="admin_official_results_session@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -449,7 +443,6 @@ def test_create_official_results_for_testing_session_scope(client, db_session) -
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_testing",
-        email="admin_official_results_testing@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -501,7 +494,6 @@ def test_create_official_results_for_season_scope(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_season",
-        email="admin_official_results_season@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -537,7 +529,6 @@ def test_patch_official_results_for_season_scope(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_season_patch",
-        email="admin_official_results_season_patch@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -584,7 +575,6 @@ def test_create_official_results_returns_conflict_when_scope_already_has_results
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_conflict",
-        email="admin_official_results_conflict@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -630,7 +620,6 @@ def test_patch_official_results_updates_existing_scope_results(client, db_sessio
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_patch",
-        email="admin_official_results_patch@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -685,7 +674,6 @@ def test_patch_official_results_returns_not_found_when_scope_has_no_existing_res
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_patch_missing",
-        email="admin_official_results_patch_missing@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -731,7 +719,6 @@ def test_create_official_results_allows_group_managers(
     user = _create_local_user(
         db_session,
         username=username,
-        email=f"{username}@example.com",
         password="secret123",
     )
     data = _create_race_bet_context_fixture(db_session)
@@ -762,7 +749,6 @@ def test_patch_official_results_allows_group_owner(client, db_session) -> None:
     user = _create_local_user(
         db_session,
         username="owner_official_results_patch",
-        email="owner_official_results_patch@example.com",
         password="secret123",
     )
     data = _create_race_bet_context_fixture(db_session)
@@ -807,7 +793,6 @@ def test_create_official_results_forbids_group_member(client, db_session) -> Non
     user = _create_local_user(
         db_session,
         username="member_official_results_create",
-        email="member_official_results_create@example.com",
         password="secret123",
     )
     data = _create_race_bet_context_fixture(db_session)
@@ -838,7 +823,6 @@ def test_create_official_results_forbids_user_from_other_group(client, db_sessio
     user = _create_local_user(
         db_session,
         username="outsider_official_results_create",
-        email="outsider_official_results_create@example.com",
         password="secret123",
     )
     data = _create_race_bet_context_fixture(db_session)
@@ -871,7 +855,6 @@ def test_create_official_results_prints_payload(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_manual_create",
-        email="admin_official_results_manual_create@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -907,7 +890,6 @@ def test_patch_official_results_prints_payload(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_manual_patch",
-        email="admin_official_results_manual_patch@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -1034,7 +1016,6 @@ def test_get_race_event_official_results_returns_questions_values_and_scope_stat
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_get_race",
-        email="admin_official_results_get_race@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -1116,7 +1097,6 @@ def test_get_race_event_official_results_returns_post_status_when_no_results_exi
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_get_race_empty",
-        email="admin_official_results_get_race_empty@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -1150,7 +1130,6 @@ def test_get_testing_event_official_results_returns_session_values(client, db_se
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_get_testing",
-        email="admin_official_results_get_testing@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -1211,7 +1190,6 @@ def test_get_season_official_results_returns_questions_values_and_publication_st
     _create_admin_user_with_permission(
         db_session,
         username="admin_official_results_get_season",
-        email="admin_official_results_get_season@example.com",
         password="secret123",
         permission_code="SCORING_MANAGE",
     )
@@ -1267,7 +1245,6 @@ def test_get_official_results_allows_group_owner(client, db_session) -> None:
     user = _create_local_user(
         db_session,
         username="owner_official_results_get",
-        email="owner_official_results_get@example.com",
         password="secret123",
     )
     data = _create_race_bet_context_fixture(db_session)
@@ -1298,7 +1275,6 @@ def test_get_official_results_forbids_group_member(client, db_session) -> None:
     user = _create_local_user(
         db_session,
         username="member_official_results_get",
-        email="member_official_results_get@example.com",
         password="secret123",
     )
     data = _create_race_bet_context_fixture(db_session)

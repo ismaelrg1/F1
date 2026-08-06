@@ -6,7 +6,6 @@ import logging
 import time
 
 
-from app.adapters.email import ResendEmailSender
 from app.adapters.security import PasslibPasswordHasher, Sha256ResetTokenHasher
 from app.adapters.sqlalchemy import SqlAlchemyAuthRepository, SqlAlchemyPasswordResetTokenRepository
 from app.api.deps import _translate_auth_error
@@ -51,22 +50,16 @@ def password_forgot(
     auth_repository = SqlAlchemyAuthRepository(db)
     token_repository = SqlAlchemyPasswordResetTokenRepository(db)
     token_hasher = Sha256ResetTokenHasher()
-    email_sender = ResendEmailSender()
-    
     use_case = RequestPasswordReset(
         auth_repository,
         token_repository,
         token_hasher,
-        email_sender,
-        reset_base_url=f"{settings.frontend_base_url}/reset-password",
         token_ttl=timedelta(minutes=settings.password_reset_token_expire_minutes),
         request_cooldown=timedelta(seconds=settings.password_reset_request_cooldown_seconds),
     )
 
     try:
-        user = auth_repository.get_by_username(data.username)
-        if user is not None:
-            use_case.execute(user.email)
+        use_case.execute(data.username)
     except AuthError as exc:
         logger.warning(
             "Password reset request handled with internal auth error",

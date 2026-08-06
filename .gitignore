@@ -37,6 +37,8 @@ tbls-doc/
 backend/openapi/
 graph_db/
 docs/
+scripts/
+legacy/
 
 # Editors / OS
 .vscode/

@@ -16,13 +16,11 @@ def _create_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
 ) -> User:
     hasher = PasslibPasswordHasher()
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
     )
@@ -153,19 +151,16 @@ def test_get_ranking_returns_user_rows_and_timeline_for_user_group(client, db_se
     viewer = _create_user(
         db_session,
         username=f"viewer_{uuid4().hex[:8]}",
-        email=f"viewer_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     other_user = _create_user(
         db_session,
         username=f"other_{uuid4().hex[:8]}",
-        email=f"other_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     zero_user = _create_user(
         db_session,
         username=f"zero_{uuid4().hex[:8]}",
-        email=f"zero_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group(
@@ -388,25 +383,21 @@ def test_get_ranking_returns_team_rows_when_group_uses_teams(client, db_session)
     viewer = _create_user(
         db_session,
         username=f"viewer_{uuid4().hex[:8]}",
-        email=f"viewer_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     teammate = _create_user(
         db_session,
         username=f"teammate_{uuid4().hex[:8]}",
-        email=f"teammate_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     rival = _create_user(
         db_session,
         username=f"rival_{uuid4().hex[:8]}",
-        email=f"rival_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     guest_without_team = _create_user(
         db_session,
         username=f"guest_{uuid4().hex[:8]}",
-        email=f"guest_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group(

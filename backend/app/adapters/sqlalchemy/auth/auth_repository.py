@@ -21,20 +21,14 @@ class SqlAlchemyAuthRepository(AuthRepository):
         user = self._session.execute(stmt).scalar_one_or_none()
         return self._to_domain_user(user)
 
-    def get_by_email(self, email: str) -> AuthenticatedLoginUser | None:
-        stmt = select(User).where(User.email == email)
-        user = self._session.execute(stmt).scalar_one_or_none()
-        return self._to_domain_user(user)
-
     def get_by_google_sub(self, google_sub: str) -> AuthenticatedLoginUser | None:
         stmt = select(User).where(User.google_sub == google_sub)
         user = self._session.execute(stmt).scalar_one_or_none()
         return self._to_domain_user(user)
 
-    def create_local_user(self, *, username: str, email: str, password_hash: str) -> AuthenticatedLoginUser:
+    def create_local_user(self, *, username: str, password_hash: str) -> AuthenticatedLoginUser:
         user = User(
             username=username,
-            email=email,
             password_hash=password_hash,
             auth_provider="LOCAL",
         )
@@ -42,10 +36,9 @@ class SqlAlchemyAuthRepository(AuthRepository):
         self._session.flush()
         return self._to_domain_user(user)
 
-    def create_google_user(self, *, username: str, email: str, google_sub: str) -> AuthenticatedLoginUser:
+    def create_google_user(self, *, username: str, google_sub: str) -> AuthenticatedLoginUser:
         user = User(
             username=username,
-            email=email,
             google_sub=google_sub,
             auth_provider="GOOGLE",
         )
@@ -70,7 +63,6 @@ class SqlAlchemyAuthRepository(AuthRepository):
             id=user.id,
             public_id=user.public_id,
             username=user.username,
-            email=user.email,
             password_hash=user.password_hash,
             google_sub=user.google_sub,
             auth_provider=user.auth_provider,

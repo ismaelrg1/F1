@@ -10,7 +10,6 @@ def _create_admin_user_with_permission(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
     permission_code: str,
 ) -> None:
@@ -37,7 +36,6 @@ def _create_admin_user_with_permission(
 
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[role],
@@ -56,7 +54,6 @@ def test_list_countries_returns_ordered_countries(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
         username="countries_reader",
-        email="countries_reader@example.com",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )

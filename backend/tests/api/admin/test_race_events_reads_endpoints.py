@@ -12,7 +12,6 @@ def _create_admin_user_with_permission(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
     permission_code: str,
 ) -> None:
@@ -38,8 +37,7 @@ def _create_admin_user_with_permission(
         role.permissions.append(permission)
 
     user = User(
-        username=username,
-        email=email,
+        username=username,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[role],
@@ -56,8 +54,7 @@ def test_list_admin_race_events_requires_auth(client) -> None:
 def test_list_admin_race_events_returns_items(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_race_read",
-        email="admin_race_read@example.com",
+        username="admin_race_read",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )

@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import CheckConstraint, DateTime, Index, String, func, text
-from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,7 +23,6 @@ class User(Base):
     __tablename__ = "users"
     __table_args__ = (
         CheckConstraint("length(username) >= 3", name="ck_users_username_minlen"),
-        CheckConstraint("length(email) >= 5", name="ck_users_email_minlen"),
         Index("ix_users_created_at", "created_at"),
         Index("ix_users_auth_provider", "auth_provider"),
         Index("ix_users_google_sub", "google_sub"),
@@ -40,7 +38,6 @@ class User(Base):
         default=uuid4,
     )
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    email: Mapped[str] = mapped_column(CITEXT(), unique=True, nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     google_sub: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
     auth_provider: Mapped[Optional[str]] = mapped_column(

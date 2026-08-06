@@ -65,13 +65,11 @@ def _create_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
 ) -> User:
     hasher = PasslibPasswordHasher()
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
     )
@@ -314,7 +312,6 @@ def test_get_race_event_bet_questions_requires_group_membership(client, db_sessi
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
 
@@ -347,7 +344,6 @@ def test_get_race_event_bet_questions_returns_event_and_session_questions(client
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -614,7 +610,6 @@ def test_get_race_event_bet_questions_returns_404_when_bet_context_is_missing(cl
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -673,7 +668,6 @@ def test_preview_race_event_bet_questions_payload_prints_result(client, db_sessi
     user = _create_user(
         db_session,
         username="bet_questions_manual",
-        email="bet_questions_manual@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -894,7 +888,6 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -1221,7 +1214,6 @@ def test_preview_testing_event_bet_questions_payload_prints_result(client, db_se
     user = _create_user(
         db_session,
         username="testing_bets_manual",
-        email="testing_bets_manual@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -1492,7 +1484,6 @@ def test_get_season_bet_questions_returns_questions(client, db_session) -> None:
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -1653,7 +1644,6 @@ def test_preview_season_bet_questions_payload_prints_result(client, db_session) 
     user = _create_user(
         db_session,
         username="season_bets_manual",
-        email="season_bets_manual@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -1937,7 +1927,6 @@ def test_get_race_event_bet_answers_returns_event_and_session_answers(client, db
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -2137,7 +2126,6 @@ def test_get_testing_event_bet_answers_returns_event_and_filtered_session_answer
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -2496,7 +2484,6 @@ def test_get_race_event_powerups_returns_user_assignments(client, db_session) ->
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -2549,7 +2536,6 @@ def test_get_race_event_powerups_marks_session_restricted_and_already_used(clien
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -2606,7 +2592,6 @@ def test_get_race_event_powerups_returns_404_when_session_is_missing(client, db_
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -2640,19 +2625,16 @@ def test_get_race_event_powerups_returns_user_target_options_with_penalty_limit(
     user = _create_user(
         db_session,
         username=f"actor_{uuid4().hex[:8]}",
-        email=f"actor_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     available_target = _create_user(
         db_session,
         username=f"available_{uuid4().hex[:8]}",
-        email=f"available_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     blocked_target = _create_user(
         db_session,
         username=f"blocked_{uuid4().hex[:8]}",
-        email=f"blocked_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -2741,7 +2723,6 @@ def test_patch_race_event_bet_answers_saves_partial_event_draft(client, db_sessi
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -2804,7 +2785,6 @@ def test_patch_race_event_bet_answers_saves_partial_session_draft(client, db_ses
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -2870,7 +2850,6 @@ def test_patch_race_event_bet_answers_returns_409_when_session_is_closed(client,
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -2915,7 +2894,6 @@ def test_patch_race_event_bet_answers_returns_409_when_event_is_not_open(client,
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -2959,7 +2937,6 @@ def test_patch_race_event_bet_answers_returns_400_when_answer_is_not_in_scope(cl
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -3000,7 +2977,6 @@ def test_patch_race_event_bet_answers_returns_409_when_bet_is_already_submitted(
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -3212,7 +3188,6 @@ def test_submit_race_event_bet_answers_creates_first_submission(client, db_sessi
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -3283,7 +3258,6 @@ def test_submit_race_event_bet_answers_creates_powerup_use(client, db_session) -
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -3353,7 +3327,6 @@ def test_submit_race_event_bet_answers_rejects_powerup_after_any_context_submiss
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -3428,7 +3401,6 @@ def test_submit_race_event_bet_answers_merges_existing_draft(client, db_session)
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -3507,7 +3479,6 @@ def test_submit_race_event_session_bet_answers_creates_session_submission(client
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -3570,7 +3541,6 @@ def test_submit_race_event_bet_answers_updates_existing_submission(client, db_se
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -3662,7 +3632,6 @@ def test_submit_race_event_bet_answers_returns_400_when_required_answer_is_missi
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -3703,7 +3672,6 @@ def test_submit_race_event_bet_answers_allows_modification_with_active_permissio
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -3800,7 +3768,6 @@ def test_submit_race_event_bet_answers_returns_409_when_modification_limit_is_re
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4066,7 +4033,6 @@ def test_get_testing_event_powerups_returns_session_state(client, db_session) ->
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4129,7 +4095,6 @@ def test_patch_testing_event_bet_answers_saves_partial_event_draft(client, db_se
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4195,7 +4160,6 @@ def test_patch_testing_event_bet_answers_saves_partial_session_draft(client, db_
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4263,7 +4227,6 @@ def test_patch_testing_event_bet_answers_returns_409_when_session_is_closed(clie
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4308,7 +4271,6 @@ def test_patch_testing_event_bet_answers_returns_409_when_event_is_not_open(clie
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4352,7 +4314,6 @@ def test_patch_testing_event_bet_answers_returns_400_when_answer_is_not_in_scope
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4393,7 +4354,6 @@ def test_patch_testing_event_bet_answers_returns_409_when_bet_is_already_submitt
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4445,7 +4405,6 @@ def test_submit_testing_event_bet_answers_creates_first_submission(client, db_se
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4519,7 +4478,6 @@ def test_submit_testing_event_bet_answers_merges_existing_draft(client, db_sessi
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4598,7 +4556,6 @@ def test_submit_testing_event_session_bet_answers_creates_session_submission(cli
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4670,7 +4627,6 @@ def test_submit_testing_event_bet_answers_returns_400_when_required_answer_is_mi
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4819,7 +4775,6 @@ def test_get_season_powerups_returns_assigned_powerups(client, db_session) -> No
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4892,7 +4847,6 @@ def test_get_season_powerups_returns_404_when_bet_context_is_missing(client, db_
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4923,7 +4877,6 @@ def test_patch_season_bet_answers_saves_partial_draft(client, db_session) -> Non
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -4989,7 +4942,6 @@ def test_patch_season_bet_answers_returns_409_when_season_is_closed(client, db_s
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5033,7 +4985,6 @@ def test_patch_season_bet_answers_returns_409_when_season_is_not_open(client, db
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5077,7 +5028,6 @@ def test_patch_season_bet_answers_returns_400_when_answer_is_not_in_scope(client
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5118,7 +5068,6 @@ def test_patch_season_bet_answers_returns_409_when_bet_is_already_submitted(clie
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5170,7 +5119,6 @@ def test_submit_season_bet_answers_creates_first_submission(client, db_session) 
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5244,7 +5192,6 @@ def test_submit_season_bet_answers_merges_existing_draft(client, db_session) -> 
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5325,7 +5272,6 @@ def test_submit_season_bet_answers_updates_existing_submission(client, db_sessio
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5419,7 +5365,6 @@ def test_submit_season_bet_answers_returns_400_when_required_answer_is_missing(c
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5460,7 +5405,6 @@ def test_get_season_bet_answers_returns_answers(client, db_session) -> None:
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5564,7 +5508,6 @@ def test_get_season_bet_answers_returns_404_when_season_is_missing(client, db_se
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5592,7 +5535,6 @@ def test_get_season_bet_answers_returns_404_when_bet_context_is_missing(client, 
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5624,13 +5566,11 @@ def test_get_race_event_bet_results_returns_group_event_results_when_always_visi
     viewer = _create_user(
         db_session,
         username=f"viewer_{uuid4().hex[:8]}",
-        email=f"viewer_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     other_user = _create_user(
         db_session,
         username=f"other_{uuid4().hex[:8]}",
-        email=f"other_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -5881,13 +5821,11 @@ def test_get_race_event_bet_results_with_session_id_returns_only_session_results
     viewer = _create_user(
         db_session,
         username=f"viewer_{uuid4().hex[:8]}",
-        email=f"viewer_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     other_user = _create_user(
         db_session,
         username=f"other_{uuid4().hex[:8]}",
-        email=f"other_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -6082,13 +6020,11 @@ def test_get_race_event_bet_results_hides_group_entries_when_submit_required_and
     viewer = _create_user(
         db_session,
         username=f"viewer_{uuid4().hex[:8]}",
-        email=f"viewer_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     other_user = _create_user(
         db_session,
         username=f"other_{uuid4().hex[:8]}",
-        email=f"other_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -6209,13 +6145,11 @@ def test_get_testing_event_bet_results_with_session_id_returns_session_results_w
     viewer = _create_user(
         db_session,
         username=f"viewer_{uuid4().hex[:8]}",
-        email=f"viewer_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     other_user = _create_user(
         db_session,
         username=f"other_{uuid4().hex[:8]}",
-        email=f"other_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -6480,13 +6414,11 @@ def test_get_testing_event_bet_results_with_session_id_uses_submit_required_for_
     viewer = _create_user(
         db_session,
         username=f"viewer_{uuid4().hex[:8]}",
-        email=f"viewer_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     other_user = _create_user(
         db_session,
         username=f"other_{uuid4().hex[:8]}",
-        email=f"other_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -6690,13 +6622,11 @@ def test_get_season_bet_results_keeps_entries_visible_but_hides_scores_until_res
     viewer = _create_user(
         db_session,
         username=f"viewer_{uuid4().hex[:8]}",
-        email=f"viewer_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     other_user = _create_user(
         db_session,
         username=f"other_{uuid4().hex[:8]}",
-        email=f"other_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -6851,13 +6781,11 @@ def test_get_season_bet_results_returns_group_results_when_always_visible(client
     viewer = _create_user(
         db_session,
         username=f"viewer_{uuid4().hex[:8]}",
-        email=f"viewer_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     other_user = _create_user(
         db_session,
         username=f"other_{uuid4().hex[:8]}",
-        email=f"other_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(
@@ -7087,13 +7015,11 @@ def test_get_season_bet_results_hides_group_entries_when_submit_required_and_vie
     viewer = _create_user(
         db_session,
         username=f"viewer_{uuid4().hex[:8]}",
-        email=f"viewer_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     other_user = _create_user(
         db_session,
         username=f"other_{uuid4().hex[:8]}",
-        email=f"other_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     group = _create_group_with_membership(

@@ -34,7 +34,6 @@ def _create_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
     role_name: RoleName | None = None,
 ) -> User:
@@ -53,7 +52,6 @@ def _create_user(
 
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=roles,
@@ -261,7 +259,6 @@ def test_get_management_calendar_requires_group_header(client, db_session) -> No
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     _login(client, user)
@@ -276,7 +273,6 @@ def test_get_management_calendar_returns_events_and_management_flags_for_admin(c
     admin = _create_user(
         db_session,
         username=f"admin_{uuid4().hex[:8]}",
-        email=f"admin_{uuid4().hex[:8]}@example.com",
         password="secret123",
         role_name=RoleName.ADMIN,
     )
@@ -340,7 +336,6 @@ def test_get_management_calendar_marks_events_without_group_context(client, db_s
     admin = _create_user(
         db_session,
         username=f"admin_{uuid4().hex[:8]}",
-        email=f"admin_{uuid4().hex[:8]}@example.com",
         password="secret123",
         role_name=RoleName.ADMIN,
     )
@@ -370,7 +365,6 @@ def test_get_management_calendar_allows_group_owner(client, db_session) -> None:
     owner = _create_user(
         db_session,
         username=f"owner_{uuid4().hex[:8]}",
-        email=f"owner_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_management_calendar_fixture(db_session)
@@ -396,7 +390,6 @@ def test_get_management_calendar_allows_group_moderator(client, db_session) -> N
     moderator = _create_user(
         db_session,
         username=f"moderator_{uuid4().hex[:8]}",
-        email=f"moderator_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_management_calendar_fixture(db_session)
@@ -422,7 +415,6 @@ def test_get_management_calendar_forbids_group_member(client, db_session) -> Non
     member = _create_user(
         db_session,
         username=f"member_{uuid4().hex[:8]}",
-        email=f"member_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_management_calendar_fixture(db_session)
@@ -448,7 +440,6 @@ def test_get_management_calendar_forbids_user_from_other_group(client, db_sessio
     user = _create_user(
         db_session,
         username=f"outsider_{uuid4().hex[:8]}",
-        email=f"outsider_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_management_calendar_fixture(db_session)

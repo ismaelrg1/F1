@@ -20,13 +20,11 @@ def _create_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
 ) -> None:
     hasher = PasslibPasswordHasher()
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
     )
@@ -45,7 +43,6 @@ def test_get_home_returns_next_event_of_active_season(client, db_session) -> Non
     _create_user(
         db_session,
         username="home_reader",
-        email="home_reader@example.com",
         password="secret123",
     )
 
@@ -156,7 +153,6 @@ def test_get_home_returns_null_when_no_upcoming_event_exists(client, db_session)
     _create_user(
         db_session,
         username="home_empty_reader",
-        email="home_empty_reader@example.com",
         password="secret123",
     )
     active_season = Season(year=2026, is_active=True)
@@ -208,7 +204,6 @@ def test_preview_home_payload_prints_result(client, db_session) -> None:
     _create_user(
         db_session,
         username="home_manual",
-        email="home_manual@example.com",
         password="secret123",
     )
 

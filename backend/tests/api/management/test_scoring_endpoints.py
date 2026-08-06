@@ -37,7 +37,7 @@ from app.db.social import Group, GroupMembership
 from app.db.social.group_membership import GroupRole
 
 
-def _create_admin_user(db_session, *, username: str, email: str, password: str) -> User:
+def _create_admin_user(db_session, *, username: str, password: str) -> User:
     hasher = PasslibPasswordHasher()
     role = db_session.execute(select(Role).where(Role.name == RoleName.ADMIN)).scalar_one_or_none()
     if role is None:
@@ -47,7 +47,6 @@ def _create_admin_user(db_session, *, username: str, email: str, password: str) 
 
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[role],
@@ -57,11 +56,10 @@ def _create_admin_user(db_session, *, username: str, email: str, password: str) 
     return user
 
 
-def _create_local_user(db_session, *, username: str, email: str, password: str) -> User:
+def _create_local_user(db_session, *, username: str, password: str) -> User:
     hasher = PasslibPasswordHasher()
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[],
@@ -491,13 +489,11 @@ def test_calculate_race_event_scoring_creates_context_and_session_scores(client,
     admin = _create_admin_user(
         db_session,
         username="admin_calc_race",
-        email="admin_calc_race@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username="player_calc_race",
-        email="player_calc_race@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -577,13 +573,11 @@ def test_calculate_testing_event_scoring_creates_session_score(client, db_sessio
     admin = _create_admin_user(
         db_session,
         username="admin_calc_testing",
-        email="admin_calc_testing@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username="player_calc_testing",
-        email="player_calc_testing@example.com",
         password="secret123",
     )
     data = _create_testing_fixture(db_session)
@@ -628,13 +622,11 @@ def test_calculate_season_scoring_creates_context_score(client, db_session) -> N
     admin = _create_admin_user(
         db_session,
         username="admin_calc_season",
-        email="admin_calc_season@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username="player_calc_season",
-        email="player_calc_season@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -676,13 +668,11 @@ def test_calculate_scoring_replaces_existing_scores(client, db_session) -> None:
     admin = _create_admin_user(
         db_session,
         username="admin_calc_replace",
-        email="admin_calc_replace@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username="player_calc_replace",
-        email="player_calc_replace@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -727,7 +717,6 @@ def test_calculate_scoring_returns_conflict_without_official_results(client, db_
     admin = _create_admin_user(
         db_session,
         username="admin_calc_no_results",
-        email="admin_calc_no_results@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -746,7 +735,6 @@ def test_calculate_scoring_requires_management_group_header(client, db_session) 
     admin = _create_admin_user(
         db_session,
         username="admin_calc_no_group",
-        email="admin_calc_no_group@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -764,7 +752,6 @@ def test_calculate_scoring_forbids_group_member(client, db_session) -> None:
     member = _create_local_user(
         db_session,
         username="member_calc_scoring",
-        email="member_calc_scoring@example.com",
         password="secret123",
     )
     data = _create_race_fixture(db_session)
@@ -789,13 +776,11 @@ def test_calculate_scoring_allows_group_owner(client, db_session) -> None:
     owner = _create_local_user(
         db_session,
         username="owner_calc_scoring",
-        email="owner_calc_scoring@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username="player_owner_calc_scoring",
-        email="player_owner_calc_scoring@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -831,13 +816,11 @@ def test_calculate_scoring_uses_position_near_evaluator_rule(client, db_session)
     admin = _create_admin_user(
         db_session,
         username=f"admin_near_{uuid4().hex[:8]}",
-        email=f"admin_near_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username=f"player_near_{uuid4().hex[:8]}",
-        email=f"player_near_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -891,13 +874,11 @@ def test_calculate_scoring_applies_bonus_when_all_bet_scores_hit(client, db_sess
     admin = _create_admin_user(
         db_session,
         username=f"admin_group_bonus_{uuid4().hex[:8]}",
-        email=f"admin_group_bonus_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username=f"player_group_bonus_{uuid4().hex[:8]}",
-        email=f"player_group_bonus_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -975,13 +956,11 @@ def test_calculate_scoring_does_not_apply_group_bonus_when_one_bet_score_misses(
     admin = _create_admin_user(
         db_session,
         username=f"admin_group_miss_{uuid4().hex[:8]}",
-        email=f"admin_group_miss_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username=f"player_group_miss_{uuid4().hex[:8]}",
-        email=f"player_group_miss_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -1057,13 +1036,11 @@ def test_calculate_scoring_applies_bonus_if_at_least_x_hits(client, db_session) 
     admin = _create_admin_user(
         db_session,
         username=f"admin_atleast_{uuid4().hex[:8]}",
-        email=f"admin_atleast_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username=f"player_atleast_{uuid4().hex[:8]}",
-        email=f"player_atleast_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -1117,13 +1094,11 @@ def test_calculate_scoring_applies_bonus_per_hit_from_x(client, db_session) -> N
     admin = _create_admin_user(
         db_session,
         username=f"admin_perhit_{uuid4().hex[:8]}",
-        email=f"admin_perhit_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username=f"player_perhit_{uuid4().hex[:8]}",
-        email=f"player_perhit_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -1196,13 +1171,11 @@ def test_calculate_scoring_applies_double_points_powerup(client, db_session) -> 
     admin = _create_admin_user(
         db_session,
         username=f"admin_double_{uuid4().hex[:8]}",
-        email=f"admin_double_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username=f"player_double_{uuid4().hex[:8]}",
-        email=f"player_double_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -1256,13 +1229,11 @@ def test_calculate_scoring_applies_powerup_submitted_with_season_bet(client, db_
     admin = _create_admin_user(
         db_session,
         username=f"admin_submit_powerup_{uuid4().hex[:8]}",
-        email=f"admin_submit_powerup_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username=f"player_submit_powerup_{uuid4().hex[:8]}",
-        email=f"player_submit_powerup_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -1356,19 +1327,16 @@ def test_calculate_scoring_applies_halve_points_penalty_powerup(client, db_sessi
     admin = _create_admin_user(
         db_session,
         username=f"admin_half_{uuid4().hex[:8]}",
-        email=f"admin_half_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     actor = _create_local_user(
         db_session,
         username=f"actor_half_{uuid4().hex[:8]}",
-        email=f"actor_half_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username=f"player_half_{uuid4().hex[:8]}",
-        email=f"player_half_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)
@@ -1424,13 +1392,11 @@ def test_calculate_scoring_skips_disabled_powerup_by_restriction(client, db_sess
     admin = _create_admin_user(
         db_session,
         username=f"admin_restricted_{uuid4().hex[:8]}",
-        email=f"admin_restricted_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     player = _create_local_user(
         db_session,
         username=f"player_restricted_{uuid4().hex[:8]}",
-        email=f"player_restricted_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
     data = _create_season_fixture(db_session)

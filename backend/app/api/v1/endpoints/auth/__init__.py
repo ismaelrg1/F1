@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from . import password, registration, session
-from .password import PASSWORD_FORGOT_MIN_DURATION_SECONDS, ResendEmailSender
+from .password import PASSWORD_FORGOT_MIN_DURATION_SECONDS
 
 router = APIRouter()
 router.include_router(session.router)
@@ -14,5 +14,4 @@ __all__ = [
     "registration",
     "session",
     "PASSWORD_FORGOT_MIN_DURATION_SECONDS",
-    "ResendEmailSender",
 ]

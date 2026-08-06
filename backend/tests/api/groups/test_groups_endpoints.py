@@ -13,7 +13,6 @@ def _create_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
     role_name: RoleName | None = None,
 ) -> User:
@@ -32,7 +31,6 @@ def _create_user(
 
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=roles,
@@ -87,7 +85,6 @@ def test_get_groups_returns_all_groups_for_admin(client, db_session) -> None:
     admin = _create_user(
         db_session,
         username=f"admin_{uuid4().hex[:8]}",
-        email=f"admin_{uuid4().hex[:8]}@example.com",
         password="secret123",
         role_name=RoleName.ADMIN,
     )
@@ -124,7 +121,6 @@ def test_get_groups_returns_only_owner_and_moderator_groups_for_non_admin(client
     user = _create_user(
         db_session,
         username=f"user_{uuid4().hex[:8]}",
-        email=f"user_{uuid4().hex[:8]}@example.com",
         password="secret123",
     )
 

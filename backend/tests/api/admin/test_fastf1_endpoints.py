@@ -12,7 +12,6 @@ def _create_admin_user_with_permission(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
     permission_code: str,
 ) -> None:
@@ -46,8 +45,7 @@ def _create_admin_user_with_permission(
         role.permissions.append(permission)
 
     user = User(
-        username=username,
-        email=email,
+        username=username,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[role],
@@ -103,8 +101,7 @@ class FakeSchedule:
 def test_list_fastf1_race_events_returns_non_testing_events(client, db_session, monkeypatch) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_fastf1",
-        email="admin_fastf1@example.com",
+        username="admin_fastf1",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -146,8 +143,7 @@ import json
 def test_preview_fastf1_race_events_prints_payload(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_fastf1_preview",
-        email="admin_fastf1_preview@example.com",
+        username="admin_fastf1_preview",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -167,8 +163,7 @@ def test_preview_fastf1_race_events_prints_payload(client, db_session) -> None:
 def test_preview_fastf1_testing_events_prints_payload(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_fastf1_testing_preview",
-        email="admin_fastf1_testing_preview@example.com",
+        username="admin_fastf1_testing_preview",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )

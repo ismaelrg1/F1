@@ -23,13 +23,11 @@ def _create_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
 ) -> None:
     hasher = PasslibPasswordHasher()
     user = User(
-        username=username,
-        email=email,
+        username=username,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
     )
@@ -48,8 +46,7 @@ def test_get_calendar_returns_single_ordered_list_with_testing_first(client, db_
 
     _create_user(
         db_session,
-        username="calendar_reader",
-        email="calendar_reader@example.com",
+        username="calendar_reader",
         password="secret123",
     )
 
@@ -176,8 +173,7 @@ def test_get_calendar_returns_requested_season_when_year_is_provided(client, db_
 
     _create_user(
         db_session,
-        username="calendar_year_reader",
-        email="calendar_year_reader@example.com",
+        username="calendar_year_reader",
         password="secret123",
     )
 
@@ -257,8 +253,7 @@ def test_preview_calendar_payload_prints_result(client, db_session) -> None:
 
     _create_user(
         db_session,
-        username="calendar_manual",
-        email="calendar_manual@example.com",
+        username="calendar_manual",
         password="secret123",
     )
 

@@ -19,12 +19,11 @@ def _unique_user_data(prefix: str) -> tuple[str, str]:
     return username, email
 
 
-def _create_local_user(db_session, *, username: str, email: str, password: str) -> None:
+def _create_local_user(db_session, *, username: str, password: str) -> None:
     hasher = PasslibPasswordHasher()
     db_session.add(
         User(
             username=username,
-            email=email,
             password_hash=hasher.hash(password),
             auth_provider="LOCAL",
         )
@@ -32,11 +31,10 @@ def _create_local_user(db_session, *, username: str, email: str, password: str) 
     db_session.flush()
 
 
-def _create_google_user(db_session, *, username: str, email: str, google_sub: str) -> None:
+def _create_google_user(db_session, *, username: str, google_sub: str) -> None:
     db_session.add(
         User(
             username=username,
-            email=email,
             google_sub=google_sub,
             auth_provider="GOOGLE",
         )
@@ -69,7 +67,7 @@ def test_register_local_endpoint_persists_user_in_db(client, db_session) -> None
 def test_login_local_endpoint_sets_jwt_cookies(client, db_session) -> None:
     username, email = _unique_user_data("login_local")
 
-    _create_local_user(db_session, username=username, email=email, password="secret123")
+    _create_local_user(db_session, username=username, password="secret123")
 
     response = client.post(
         "/api/v1/auth/login/local",
@@ -84,8 +82,8 @@ def test_login_local_endpoint_sets_jwt_cookies(client, db_session) -> None:
 def test_login_local_endpoint_sets_public_id_as_jwt_subject(client, db_session) -> None:
     username, email = _unique_user_data("login_subject")
 
-    _create_local_user(db_session, username=username, email=email, password="secret123")
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    _create_local_user(db_session, username=username, password="secret123")
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
 
     response = client.post(
         "/api/v1/auth/login/local",
@@ -108,7 +106,7 @@ def test_login_local_endpoint_sets_public_id_as_jwt_subject(client, db_session) 
 def test_refresh_endpoint_uses_refresh_cookie_after_login(client, db_session) -> None:
     username, email = _unique_user_data("refresh_local")
 
-    _create_local_user(db_session, username=username, email=email, password="secret123")
+    _create_local_user(db_session, username=username, password="secret123")
 
     login_response = client.post(
         "/api/v1/auth/login/local",
@@ -141,7 +139,7 @@ def test_register_google_endpoint_persists_google_user(client, db_session, monke
     assert response.json()["user"]["username"] == username
     assert "email" not in response.json()["user"]
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     assert user.auth_provider == "GOOGLE"
     assert user.google_sub == google_sub
     assert user.password_hash is None
@@ -152,11 +150,11 @@ def test_login_google_endpoint_sets_jwt_cookies(client, db_session, monkeypatch)
     google_sub = f"google-{uuid4().hex}"
 
     def fake_verify(self, _raw_id_token: str):
-        return SimpleNamespace(sub=google_sub, email=email, email_verified=True)
+        return SimpleNamespace(sub=google_sub, email_verified=True)
 
     monkeypatch.setattr(GoogleIdTokenVerifier, "verify", fake_verify)
 
-    _create_google_user(db_session, username=username, email=email, google_sub=google_sub)
+    _create_google_user(db_session, username=username, google_sub=google_sub)
 
     response = client.post(
         "/api/v1/auth/login/google",
@@ -173,9 +171,9 @@ def test_password_reset_endpoint_updates_local_user_password(client, db_session)
     raw_token = "reset-token-123"
     token_hash = Sha256ResetTokenHasher().hash(raw_token)
 
-    _create_local_user(db_session, username=username, email=email, password="oldsecret")
+    _create_local_user(db_session, username=username, password="oldsecret")
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     db_session.add(
         PasswordResetToken(
             user_id=user.id,
@@ -193,7 +191,7 @@ def test_password_reset_endpoint_updates_local_user_password(client, db_session)
     assert response.status_code == 200
     assert response.json()["msg"] == "Password has been reset"
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     assert PasslibPasswordHasher().verify("newsecret123", user.password_hash)
     token = db_session.execute(select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)).scalar_one()
     assert token.used_at is not None
@@ -214,9 +212,9 @@ def test_password_reset_endpoint_returns_same_error_for_used_token(client, db_se
     raw_token = "used-token-123"
     token_hash = Sha256ResetTokenHasher().hash(raw_token)
 
-    _create_local_user(db_session, username=username, email=email, password="oldsecret")
+    _create_local_user(db_session, username=username, password="oldsecret")
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     db_session.add(
         PasswordResetToken(
             user_id=user.id,
@@ -235,7 +233,7 @@ def test_password_reset_endpoint_returns_same_error_for_used_token(client, db_se
     assert response.status_code == 400
     assert response.json()["detail"]["error"]["code"] == "auth.invalid_password_reset_token"
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     assert PasslibPasswordHasher().verify("oldsecret", user.password_hash)
 
 
@@ -244,9 +242,9 @@ def test_password_reset_endpoint_returns_same_error_for_expired_token(client, db
     raw_token = "expired-token-123"
     token_hash = Sha256ResetTokenHasher().hash(raw_token)
 
-    _create_local_user(db_session, username=username, email=email, password="oldsecret")
+    _create_local_user(db_session, username=username, password="oldsecret")
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     db_session.add(
         PasswordResetToken(
             user_id=user.id,
@@ -264,7 +262,7 @@ def test_password_reset_endpoint_returns_same_error_for_expired_token(client, db
     assert response.status_code == 400
     assert response.json()["detail"]["error"]["code"] == "auth.invalid_password_reset_token"
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     assert PasslibPasswordHasher().verify("oldsecret", user.password_hash)
 
 
@@ -273,9 +271,9 @@ def test_password_reset_endpoint_returns_same_error_for_invalidated_token(client
     raw_token = "invalidated-token-123"
     token_hash = Sha256ResetTokenHasher().hash(raw_token)
 
-    _create_local_user(db_session, username=username, email=email, password="oldsecret")
+    _create_local_user(db_session, username=username, password="oldsecret")
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     db_session.add(
         PasswordResetToken(
             user_id=user.id,
@@ -294,19 +292,15 @@ def test_password_reset_endpoint_returns_same_error_for_invalidated_token(client
     assert response.status_code == 400
     assert response.json()["detail"]["error"]["code"] == "auth.invalid_password_reset_token"
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     assert PasslibPasswordHasher().verify("oldsecret", user.password_hash)
 
 
 def test_password_forgot_endpoint_creates_reset_token_for_local_user(client, db_session, monkeypatch) -> None:
     username, email = _unique_user_data("forgot_local")
 
-    _create_local_user(db_session, username=username, email=email, password="oldsecret")
+    _create_local_user(db_session, username=username, password="oldsecret")
     monkeypatch.setattr("app.api.v1.endpoints.auth.password.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
-    monkeypatch.setattr(
-        "app.api.v1.endpoints.auth.ResendEmailSender.send_password_reset_email",
-        lambda self, *, to_email, reset_url: None,
-    )
 
     response = client.post(
         "/api/v1/auth/password/forgot",
@@ -316,7 +310,7 @@ def test_password_forgot_endpoint_creates_reset_token_for_local_user(client, db_
     assert response.status_code == 200
     assert response.json()["msg"] == "If the account exists, reset instructions have been sent"
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     token = db_session.execute(
         select(PasswordResetToken).where(PasswordResetToken.user_id == user.id)
     ).scalar_one()
@@ -340,7 +334,7 @@ def test_password_forgot_endpoint_returns_neutral_success_for_unknown_user(clien
 def test_password_forgot_endpoint_logs_internal_error_for_google_user(client, db_session, monkeypatch, caplog) -> None:
     username, email = _unique_user_data("forgot_google")
 
-    _create_google_user(db_session, username=username, email=email, google_sub=f"google-{uuid4().hex}")
+    _create_google_user(db_session, username=username, google_sub=f"google-{uuid4().hex}")
     monkeypatch.setattr("app.api.v1.endpoints.auth.password.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
 
     with caplog.at_level("WARNING", logger="app.api.v1.endpoints.auth"):
@@ -362,10 +356,10 @@ def test_password_forgot_endpoint_logs_internal_error_for_google_user(client, db
 def test_password_forgot_endpoint_logs_internal_error_for_cooldown(client, db_session, monkeypatch, caplog) -> None:
     username, email = _unique_user_data("forgot_cooldown")
 
-    _create_local_user(db_session, username=username, email=email, password="oldsecret")
+    _create_local_user(db_session, username=username, password="oldsecret")
     monkeypatch.setattr("app.api.v1.endpoints.auth.password.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     db_session.add(
         PasswordResetToken(
             user_id=user.id,

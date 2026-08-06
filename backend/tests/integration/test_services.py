@@ -78,14 +78,6 @@ class FakeResetTokenHasher:
         return f"token-hash:{raw_token}"
 
 
-class FakeEmailSender:
-    def __init__(self):
-        self.sent = []
-
-    def send_password_reset_email(self, *, to_email: str, reset_url: str) -> None:
-        self.sent.append({"to_email": to_email, "reset_url": reset_url})
-
-
 class FakePasswordResetTokenRepository:
     def __init__(self):
         self.active_by_user_id = {}
@@ -129,7 +121,6 @@ class FakePasswordResetTokenRepository:
 class FakeAuthRepository:
     def __init__(self):
         self.users_by_username = {}
-        self.users_by_email = {}
         self.users_by_google_sub = {}
         self.next_id = 1
 
@@ -137,45 +128,38 @@ class FakeAuthRepository:
         return self.users_by_username.get(username)
 
     def get_by_id(self, user_id: int):
-        for user in self.users_by_email.values():
+        for user in self.users_by_username.values():
             if user.id == user_id:
                 return user
         return None
 
-    def get_by_email(self, email: str):
-        return self.users_by_email.get(email)
-
     def get_by_google_sub(self, google_sub: str):
         return self.users_by_google_sub.get(google_sub)
 
-    def create_local_user(self, *, username: str, email: str, password_hash: str):
+    def create_local_user(self, *, username: str, password_hash: str):
         user = SimpleNamespace(
             id=self.next_id,
             public_id=uuid4(),
             username=username,
-            email=email,
             password_hash=password_hash,
             google_sub=None,
             auth_provider="LOCAL",
         )
         self.next_id += 1
         self.users_by_username[username] = user
-        self.users_by_email[email] = user
         return user
 
-    def create_google_user(self, *, username: str, email: str, google_sub: str):
+    def create_google_user(self, *, username: str, google_sub: str):
         user = SimpleNamespace(
             id=self.next_id,
             public_id=uuid4(),
             username=username,
-            email=email,
             password_hash=None,
             google_sub=google_sub,
             auth_provider="GOOGLE",
         )
         self.next_id += 1
         self.users_by_username[username] = user
-        self.users_by_email[email] = user
         self.users_by_google_sub[google_sub] = user
         return user
 
@@ -192,7 +176,6 @@ def test_login_user_authenticates_matching_password() -> None:
         id=1,
         public_id=uuid4(),
         username="alice",
-        email="a@example.com",
         password_hash="secret",
         google_sub=None,
         auth_provider="LOCAL",
@@ -210,7 +193,7 @@ def test_register_local_user_hashes_password_and_creates_user() -> None:
     repository = FakeAuthRepository()
     use_case = RegisterLocalUser(repository, FakePasswordHasher())
 
-    result = use_case.execute(username="alice", email="a@example.com", password="secret")
+    result = use_case.execute(username="alice", password="secret")
 
     assert result.id == 1
     assert result.username == "alice"
@@ -227,7 +210,7 @@ def test_register_google_user_creates_google_account() -> None:
     result = use_case.execute("fake-id-token")
 
     assert result.id == 1
-    assert result.email == "alice@gmail.com"
+    assert result.username == "alice"
     assert result.google_sub == "google-sub-1"
 
 
@@ -237,7 +220,6 @@ def test_login_google_user_resolves_registered_account() -> None:
         id=1,
         public_id=uuid4(),
         username="alice",
-        email="alice@gmail.com",
         password_hash=None,
         google_sub="google-sub-1",
         auth_provider="GOOGLE",
@@ -254,40 +236,32 @@ def test_login_google_user_resolves_registered_account() -> None:
     assert result.auth_provider == "GOOGLE"
 
 
-def test_request_password_reset_creates_hashed_token_and_sends_email() -> None:
+def test_request_password_reset_creates_hashed_token() -> None:
     repository = FakeAuthRepository()
     user = repository.create_local_user(
         username="alice",
-        email="a@example.com",
         password_hash="hashed:old",
     )
     token_repository = FakePasswordResetTokenRepository()
-    email_sender = FakeEmailSender()
     use_case = RequestPasswordReset(
         repository,
         token_repository,
         FakeResetTokenHasher(),
-        email_sender,
-        reset_base_url="https://frontend/reset-password",
         token_ttl=timedelta(minutes=5),
         request_cooldown=timedelta(seconds=60),
     )
 
-    use_case.execute(user.email)
+    use_case.execute(user.username)
 
     active = token_repository.get_active_for_user(user.id)
     assert active is not None
     assert active.token_hash.startswith("token-hash:")
-    assert email_sender.sent
-    assert email_sender.sent[0]["to_email"] == user.email
-    assert email_sender.sent[0]["reset_url"].startswith("https://frontend/reset-password?token=")
 
 
 def test_reset_password_updates_password_and_marks_token_used() -> None:
     repository = FakeAuthRepository()
     user = repository.create_local_user(
         username="alice",
-        email="a@example.com",
         password_hash="hashed:old",
     )
     token_repository = FakePasswordResetTokenRepository()

@@ -7,13 +7,11 @@ def _create_user(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
 ) -> None:
     hasher = PasslibPasswordHasher()
     user = User(
         username=username,
-        email=email,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
     )
@@ -31,7 +29,6 @@ def test_get_seasons_returns_ordered_years_for_logged_user(client, db_session) -
     _create_user(
         db_session,
         username="season_reader",
-        email="season_reader@example.com",
         password="secret123",
     )
 

@@ -12,7 +12,6 @@ def _create_admin_user_with_permission(
     db_session,
     *,
     username: str,
-    email: str,
     password: str,
     permission_code: str,
 ) -> None:
@@ -38,8 +37,7 @@ def _create_admin_user_with_permission(
         role.permissions.append(permission)
 
     user = User(
-        username=username,
-        email=email,
+        username=username,
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[role],
@@ -51,8 +49,7 @@ def _create_admin_user_with_permission(
 def test_create_race_event(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_race",
-        email="admin_race@example.com",
+        username="admin_race",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -125,8 +122,7 @@ def test_create_race_event(client, db_session) -> None:
 def test_create_race_event_returns_conflict_for_duplicate(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_race_duplicate",
-        email="admin_race_duplicate@example.com",
+        username="admin_race_duplicate",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -181,7 +177,6 @@ def test_update_race_event_replaces_sessions(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
         username="admin_race_update",
-        email="admin_race_update@example.com",
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )

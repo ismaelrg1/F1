@@ -31,13 +31,8 @@ class Settings(BaseSettings):
     password_reset_token_expire_minutes: int = 5
     password_reset_request_cooldown_seconds: int = 60
 
-    frontend_base_url: str = "http://localhost:3000"
     backend_base_url: str = "http://localhost:8000"
     cors_allowed_origins: str = "http://localhost:3000" 
-
-    resend_api_key: str = ""
-    resend_from_email: str = "onboarding@resend.dev"
-    resend_from_name: str = "FutureF1"
 
     model_config = SettingsConfigDict(
         env_file=".env", 
