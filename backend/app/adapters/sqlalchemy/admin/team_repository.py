@@ -23,10 +23,11 @@ class SqlAlchemyAdminTeamRepository(AdminTeamRepository):
             id=team.id,
             code=team.code,
             name=team.name,
+            color=team.color,
         )
 
-    def create(self, *, code: str, name: str) -> AdminTeam:
-        team = TeamF1(code=code, name=name)
+    def create(self, *, code: str, name: str, color: str) -> AdminTeam:
+        team = TeamF1(code=code, name=name, color=color)
         self._session.add(team)
         self._session.flush()
         self._session.refresh(team)
@@ -34,6 +35,7 @@ class SqlAlchemyAdminTeamRepository(AdminTeamRepository):
             id=team.id,
             code=team.code,
             name=team.name,
+            color=team.color,
         )
 
     def get_season_by_year(self, year: int) -> AdminTeamSeason | None:

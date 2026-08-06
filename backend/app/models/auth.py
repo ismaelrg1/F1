@@ -1,13 +1,11 @@
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
-
+from pydantic import BaseModel
 
 class UserSummary(BaseModel):
     id: int
     public_id: UUID
     username: str
-    email: str
 
 
 class LoginLocalRequest(BaseModel):
@@ -26,7 +24,6 @@ class LoginResponse(BaseModel):
 
 class RegisterLocalRequest(BaseModel):
     username: str
-    email: str
     password: str
 
 
@@ -40,7 +37,7 @@ class RegisterResponse(BaseModel):
 
 
 class PasswordForgotRequest(BaseModel):
-    email: EmailStr
+    username: str
 
 class PasswordForgotResponse(BaseModel):
     msg: str

@@ -11,7 +11,7 @@ class AdminTeamRepository(Protocol):
     def get_by_code(self, code: str) -> AdminTeam | None:
         ...
 
-    def create(self, *, code: str, name: str) -> AdminTeam:
+    def create(self, *, code: str, name: str, color: str) -> AdminTeam:
         ...
 
     def get_season_by_year(self, year: int) -> AdminTeamSeason | None:

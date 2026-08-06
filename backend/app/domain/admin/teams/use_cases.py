@@ -11,7 +11,7 @@ class CreateTeam:
     def __init__(self, repository: AdminTeamRepository):
         self._repository = repository
 
-    def execute(self, *, code: str, name: str):
+    def execute(self, *, code: str, name: str, color: str):
         normalized_code = code.strip().upper()
 
         existing = self._repository.get_by_code(normalized_code)
@@ -21,6 +21,7 @@ class CreateTeam:
         return self._repository.create(
             code=normalized_code,
             name=name.strip(),
+            color=color.strip().upper(),
         )
 
 

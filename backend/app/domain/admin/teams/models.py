@@ -6,6 +6,7 @@ class AdminTeam:
     id: int
     code: str
     name: str
+    color: str
 
 
 @dataclass(frozen=True)

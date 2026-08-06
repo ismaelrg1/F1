@@ -200,8 +200,8 @@ def _add_powerup_restriction(
 
 
 def _create_race_event_roster(db_session, *, season_id: int, race_event: RaceEvent, fp1_session: EventSession) -> None:
-    red_bull = TeamF1(code="RBR", name="Red Bull Racing")
-    ferrari = TeamF1(code="FER", name="Ferrari")
+    red_bull = TeamF1(code="RBR", name="Red Bull Racing", color="#1E41FF")
+    ferrari = TeamF1(code="FER", name="Ferrari", color="#DC0000")
     honda = Engine(code="HONDA", name="Honda")
     ferrari_engine = Engine(code="FERRARI", name="Ferrari")
     verstappen = Driver(code="VER", name="Max Verstappen")
@@ -918,8 +918,8 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
     db_session.add(circuit)
     db_session.flush()
 
-    red_bull = TeamF1(code="RBR", name="Red Bull Racing")
-    ferrari = TeamF1(code="FER", name="Ferrari")
+    red_bull = TeamF1(code="RBR", name="Red Bull Racing", color="#1E41FF")
+    ferrari = TeamF1(code="FER", name="Ferrari", color="#DC0000")
     honda = Engine(code="HONDA", name="Honda")
     ferrari_engine = Engine(code="FERRARI", name="Ferrari Power Unit")
     verstappen = Driver(code="VER", name="Max Verstappen")
@@ -1245,8 +1245,8 @@ def test_preview_testing_event_bet_questions_payload_prints_result(client, db_se
     db_session.add(circuit)
     db_session.flush()
 
-    red_bull = TeamF1(code="RBR", name="Red Bull Racing")
-    ferrari = TeamF1(code="FER", name="Ferrari")
+    red_bull = TeamF1(code="RBR", name="Red Bull Racing", color="#1E41FF")
+    ferrari = TeamF1(code="FER", name="Ferrari", color="#DC0000")
     honda = Engine(code="HONDA", name="Honda")
     ferrari_engine = Engine(code="FERRARI", name="Ferrari Power Unit")
     verstappen = Driver(code="VER", name="Max Verstappen")
@@ -1666,8 +1666,8 @@ def test_preview_season_bet_questions_payload_prints_result(client, db_session) 
     db_session.add(season)
     db_session.flush()
 
-    red_bull = TeamF1(code="RBR", name="Red Bull Racing")
-    ferrari = TeamF1(code="FER", name="Ferrari")
+    red_bull = TeamF1(code="RBR", name="Red Bull Racing", color="#1E41FF")
+    ferrari = TeamF1(code="FER", name="Ferrari", color="#DC0000")
     honda = Engine(code="HONDA", name="Honda")
     ferrari_engine = Engine(code="FERRARI", name="Ferrari Power Unit")
     verstappen = Driver(code="VER", name="Max Verstappen")

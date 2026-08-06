@@ -1,3 +1,5 @@
+from hashlib import sha256
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
@@ -27,6 +29,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def _internal_email_for_username(username: str) -> str:
+    digest = sha256(username.encode("utf-8")).hexdigest()[:16]
+    return f"{digest}@local.futuref1.invalid"
+
+
 def _build_register_response(*, user, message: str) -> RegisterResponse:
     return RegisterResponse(
         msg=message,
@@ -34,7 +42,6 @@ def _build_register_response(*, user, message: str) -> RegisterResponse:
             id=user.id,
             public_id=user.public_id,
             username=user.username,
-            email=user.email,
         ),
     )
 
@@ -51,7 +58,11 @@ def register_local(
     use_case = RegisterLocalUser(repository, password_hasher)
 
     try:
-        user = use_case.execute(username=data.username, email=data.email, password=data.password)
+        user = use_case.execute(
+            username=data.username,
+            email=_internal_email_for_username(data.username),
+            password=data.password,
+        )
     except AuthError as exc:
         raise _translate_auth_error(exc, locale=locale) from exc
 

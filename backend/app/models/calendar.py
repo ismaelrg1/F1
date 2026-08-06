@@ -27,11 +27,9 @@ class CalendarTestingSessionRead(BaseModel):
     scheduled_start_datetime: datetime | None
     scheduled_end_datetime: datetime | None
 
-
 class CalendarEventRead(BaseModel):
     kind: Literal["TESTING", "RACE"]
     public_id: UUID
-    season_year: int
     round_number: int | None
     name: str
     circuit_code: str

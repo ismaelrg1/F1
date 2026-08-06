@@ -155,7 +155,7 @@ def test_get_calendar_returns_single_ordered_list_with_testing_first(client, db_
     assert [item["kind"] for item in payload["items"]] == ["TESTING", "RACE"]
 
     testing_item = payload["items"][0]
-    assert testing_item["season_year"] == 2026
+    assert "season_year" not in testing_item
     assert "round_number" not in testing_item
     assert testing_item["name"] == "Pre-Season Testing 1"
     assert testing_item["is_up_next"] is True
@@ -163,7 +163,7 @@ def test_get_calendar_returns_single_ordered_list_with_testing_first(client, db_
     assert testing_item["race_sessions"] == []
 
     race_item = payload["items"][1]
-    assert race_item["season_year"] == 2026
+    assert "season_year" not in race_item
     assert race_item["round_number"] == 1
     assert race_item["name"] == "Bahrain Grand Prix"
     assert race_item["is_up_next"] is False
@@ -243,7 +243,7 @@ def test_get_calendar_returns_requested_season_when_year_is_provided(client, db_
     payload = response.json()
 
     assert len(payload["items"]) == 2
-    assert [item["season_year"] for item in payload["items"]] == [2027, 2027]
+    assert all("season_year" not in item for item in payload["items"])
     assert [item["kind"] for item in payload["items"]] == ["TESTING", "RACE"]
     assert payload["items"][0]["name"] == "Testing 2027"
     assert payload["items"][1]["name"] == "Bahrain Grand Prix 2027"

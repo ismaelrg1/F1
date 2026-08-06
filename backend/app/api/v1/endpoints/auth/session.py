@@ -40,7 +40,6 @@ def _build_login_response(*, user, message: str) -> LoginResponse:
             id=user.id,
             public_id=user.public_id,
             username=user.username,
-            email=user.email,
         ),
     )
 

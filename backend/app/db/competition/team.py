@@ -16,13 +16,18 @@ class TeamF1(Base):
         CheckConstraint(
             "code ~ '^[A-Z]{3}$'",
             name="ck_driver_code_format"
-        ),   
+        ),
+        CheckConstraint(
+            "color ~ '^#[0-9A-Fa-f]{6}$'",
+            name="ck_teams_color_format",
+        ),
         {"schema": "competition"}
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(3), nullable=False, unique=True, index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+    color: Mapped[str] = mapped_column(String(7), nullable=False)
 
     season_teams: Mapped[List["SeasonTeam"]] = relationship(
         "SeasonTeam",

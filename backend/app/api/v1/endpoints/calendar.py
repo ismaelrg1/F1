@@ -35,7 +35,6 @@ def get_calendar(
         CalendarEventRead(
             kind=result.event.kind,
             public_id=result.event.public_id,
-            season_year=result.event.season_year,
             round_number=result.event.round_number,
             name=result.event.name,
             circuit_code=result.event.circuit_code,

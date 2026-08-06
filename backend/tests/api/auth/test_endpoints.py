@@ -45,21 +45,21 @@ def _create_google_user(db_session, *, username: str, email: str, google_sub: st
 
 
 def test_register_local_endpoint_persists_user_in_db(client, db_session) -> None:
-    username, email = _unique_user_data("register_local")
+    username, _email = _unique_user_data("register_local")
 
     response = client.post(
         "/api/v1/auth/register/local",
         json={
             "username": username,
-            "email": email,
             "password": "secret123",
         },
     )
 
     assert response.status_code == 200
-    assert response.json()["user"]["email"] == email
+    assert response.json()["user"]["username"] == username
+    assert "email" not in response.json()["user"]
 
-    user = db_session.execute(select(User).where(User.email == email)).scalar_one()
+    user = db_session.execute(select(User).where(User.username == username)).scalar_one()
     assert user.username == username
     assert user.auth_provider == "LOCAL"
     assert user.password_hash is not None
@@ -138,7 +138,8 @@ def test_register_google_endpoint_persists_google_user(client, db_session, monke
     )
 
     assert response.status_code == 200
-    assert response.json()["user"]["email"] == email
+    assert response.json()["user"]["username"] == username
+    assert "email" not in response.json()["user"]
 
     user = db_session.execute(select(User).where(User.email == email)).scalar_one()
     assert user.auth_provider == "GOOGLE"
@@ -301,7 +302,7 @@ def test_password_forgot_endpoint_creates_reset_token_for_local_user(client, db_
     username, email = _unique_user_data("forgot_local")
 
     _create_local_user(db_session, username=username, email=email, password="oldsecret")
-    monkeypatch.setattr("app.api.v1.endpoints.auth.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
+    monkeypatch.setattr("app.api.v1.endpoints.auth.password.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
     monkeypatch.setattr(
         "app.api.v1.endpoints.auth.ResendEmailSender.send_password_reset_email",
         lambda self, *, to_email, reset_url: None,
@@ -309,11 +310,11 @@ def test_password_forgot_endpoint_creates_reset_token_for_local_user(client, db_
 
     response = client.post(
         "/api/v1/auth/password/forgot",
-        json={"email": email},
+        json={"username": username},
     )
 
     assert response.status_code == 200
-    assert response.json()["msg"] == "If the account exists, a reset email has been sent"
+    assert response.json()["msg"] == "If the account exists, reset instructions have been sent"
 
     user = db_session.execute(select(User).where(User.email == email)).scalar_one()
     token = db_session.execute(
@@ -323,46 +324,46 @@ def test_password_forgot_endpoint_creates_reset_token_for_local_user(client, db_
     assert token.invalidated_at is None
 
 
-def test_password_forgot_endpoint_returns_neutral_success_for_unknown_email(client, monkeypatch) -> None:
-    _, email = _unique_user_data("forgot_unknown")
-    monkeypatch.setattr("app.api.v1.endpoints.auth.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
+def test_password_forgot_endpoint_returns_neutral_success_for_unknown_user(client, monkeypatch) -> None:
+    username, _email = _unique_user_data("forgot_unknown")
+    monkeypatch.setattr("app.api.v1.endpoints.auth.password.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
 
     response = client.post(
         "/api/v1/auth/password/forgot",
-        json={"email": email},
+        json={"username": username},
     )
 
     assert response.status_code == 200
-    assert response.json()["msg"] == "If the account exists, a reset email has been sent"
+    assert response.json()["msg"] == "If the account exists, reset instructions have been sent"
 
 
 def test_password_forgot_endpoint_logs_internal_error_for_google_user(client, db_session, monkeypatch, caplog) -> None:
     username, email = _unique_user_data("forgot_google")
 
     _create_google_user(db_session, username=username, email=email, google_sub=f"google-{uuid4().hex}")
-    monkeypatch.setattr("app.api.v1.endpoints.auth.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
+    monkeypatch.setattr("app.api.v1.endpoints.auth.password.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
 
     with caplog.at_level("WARNING", logger="app.api.v1.endpoints.auth"):
         response = client.post(
             "/api/v1/auth/password/forgot",
-            json={"email": email},
+            json={"username": username},
         )
 
     assert response.status_code == 200
-    assert response.json()["msg"] == "If the account exists, a reset email has been sent"
+    assert response.json()["msg"] == "If the account exists, reset instructions have been sent"
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.msg == "Password reset request handled with internal auth error"
     assert record.error_type == "PasswordResetNotAvailableError"
     assert record.error_context == {"provider": "GOOGLE"}
-    assert record.email == email
+    assert record.username == username
 
 
 def test_password_forgot_endpoint_logs_internal_error_for_cooldown(client, db_session, monkeypatch, caplog) -> None:
     username, email = _unique_user_data("forgot_cooldown")
 
     _create_local_user(db_session, username=username, email=email, password="oldsecret")
-    monkeypatch.setattr("app.api.v1.endpoints.auth.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
+    monkeypatch.setattr("app.api.v1.endpoints.auth.password.PASSWORD_FORGOT_MIN_DURATION_SECONDS", 0.0)
 
     user = db_session.execute(select(User).where(User.email == email)).scalar_one()
     db_session.add(
@@ -377,14 +378,14 @@ def test_password_forgot_endpoint_logs_internal_error_for_cooldown(client, db_se
     with caplog.at_level("WARNING", logger="app.api.v1.endpoints.auth"):
         response = client.post(
             "/api/v1/auth/password/forgot",
-            json={"email": email},
+            json={"username": username},
         )
 
     assert response.status_code == 200
-    assert response.json()["msg"] == "If the account exists, a reset email has been sent"
+    assert response.json()["msg"] == "If the account exists, reset instructions have been sent"
     assert len(caplog.records) == 1
     record = caplog.records[0]
     assert record.msg == "Password reset request handled with internal auth error"
     assert record.error_type == "PasswordResetTooManyRequestsError"
     assert record.error_context == {"cooldown_seconds": 60}
-    assert record.email == email
+    assert record.username == username

@@ -64,14 +64,16 @@ def password_forgot(
     )
 
     try:
-        use_case.execute(data.email)
+        user = auth_repository.get_by_username(data.username)
+        if user is not None:
+            use_case.execute(user.email)
     except AuthError as exc:
         logger.warning(
             "Password reset request handled with internal auth error",
             extra={
                 "error_type": type(exc).__name__,
                 "error_context": getattr(exc, "context", {}),
-                "email": data.email,
+                "username": data.username,
             },
         )
 
@@ -79,7 +81,7 @@ def password_forgot(
 
 
     return PasswordForgotResponse(
-        msg="If the account exists, a reset email has been sent"
+        msg="If the account exists, reset instructions have been sent"
     )
 
 

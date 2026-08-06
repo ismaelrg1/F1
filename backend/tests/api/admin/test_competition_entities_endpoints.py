@@ -124,13 +124,14 @@ def test_create_team(client, db_session) -> None:
 
     response = client.post(
         "/api/v1/admin/teams",
-        json={"code": "AST", "name": "Aston Martin"},
+        json={"code": "AST", "name": "Aston Martin", "color": "#006F62"},
     )
 
     assert response.status_code == 201
     payload = response.json()
     assert payload["code"] == "AST"
     assert payload["name"] == "Aston Martin"
+    assert payload["color"] == "#006F62"
 
 
 def test_create_season_team(client, db_session) -> None:
@@ -150,7 +151,10 @@ def test_create_season_team(client, db_session) -> None:
     )
     assert login_response.status_code == 200
 
-    client.post("/api/v1/admin/teams", json={"code": "AST", "name": "Aston Martin"})
+    client.post(
+        "/api/v1/admin/teams",
+        json={"code": "AST", "name": "Aston Martin", "color": "#006F62"},
+    )
 
     response = client.post(
         "/api/v1/admin/season-teams",

@@ -45,6 +45,7 @@ def create_team(
         team = use_case.execute(
             code=data.code,
             name=data.name,
+            color=data.color,
         )
     except AdminError as exc:
         raise _translate_admin_error(exc, locale=locale) from exc
@@ -53,6 +54,7 @@ def create_team(
         id=team.id,
         code=team.code,
         name=team.name,
+        color=team.color,
     )
 
 
