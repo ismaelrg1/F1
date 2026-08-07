@@ -1,13 +1,13 @@
-from passlib.context import CryptContext
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.domain.auth.ports import PasswordHasher
 
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
-
-
-class PasslibPasswordHasher(PasswordHasher):
+class WerkzeugPasswordHasher(PasswordHasher):
     def verify(self, plain_password: str, password_hash: str) -> bool:
-        return pwd_context.verify(plain_password, password_hash)
+        return check_password_hash(password_hash, plain_password)
 
     def hash(self, plain_password: str) -> str:
-        return pwd_context.hash(plain_password)
+        return generate_password_hash(
+            plain_password,
+            method="scrypt",
+        )
