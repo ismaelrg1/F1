@@ -46,6 +46,7 @@ def create_driver(
         driver = use_case.execute(
             code=data.code,
             name=data.name,
+            nationality_country_id=data.nationality_country_id,
         )
     except AdminError as exc:
         raise _translate_admin_error(exc, locale=locale) from exc
@@ -54,6 +55,7 @@ def create_driver(
         id=driver.id,
         code=driver.code,
         name=driver.name,
+        nationality_country_id=driver.nationality_country_id,
     )
 
 

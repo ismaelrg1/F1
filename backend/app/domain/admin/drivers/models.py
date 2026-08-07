@@ -6,6 +6,7 @@ class AdminDriver:
     id: int
     code: str
     name: str
+    nationality_country_id: int | None = None
 
 
 @dataclass(frozen=True)

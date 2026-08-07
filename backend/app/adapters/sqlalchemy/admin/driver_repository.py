@@ -24,10 +24,15 @@ class SqlAlchemyAdminDriverRepository(AdminDriverRepository):
             id=driver.id,
             code=driver.code,
             name=driver.name,
+            nationality_country_id=driver.nationality_country_id,
         )
 
-    def create(self, *, code: str, name: str) -> AdminDriver:
-        driver = Driver(code=code, name=name)
+    def create(self, *, code: str, name: str, nationality_country_id: int | None = None) -> AdminDriver:
+        driver = Driver(
+            code=code,
+            name=name,
+            nationality_country_id=nationality_country_id,
+        )
         self._session.add(driver)
         self._session.flush()
         self._session.refresh(driver)
@@ -35,6 +40,7 @@ class SqlAlchemyAdminDriverRepository(AdminDriverRepository):
             id=driver.id,
             code=driver.code,
             name=driver.name,
+            nationality_country_id=driver.nationality_country_id,
         )
 
     def get_season_by_year(self, year: int) -> AdminDriverSeason | None:

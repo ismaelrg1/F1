@@ -2,7 +2,7 @@ from sqlalchemy import select
 
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import Permission, Role, User
-from app.db.competition import Season
+from app.db.competition import Country, Driver, Season
 from app.db.enums import RoleName, SeasonDriverStatus
 
 
@@ -35,7 +35,8 @@ def _create_admin_user_with_permission(
         role.permissions.append(permission)
 
     user = User(
-        username=username,
+        username=username,
+
         password_hash=hasher.hash(password),
         auth_provider="LOCAL",
         roles=[role],
@@ -47,10 +48,19 @@ def _create_admin_user_with_permission(
 def test_create_driver(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_driver",
+        username="admin_driver",
+
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
+
+    country = Country(
+        iso2="ES",
+        name="Spain",
+        flag_asset_url="/static/images/flags/ES.svg",
+    )
+    db_session.add(country)
+    db_session.flush()
 
     login_response = client.post(
         "/api/v1/auth/login/local",
@@ -60,19 +70,30 @@ def test_create_driver(client, db_session) -> None:
 
     response = client.post(
         "/api/v1/admin/drivers",
-        json={"code": "ALO", "name": "Fernando Alonso"},
+        json={
+            "code": "ALO",
+            "name": "Fernando Alonso",
+            "nationality_country_id": country.id,
+        },
     )
 
     assert response.status_code == 201
     payload = response.json()
     assert payload["code"] == "ALO"
     assert payload["name"] == "Fernando Alonso"
+    assert payload["nationality_country_id"] == country.id
+
+    driver = db_session.execute(
+        select(Driver).where(Driver.code == "ALO")
+    ).scalar_one()
+    assert driver.nationality_country_id == country.id
 
 
 def test_create_season_driver(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_season_driver",
+        username="admin_season_driver",
+
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -106,7 +127,8 @@ def test_create_season_driver(client, db_session) -> None:
 def test_create_team(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_team",
+        username="admin_team",
+
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -132,7 +154,8 @@ def test_create_team(client, db_session) -> None:
 def test_create_season_team(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_season_team",
+        username="admin_season_team",
+
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -169,7 +192,8 @@ def test_create_season_team(client, db_session) -> None:
 def test_create_engine(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_engine",
+        username="admin_engine",
+
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )
@@ -194,7 +218,8 @@ def test_create_engine(client, db_session) -> None:
 def test_create_season_engine(client, db_session) -> None:
     _create_admin_user_with_permission(
         db_session,
-        username="admin_season_engine",
+        username="admin_season_engine",
+
         password="secret123",
         permission_code="COMPETITION_MANAGE",
     )

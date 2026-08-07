@@ -11,7 +11,7 @@ class CreateDriver:
     def __init__(self, repository: AdminDriverRepository):
         self._repository = repository
 
-    def execute(self, *, code: str, name: str):
+    def execute(self, *, code: str, name: str, nationality_country_id: int | None = None):
         normalized_code = code.strip().upper()
 
         existing = self._repository.get_by_code(normalized_code)
@@ -21,6 +21,7 @@ class CreateDriver:
         return self._repository.create(
             code=normalized_code,
             name=name.strip(),
+            nationality_country_id=nationality_country_id,
         )
 
 
