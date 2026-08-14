@@ -34,6 +34,34 @@ from app.domain.bets.errors import (
 from app.domain.bets.enums import BetTemplateScope, BetValueType
 
 
+def _filter_roster_by_constraints(
+    *,
+    roster: list[BetRosterEntry],
+    value_type: BetValueType,
+    constraints_json: dict[str, Any] | None,
+) -> list[BetRosterEntry]:
+    if value_type != BetValueType.DRIVER:
+        return roster
+
+    if not constraints_json:
+        return roster
+
+    if constraints_json.get("options_filter") != "team_drivers":
+        return roster
+
+    team_code = constraints_json.get("team_code")
+    if not isinstance(team_code, str) or not team_code.strip():
+        return roster
+
+    normalized_team_code = team_code.strip().upper()
+
+    return [
+        entry
+        for entry in roster
+        if entry.team_code == normalized_team_code
+    ]
+
+
 class GetRaceEventBetQuestions:
     def __init__(self, repository: BetQuestionsRepository):
         self._repository = repository
@@ -179,6 +207,7 @@ class GetRaceEventBetQuestions:
                         race_event=race_event,
                         event_session=event_session,
                         value_type=bet_score.value_type,
+                        constraints_json=constraints_json,
                     ),
                 )
             )
@@ -191,9 +220,15 @@ class GetRaceEventBetQuestions:
         race_event: BetRaceEvent,
         event_session: BetRaceEventSession | None,
         value_type: BetValueType,
+        constraints_json: dict[str, Any] | None,
     ) -> list[BetQuestionOptionResult] | None:
         if value_type in {BetValueType.DRIVER, BetValueType.TEAM, BetValueType.ENGINE, BetValueType.POSITION}:
             roster = self._resolve_race_roster(race_event=race_event, event_session=event_session)
+            roster = _filter_roster_by_constraints(
+                roster=roster,
+                value_type=value_type,
+                constraints_json=constraints_json,
+            )
 
         if value_type == BetValueType.DRIVER:
             seen: set[str] = set()
@@ -209,6 +244,8 @@ class GetRaceEventBetQuestions:
                         meta={
                             "code": entry.driver_code,
                             "driver_number": entry.driver_number,
+                            "team_code": entry.team_code,
+                            "team_name": entry.team_name,
                         },
                     )
                 )
@@ -447,6 +484,7 @@ class GetTestingEventBetQuestions:
                         testing_event=testing_event,
                         testing_event_session=testing_event_session,
                         value_type=bet_score.value_type,
+                        constraints_json=constraints_json,
                     ),
                 )
             )
@@ -459,11 +497,17 @@ class GetTestingEventBetQuestions:
         testing_event: BetTestingEvent,
         testing_event_session: BetTestingEventSession | None,
         value_type: BetValueType,
+        constraints_json: dict[str, Any] | None,
     ) -> list[BetQuestionOptionResult] | None:
         if value_type in {BetValueType.DRIVER, BetValueType.TEAM, BetValueType.ENGINE, BetValueType.POSITION}:
             roster = self._resolve_testing_roster(
                 testing_event=testing_event,
                 testing_event_session=testing_event_session,
+            )
+            roster = _filter_roster_by_constraints(
+                roster=roster,
+                value_type=value_type,
+                constraints_json=constraints_json,
             )
 
         if value_type == BetValueType.DRIVER:
@@ -480,6 +524,8 @@ class GetTestingEventBetQuestions:
                         meta={
                             "code": entry.driver_code,
                             "driver_number": entry.driver_number,
+                            "team_code": entry.team_code,
+                            "team_name": entry.team_name,
                         },
                     )
                 )
@@ -524,7 +570,6 @@ class GetTestingEventBetQuestions:
             ]
 
         return None
-
     def _build_testing_constraints(
         self,
         *,
@@ -678,6 +723,7 @@ class GetSeasonBetQuestions:
                     options=self._build_season_options(
                         season=season,
                         value_type=bet_score.value_type,
+                        constraints_json=constraints_json,
                     ),
                 )
             )
@@ -689,9 +735,15 @@ class GetSeasonBetQuestions:
         *,
         season: BetSeason,
         value_type: BetValueType,
+        constraints_json: dict[str, Any] | None,
     ) -> list[BetQuestionOptionResult] | None:
         if value_type in {BetValueType.DRIVER, BetValueType.TEAM, BetValueType.ENGINE, BetValueType.POSITION}:
             roster = self._resolve_season_roster(season=season)
+            roster = _filter_roster_by_constraints(
+                roster=roster,
+                value_type=value_type,
+                constraints_json=constraints_json,
+            )
 
         if value_type == BetValueType.DRIVER:
             seen: set[str] = set()
@@ -707,6 +759,8 @@ class GetSeasonBetQuestions:
                         meta={
                             "code": entry.driver_code,
                             "driver_number": entry.driver_number,
+                            "team_code": entry.team_code,
+                            "team_name": entry.team_name,
                         },
                     )
                 )

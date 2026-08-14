@@ -579,8 +579,8 @@ def test_get_race_event_bet_questions_returns_event_and_session_questions(client
     assert fp1_payload["questions"][0]["code"] == "FP1_FASTEST"
     assert fp1_payload["questions"][0]["constraints_json"] == {"allowed": ["NOR"]}
     assert fp1_payload["questions"][0]["options"] == [
-        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16}},
-        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1}},
+        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16, "team_code": "FER", "team_name": "Ferrari"}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing"}},
     ]
     assert fp1_payload["questions"][1]["code"] == "FP1_TOP_TEAM"
     assert fp1_payload["questions"][1]["options"] == [
@@ -594,8 +594,8 @@ def test_get_race_event_bet_questions_returns_event_and_session_questions(client
     assert race_payload["questions"][0]["code"] == "RACE_WINNER"
     assert race_payload["questions"][0]["base_points"] == 10.0
     assert race_payload["questions"][0]["options"] == [
-        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4}},
-        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1}},
+        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4, "team_code": "FER", "team_name": "Ferrari"}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing"}},
     ]
     assert race_payload["questions"][1]["code"] == "NOR_FINAL_POSITION"
     assert "options" not in race_payload["questions"][1]
@@ -1149,9 +1149,9 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
     assert payload["event_questions"][0]["code"] == "MOST_KILOMETRAGE_DRIVER"
     assert payload["event_questions"][0]["base_points"] == 7.0
     assert payload["event_questions"][0]["options"] == [
-        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16}},
-        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4}},
-        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1}},
+        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16, "team_code": "FER", "team_name": "Ferrari"}},
+        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4, "team_code": "FER", "team_name": "Ferrari"}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing"}},
     ]
 
     assert payload["event_questions"][1]["code"] == "TOP_TEAM_TESTING"
@@ -1184,9 +1184,9 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
     assert day_1["questions"][1]["code"] == "TOP_TEAM_TESTING"
     assert day_1["questions"][2]["code"] == "DAY_WINNER_DRIVER"
     assert day_1["questions"][2]["options"] == [
-        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16}},
-        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4}},
-        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1}},
+        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16, "team_code": "FER", "team_name": "Ferrari"}},
+        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4, "team_code": "FER", "team_name": "Ferrari"}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing"}},
     ]
 
     assert day_1["questions"][3]["code"] == "ALO_TEST_POSITION"
@@ -1637,6 +1637,169 @@ def test_get_season_bet_questions_returns_questions(client, db_session) -> None:
     returned_codes = [question["code"] for question in payload["questions"]]
     assert "DISABLED_QUESTION" not in returned_codes
 
+
+def test_get_season_bet_questions_filters_duel_driver_options_by_team(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+
+    season = Season(year=2031, is_active=True)
+    db_session.add(season)
+    db_session.flush()
+
+    red_bull = TeamF1(code="RBR", name="Red Bull Racing", color="#1E41FF")
+    ferrari = TeamF1(code="FER", name="Ferrari", color="#DC0000")
+    honda = Engine(code="HONDA", name="Honda")
+    ferrari_engine = Engine(code="FERRARI", name="Ferrari Power Unit")
+    verstappen = Driver(code="VER", name="Max Verstappen")
+    perez = Driver(code="PER", name="Sergio Perez")
+    leclerc = Driver(code="LEC", name="Charles Leclerc")
+    db_session.add_all(
+        [red_bull, ferrari, honda, ferrari_engine, verstappen, perez, leclerc]
+    )
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            SeasonDriver(
+                season_id=season.id,
+                driver_id=verstappen.id,
+                driver_number=1,
+                status=SeasonDriverStatus.PRIMARY,
+            ),
+            SeasonDriver(
+                season_id=season.id,
+                driver_id=perez.id,
+                driver_number=11,
+                status=SeasonDriverStatus.PRIMARY,
+            ),
+            SeasonDriver(
+                season_id=season.id,
+                driver_id=leclerc.id,
+                driver_number=16,
+                status=SeasonDriverStatus.PRIMARY,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            DriverEntry(
+                season_id=season.id,
+                driver_id=verstappen.id,
+                team_id=red_bull.id,
+                engine_id=honda.id,
+                seat_index=1,
+                active_from=None,
+                active_to=None,
+                race_event_id=None,
+                event_session_id=None,
+            ),
+            DriverEntry(
+                season_id=season.id,
+                driver_id=perez.id,
+                team_id=red_bull.id,
+                engine_id=honda.id,
+                seat_index=2,
+                active_from=None,
+                active_to=None,
+                race_event_id=None,
+                event_session_id=None,
+            ),
+            DriverEntry(
+                season_id=season.id,
+                driver_id=leclerc.id,
+                team_id=ferrari.id,
+                engine_id=ferrari_engine.id,
+                seat_index=1,
+                active_from=None,
+                active_to=None,
+                race_event_id=None,
+                event_session_id=None,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.SEASON,
+        season_id=season.id,
+        race_event_id=None,
+        testing_event_id=None,
+        label="Season 2031",
+        results_published=False,
+        results_published_at=None,
+        group_id=group.id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    duel_score = BetScore(
+        code="DUEL_RBR",
+        label="Duelo Red Bull",
+        base_points=0.5,
+        value_type=BetValueType.DRIVER,
+        constraints_json={
+            "team_code": "RBR",
+            "options_filter": "team_drivers",
+        },
+    )
+    db_session.add(duel_score)
+    db_session.flush()
+
+    season_template = BetTemplate(
+        season_id=season.id,
+        name="Season Duel Template",
+        context_kind=BetContextKind.SEASON,
+        scope=BetTemplateScope.EVENT,
+        session_type=None,
+    )
+    db_session.add(season_template)
+    db_session.flush()
+
+    db_session.add(
+        BetTemplateItem(
+            template_id=season_template.id,
+            bet_score_id=duel_score.id,
+            required=True,
+            display_order=0,
+        )
+    )
+    db_session.flush()
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get(
+        f"/api/v1/bets/seasons/{season.year}/questions",
+        headers={"X-Group-Id": str(group.public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert len(payload["questions"]) == 1
+    question = payload["questions"][0]
+    assert question["code"] == "DUEL_RBR"
+    assert question["constraints_json"] == {
+        "team_code": "RBR",
+        "options_filter": "team_drivers",
+    }
+    assert question["options"] == [
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing"}},
+        {"value": "PER", "label": "Sergio Perez", "meta": {"code": "PER", "driver_number": 11, "team_code": "RBR", "team_name": "Red Bull Racing"}},
+    ]
 
 
 @pytest.mark.manual
