@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, Index, text, Boolean, UniqueConstraint, Integer, CheckConstraint
+from sqlalchemy import ForeignKey, Index, text, Boolean, UniqueConstraint, Integer, CheckConstraint, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import JSONB
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from app.db.base import Base
 
@@ -55,9 +56,19 @@ class BetTemplateItem(Base):
         nullable=False,
     )
 
+    override_points: Mapped[float | None] = mapped_column(
+        Numeric,
+        nullable=True,
+    )
+
+    override_constraints_json: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+
 
     bet_template: Mapped["BetTemplate"] = relationship(
-        'BetTemplate', 
+        'BetTemplate',
         back_populates="items"
     )
 
@@ -66,4 +77,4 @@ class BetTemplateItem(Base):
         back_populates="template_items",
     )
 
-    
+

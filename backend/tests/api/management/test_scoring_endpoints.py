@@ -381,6 +381,8 @@ def _add_season_template(
     *,
     season_id: int,
     bet_score_id: int,
+    override_points: Decimal | None = None,
+    override_constraints_json: dict | None = None,
 ) -> BetTemplate:
     template = BetTemplate(
         season_id=season_id,
@@ -398,6 +400,8 @@ def _add_season_template(
             bet_score_id=bet_score_id,
             required=True,
             display_order=0,
+            override_points=override_points,
+            override_constraints_json=override_constraints_json,
         )
     )
     db_session.flush()
@@ -662,6 +666,58 @@ def test_calculate_season_scoring_creates_context_score(client, db_session) -> N
         )
     ).scalar_one()
     assert score.total_points == Decimal("15.00000000")
+
+
+def test_calculate_season_scoring_uses_template_item_override_points(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username=f"admin_override_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    player = _create_local_user(
+        db_session,
+        username=f"player_override_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    data = _create_season_fixture(db_session)
+    _add_season_template(
+        db_session,
+        season_id=data["season"].id,
+        bet_score_id=data["score"].id,
+        override_points=Decimal("7"),
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["score"].id,
+    )
+    _add_submitted_bet(
+        db_session,
+        user_id=player.id,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["score"].id,
+    )
+    _login(client, admin.username)
+
+    response = client.post(
+        f"/api/v1/management/scoring/seasons/{data['season'].year}/calculate",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+    score = db_session.execute(
+        select(Score).where(
+            Score.user_id == player.id,
+            Score.bet_context_id == data["bet_context"].id,
+        )
+    ).scalar_one()
+    assert score.base_points == Decimal("7.00000000")
+    assert score.total_points == Decimal("7.00000000")
+
+    component = db_session.execute(
+        select(ScoreComponent).where(ScoreComponent.score_id == score.id)
+    ).scalar_one()
+    assert component.points == Decimal("7.00000000")
 
 
 def test_calculate_scoring_replaces_existing_scores(client, db_session) -> None:

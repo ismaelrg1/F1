@@ -38,6 +38,8 @@ class BetTemplateItemDefinition:
     id: int
     required: bool
     display_order: int
+    override_points: float | None
+    override_constraints_json: dict[str, Any] | None
     bet_score: BetScoreDefinition
 
 @dataclass(frozen=True)

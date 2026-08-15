@@ -39,6 +39,7 @@ graph_db/
 docs/
 scripts/
 legacy/
+results/
 
 # Editors / OS
 .vscode/

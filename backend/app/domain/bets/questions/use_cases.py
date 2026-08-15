@@ -178,8 +178,12 @@ class GetRaceEventBetQuestions:
             if exception is not None and exception.is_disabled is True:
                 continue
 
-            base_points = bet_score.base_points
-            constraints_json = bet_score.constraints_json
+            base_points = item.override_points if item.override_points is not None else bet_score.base_points
+            constraints_json = (
+                item.override_constraints_json
+                if item.override_constraints_json is not None
+                else bet_score.constraints_json
+            )
 
             if exception is not None and exception.override_points is not None:
                 base_points = exception.override_points
@@ -455,8 +459,12 @@ class GetTestingEventBetQuestions:
             if exception is not None and exception.is_disabled is True:
                 continue
 
-            base_points = bet_score.base_points
-            constraints_json = bet_score.constraints_json
+            base_points = item.override_points if item.override_points is not None else bet_score.base_points
+            constraints_json = (
+                item.override_constraints_json
+                if item.override_constraints_json is not None
+                else bet_score.constraints_json
+            )
 
             if exception is not None and exception.override_points is not None:
                 base_points = exception.override_points
@@ -696,8 +704,12 @@ class GetSeasonBetQuestions:
             if exception is not None and exception.is_disabled is True:
                 continue
 
-            base_points = bet_score.base_points
-            constraints_json = bet_score.constraints_json
+            base_points = item.override_points if item.override_points is not None else bet_score.base_points
+            constraints_json = (
+                item.override_constraints_json
+                if item.override_constraints_json is not None
+                else bet_score.constraints_json
+            )
 
             if exception is not None and exception.override_points is not None:
                 base_points = exception.override_points

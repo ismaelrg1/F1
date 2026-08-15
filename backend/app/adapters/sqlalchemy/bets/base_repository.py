@@ -326,6 +326,8 @@ class SqlAlchemyBetBaseRepository:
                     id=item.id,
                     required=item.required,
                     display_order=item.display_order,
+                    override_points=float(item.override_points) if item.override_points is not None else None,
+                    override_constraints_json=item.override_constraints_json,
                     bet_score=BetScoreDefinition(
                         id=item.bet_score.id,
                         code=item.bet_score.code,

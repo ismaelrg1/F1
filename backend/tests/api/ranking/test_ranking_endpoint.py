@@ -67,7 +67,7 @@ def _create_published_race_context(
     round_number: int = 1,
 ) -> tuple[RaceEvent, BetContext]:
     country = Country(
-        iso2=f"C{uuid4().hex[:1].upper()}",
+        iso2=uuid4().hex[:2].upper(),
         name=f"Country {uuid4().hex[:8]}",
         flag_asset_url=None,
     )

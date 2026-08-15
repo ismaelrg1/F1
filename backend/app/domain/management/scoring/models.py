@@ -26,6 +26,11 @@ class ScoringScope:
     def is_season(self) -> bool:
         return self.race_event_id is None and self.testing_event_id is None
 
+@dataclass(frozen=True)
+class ScoringBetScoreConfig:
+    points: Decimal
+    constraints_json: dict[str, Any] | None
+
 
 @dataclass
 class ScoringCalculationResult:
@@ -63,7 +68,7 @@ class UserScoreState:
     @property
     def total_points(self) -> Decimal:
         return self.base_points + self.extra_points + self.powerup_points - self.penalty_points
-    
+
 
 @dataclass(frozen=True)
 class PowerUpEvaluationContext:

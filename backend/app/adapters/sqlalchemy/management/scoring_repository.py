@@ -6,11 +6,11 @@ from uuid import UUID
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.db.betting import Bet, BetContext, BetPick, BetScoreRelation
+from app.db.betting import Bet, BetContext, BetPick, BetScoreRelation, BetTemplate, BetTemplateItem
 from app.db.powerups import PowerUpUse, PowerUpRestriction
 from app.db.competition import EventSession, RaceEvent, Season, TestingEvent, TestingEventSession
 from app.db.enums import (
-    BetContextKind, 
+    BetContextKind,
     ScoreComponentType,
     ScoringRuleScope,
 )
@@ -27,6 +27,7 @@ from app.domain.management.scoring.evaluators import BaseEvaluator
 from app.domain.management.scoring.models import (
     ScoringCalculationResult,
     ScoringScope,
+    ScoringBetScoreConfig,
     PowerUpEvaluationContext,
 )
 from app.domain.management.scoring.powerups import BasePowerUpEvaluator
@@ -176,6 +177,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
     def calculate_scores(self, scope: ScoringScope) -> ScoringCalculationResult:
         official_results = self._load_official_results(scope)
         rules = self._load_rules(scope)
+        effective_configs = self._load_effective_bet_score_configs(scope)
         relations_by_source = self._load_relations_by_source()
         powerup_uses = self._load_powerup_uses(scope)
         powerup_restrictions = self._load_powerup_restrictions(scope)
@@ -202,6 +204,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                     official_results=official_results,
                     rules=rules,
                     relations_by_source=relations_by_source,
+                    effective_configs=effective_configs,
                 )
                 score_sessions_by_key[
                     (bet.user_id, bet.event_session_id, bet.testing_event_session_id)
@@ -214,6 +217,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                     official_results=official_results,
                     rules=rules,
                     relations_by_source=relations_by_source,
+                    effective_configs=effective_configs,
                 )
                 scores_by_user[bet.user_id] = score
                 score_components_count += count
@@ -239,6 +243,54 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
             computed_at=datetime.now(timezone.utc),
         )
 
+    def _load_effective_bet_score_configs(
+        self,
+        scope: ScoringScope,
+    ) -> dict[tuple[int, str | None], ScoringBetScoreConfig]:
+        context = self._session.get(BetContext, scope.bet_context_id)
+        if context is None:
+            return {}
+
+        templates = self._session.scalars(
+            select(BetTemplate)
+            .where(
+                BetTemplate.season_id == scope.season_id,
+                BetTemplate.context_kind == context.kind,
+            )
+            .options(joinedload(BetTemplate.items).joinedload(BetTemplateItem.bet_score))
+        ).unique().all()
+
+        configs: dict[tuple[int, str | None], ScoringBetScoreConfig] = {}
+
+        for template in templates:
+            session_type = (
+                getattr(template.session_type, "value", template.session_type)
+                if template.session_type is not None
+                else None
+            )
+
+            for item in template.items:
+                bet_score = item.bet_score
+
+                points = (
+                    Decimal(str(item.override_points))
+                    if item.override_points is not None
+                    else Decimal(str(bet_score.base_points))
+                )
+
+                constraints_json = (
+                    item.override_constraints_json
+                    if item.override_constraints_json is not None
+                    else bet_score.constraints_json
+                )
+
+                configs[(bet_score.id, session_type)] = ScoringBetScoreConfig(
+                    points=points,
+                    constraints_json=constraints_json,
+                )
+
+        return configs
+
     def _calculate_context_bet(
         self,
         *,
@@ -247,6 +299,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
         official_results: dict,
         rules: list[ScoringRule],
         relations_by_source: dict[int, list[BetScoreRelation]],
+        effective_configs: dict[tuple[int, str | None], ScoringBetScoreConfig],
     ) -> tuple[Score, int]:
         score = Score(
             user_id=bet.user_id,
@@ -273,6 +326,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 rules=rules,
                 relations_by_source=relations_by_source,
                 picks_by_score_id=picks_by_score_id,
+                effective_configs=effective_configs,
             )
             if result is None:
                 continue
@@ -326,6 +380,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
         official_results: dict,
         rules: list[ScoringRule],
         relations_by_source: dict[int, list[BetScoreRelation]],
+        effective_configs: dict[tuple[int, str | None], ScoringBetScoreConfig],
     ) -> tuple[ScoreSession, int]:
         score_session = ScoreSession(
             user_id=bet.user_id,
@@ -354,6 +409,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 rules=rules,
                 relations_by_source=relations_by_source,
                 picks_by_score_id=picks_by_score_id,
+                effective_configs=effective_configs,
             )
             if result is None:
                 continue
@@ -408,6 +464,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
         rules: list[ScoringRule],
         relations_by_source: dict[int, list[BetScoreRelation]],
         picks_by_score_id: dict[int, BetPick],
+        effective_configs: dict[tuple[int, str | None], ScoringBetScoreConfig],
     ):
         official_result = official_results.get(
             (
@@ -429,18 +486,47 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
 
         evaluator_key = rule.evaluator_key if rule is not None else "exact_match"
         evaluator = BaseEvaluator.get(evaluator_key)
+        effective_config = self._resolve_effective_config(
+            bet=bet,
+            pick=pick,
+            effective_configs=effective_configs,
+        )
 
         evaluation = evaluator.evaluate(
             pick=pick,
             official_result=official_result,
             bet_score=pick.bet_score,
             rule=rule,
+            effective_config=effective_config,
             relations=relations_by_source.get(pick.bet_score_id, []),
             related_picks=picks_by_score_id,
         )
 
         return evaluation, official_result, rule
-    
+
+    def _resolve_effective_config(
+        self,
+        *,
+        bet: Bet,
+        pick: BetPick,
+        effective_configs: dict[tuple[int, str | None], ScoringBetScoreConfig],
+    ) -> ScoringBetScoreConfig | None:
+        session_type = None
+
+        if bet.event_session_id is not None:
+            event_session = self._session.get(EventSession, bet.event_session_id)
+            if event_session is not None:
+                session_type = getattr(
+                    event_session.session_type,
+                    "value",
+                    event_session.session_type,
+                )
+
+        return (
+            effective_configs.get((pick.bet_score_id, session_type))
+            or effective_configs.get((pick.bet_score_id, None))
+        )
+
     def _apply_context_powerups(
         self,
         *,
@@ -493,7 +579,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 count += 1
 
         return count
-    
+
     def _apply_extra_rules_to_score_session(
         self,
         *,
@@ -540,7 +626,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
             count += 1
 
         return count
-    
+
     def _apply_session_powerups(
         self,
         *,
@@ -654,7 +740,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
             count += 1
 
         return count
-    
+
 
     def _matching_extra_rules(
         self,
@@ -683,7 +769,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 matched.append(rule)
 
         return matched
-    
+
     def _evaluate_extra_rule(
         self,
         *,
@@ -732,7 +818,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
 
         return Decimal("0")
 
-    
+
     def _add_score_powerup_component(
         self,
         *,
@@ -818,7 +904,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
             ): row
             for row in rows
         }
-    
+
     def _load_rules(self, scope: ScoringScope) -> list[ScoringRule]:
         return self._session.scalars(
             select(ScoringRule)
@@ -837,7 +923,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
             grouped[row.source_bet_score_id].append(row)
 
         return grouped
-    
+
     def _load_powerup_uses(self, scope: ScoringScope) -> list[PowerUpUse]:
         return self._session.scalars(
             select(PowerUpUse)
@@ -847,7 +933,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 joinedload(PowerUpUse.targets),
             )
         ).unique().all()
-    
+
     def _load_powerup_restrictions(self, scope: ScoringScope) -> list[PowerUpRestriction]:
         return self._session.scalars(
             select(PowerUpRestriction).where(
@@ -855,7 +941,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 PowerUpRestriction.is_disabled.is_(True),
             )
         ).all()
-    
+
     def _resolve_rule(
         self,
         *,
@@ -898,7 +984,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                     return rule
 
         return None
-    
+
     def _is_powerup_restricted(
         self,
         *,
@@ -917,7 +1003,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
             return True
 
         return False
-    
+
     def _resolve_powerup_target_user_ids(self, powerup_use: PowerUpUse) -> tuple[int, ...]:
         user_ids: set[int] = set()
 

@@ -1,14 +1,30 @@
+import json
 from decimal import Decimal
 
 from app.domain.management.scoring.evaluators.base import BaseEvaluator, EvaluationResult
 
 
+def _resolve_points(*, rule, bet_score, effective_config) -> Decimal:
+    params = rule.params_json if rule is not None and rule.params_json else {}
+
+    if "points" in params:
+        return Decimal(str(params["points"]))
+
+    if effective_config is not None:
+        return Decimal(str(effective_config.points))
+
+    return Decimal(str(bet_score.base_points))
+
 class ExactMatchEvaluator(BaseEvaluator):
     evaluator_key = "exact_match"
 
-    def evaluate(self, *, pick, official_result, bet_score, rule, relations=None, related_picks=None) -> EvaluationResult:
+    def evaluate(self, *, pick, official_result, bet_score, rule, effective_config=None, relations=None, related_picks=None) -> EvaluationResult:
         params = rule.params_json if rule is not None and rule.params_json else {}
-        points = Decimal(str(params.get("points", bet_score.base_points)))
+        points = _resolve_points(
+            rule=rule,
+            bet_score=bet_score,
+            effective_config=effective_config,
+        )
 
         hit = pick.value == official_result.value
 
@@ -26,13 +42,18 @@ class ExactMatchEvaluator(BaseEvaluator):
             hit=hit,
             details=details,
         )
-    
+
+
 class PositionExactOrDnfEvaluator(BaseEvaluator):
     evaluator_key = "position_exact_or_dnf"
 
-    def evaluate(self, *, pick, official_result, bet_score, rule, relations=None, related_picks=None) -> EvaluationResult:
+    def evaluate(self, *, pick, official_result, bet_score, rule, effective_config=None, relations=None, related_picks=None) -> EvaluationResult:
         params = rule.params_json if rule is not None and rule.params_json else {}
-        exact_points = Decimal(str(params.get("points", bet_score.base_points)))
+        exact_points = _resolve_points(
+            rule=rule,
+            bet_score=bet_score,
+            effective_config=effective_config,
+        )
         dnf_value = params.get("dnf_value", "DNF")
         dnf_points = Decimal(str(params.get("dnf_points", 0)))
 
@@ -60,9 +81,13 @@ class PositionExactOrDnfEvaluator(BaseEvaluator):
 class PositionExactOrNearEvaluator(BaseEvaluator):
     evaluator_key = "position_exact_or_near"
 
-    def evaluate(self, *, pick, official_result, bet_score, rule, relations=None, related_picks=None) -> EvaluationResult:
+    def evaluate(self, *, pick, official_result, bet_score, rule, effective_config=None, relations=None, related_picks=None) -> EvaluationResult:
         params = rule.params_json if rule is not None and rule.params_json else {}
-        exact_points = Decimal(str(params.get("points", bet_score.base_points)))
+        exact_points = _resolve_points(
+            rule=rule,
+            bet_score=bet_score,
+            effective_config=effective_config,
+        )
         near_points = Decimal(str(params.get("near_points", 0)))
         near_delta = int(params.get("near_delta", 1))
 
@@ -106,3 +131,33 @@ class PositionExactOrNearEvaluator(BaseEvaluator):
             details["special_group"] = params["special_group"]
 
         return EvaluationResult(points=points, hit=hit, details=details)
+
+class ExactMatchAnyEvaluator(BaseEvaluator):
+    evaluator_key = "exact_match_any"
+
+    def evaluate(self, *, pick, official_result, bet_score, rule, effective_config=None, relations=None, related_picks=None) -> EvaluationResult:
+        points = _resolve_points(
+            rule=rule,
+            bet_score=bet_score,
+            effective_config=effective_config,
+        )
+
+        try:
+            official_values = json.loads(official_result.value)
+        except (TypeError, json.JSONDecodeError):
+            official_values = official_result.value
+
+        if isinstance(official_values, list):
+            hit = pick.value in {str(value) for value in official_values}
+        else:
+            hit = pick.value == str(official_values)
+
+        return EvaluationResult(
+            points=points if hit else Decimal("0"),
+            hit=hit,
+            details={
+                "answer": pick.value,
+                "official": official_values,
+                "evaluator_key": self.evaluator_key,
+            },
+        )

@@ -26,5 +26,15 @@ class BaseEvaluator:
             raise ScoringEvaluatorNotFoundError(evaluator_key)
         return evaluator_cls()
 
-    def evaluate(self, *, pick, official_result, bet_score, rule, relations=None, related_picks=None) -> EvaluationResult:
+    def evaluate(
+        self,
+        *,
+        pick,
+        official_result,
+        bet_score,
+        rule,
+        effective_config=None,
+        relations=None,
+        related_picks=None,
+    ) -> EvaluationResult:
         raise NotImplementedError
