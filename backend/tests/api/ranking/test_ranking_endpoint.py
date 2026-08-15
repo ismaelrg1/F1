@@ -4,9 +4,9 @@ from uuid import uuid4
 from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import User
 from app.db.betting import BetContext
-from app.db.competition import Circuit, Country, RaceEvent, Season
-from app.db.enums import BetContextKind, RaceEventStatus, RankingEventType, SourceProvider
-from app.db.scoring import ResultPublication, Score, ScoreSeasonAggregate
+from app.db.competition import Circuit, Country, EventSession, RaceEvent, Season
+from app.db.enums import BetContextKind, RaceEventStatus, RankingEventType, SessionType, SourceProvider
+from app.db.scoring import ResultPublication, Score, ScoreSeasonAggregate, ScoreSession
 from app.db.social import Group, GroupMembership, Team, TeamMembership
 from app.db.social.group_membership import GroupRole
 from app.db.social.team_membership import TeamRole
@@ -377,6 +377,131 @@ def test_get_ranking_returns_user_rows_and_timeline_for_user_group(client, db_se
         },
     ]
     assert payload["timeline"]["teams"] == []
+
+
+def test_get_ranking_includes_published_race_session_scores(client, db_session) -> None:
+    viewer = _create_user(
+        db_session,
+        username=f"viewer_session_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    group = _create_group(
+        db_session,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    _add_group_member(db_session, group_id=group.id, user_id=viewer.id)
+
+    season = Season(year=2042, is_active=True)
+    db_session.add(season)
+    db_session.flush()
+
+    country = Country(
+        iso2=uuid4().hex[:2].upper(),
+        name=f"Country {uuid4().hex[:8]}",
+        flag_asset_url=None,
+    )
+    db_session.add(country)
+    db_session.flush()
+
+    circuit = Circuit(
+        code=f"circuit_{uuid4().hex[:8]}",
+        name=f"Circuit {uuid4().hex[:8]}",
+        country_id=country.id,
+        map_asset_url=None,
+        image_asset_url=None,
+    )
+    db_session.add(circuit)
+    db_session.flush()
+
+    race_event = RaceEvent(
+        season_id=season.id,
+        circuit_id=circuit.id,
+        round_number=1,
+        name="Session Grand Prix",
+        source_provider=SourceProvider.MANUAL,
+        status=RaceEventStatus.COMPLETED,
+        scheduled_event_start=datetime(2042, 3, 1, 8, 0, tzinfo=timezone.utc),
+        scheduled_event_end=datetime(2042, 3, 3, 18, 0, tzinfo=timezone.utc),
+    )
+    db_session.add(race_event)
+    db_session.flush()
+
+    event_session = EventSession(
+        race_event_id=race_event.id,
+        session_type=SessionType.RACE,
+        source_provider=SourceProvider.MANUAL,
+        status=RaceEventStatus.COMPLETED,
+        start_datetime=datetime(2042, 3, 3, 15, 0, tzinfo=timezone.utc),
+        scheduled_start_datetime=datetime(2042, 3, 3, 15, 0, tzinfo=timezone.utc),
+        lock_cutoff=datetime(2042, 3, 3, 15, 0, tzinfo=timezone.utc),
+        scheduled_lock_cutoff=datetime(2042, 3, 3, 15, 0, tzinfo=timezone.utc),
+    )
+    db_session.add(event_session)
+    db_session.flush()
+
+    bet_context = BetContext(
+        kind=BetContextKind.GP,
+        season_id=season.id,
+        race_event_id=race_event.id,
+        testing_event_id=None,
+        label="Session GP",
+        results_published=True,
+        results_published_at=datetime(2042, 3, 3, 20, 0, tzinfo=timezone.utc),
+        group_id=group.id,
+    )
+    db_session.add(bet_context)
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            ResultPublication(
+                bet_context_id=bet_context.id,
+                event_session_id=event_session.id,
+                testing_event_session_id=None,
+                published_by_user_id=viewer.id,
+                published_at=datetime(2042, 3, 3, 20, 0, tzinfo=timezone.utc),
+            ),
+            ScoreSession(
+                user_id=viewer.id,
+                bet_context_id=bet_context.id,
+                event_session_id=event_session.id,
+                testing_event_session_id=None,
+                base_points=12,
+                total_points=12,
+                computed_at=datetime(2042, 3, 3, 20, 5, tzinfo=timezone.utc),
+            ),
+        ]
+    )
+    db_session.flush()
+
+    _login(client, username=viewer.username)
+
+    response = client.get(
+        "/api/v1/ranking",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"season_year": season.year},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["users"][0]["points"] == {
+        "race": 12.0,
+        "testing": 0.0,
+        "season": 0.0,
+        "extra": 0.0,
+        "penalty": 0.0,
+        "total": 12.0,
+    }
+    assert payload["timeline"]["users"][0]["points"] == [
+        {
+            "event_order": 1,
+            "event_type": "RACE_EVENT",
+            "label": "Session GP",
+            "published_at": "2042-03-03T20:00:00Z",
+            "points": 12.0,
+        }
+    ]
 
 
 def test_get_ranking_returns_team_rows_when_group_uses_teams(client, db_session) -> None:

@@ -613,6 +613,47 @@ def test_publish_testing_session_results_creates_publication(client, db_session)
     assert row.testing_event_session_id == data["session"].id
 
 
+def test_publish_testing_event_results_creates_context_publication_without_session_id(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username="admin_publish_testing_context",
+        password="secret123",
+    )
+    data = _create_testing_fixture(db_session)
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["score"].id,
+    )
+    _add_calculated_score(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        user_id=admin.id,
+    )
+    _login(client, "admin_publish_testing_context")
+
+    response = client.post(
+        f"/api/v1/management/result-publications/testing-events/{data['testing_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        json={"note": "Testing context published"},
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["testing_event_public_id"] == str(data["testing_event"].public_id)
+    assert "testing_event_session_public_id" not in payload
+    assert payload["note"] == "Testing context published"
+
+    row = db_session.execute(
+        select(ResultPublication).where(
+            ResultPublication.bet_context_id == data["bet_context"].id,
+            ResultPublication.event_session_id.is_(None),
+            ResultPublication.testing_event_session_id.is_(None),
+        )
+    ).scalar_one()
+    assert row.note == "Testing context published"
+
+
 def test_publish_season_results_creates_publication(client, db_session) -> None:
     admin = _create_admin_user(
         db_session,

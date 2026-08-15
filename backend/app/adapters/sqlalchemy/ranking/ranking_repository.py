@@ -30,13 +30,16 @@ from app.domain.ranking.ports import RankingRepository
 
 @dataclass(frozen=True)
 class _PublishedRankingEvent:
+    publication_id: int
     bet_context_id: int
     event_type: RankingEventType
     label: str
     event_order: int
     published_at: datetime
     race_event_id: int | None = None
+    event_session_id: int | None = None
     testing_event_id: int | None = None
+    testing_event_session_id: int | None = None
 
 @dataclass(frozen=True)
 class _VisibleRankingMeta:
@@ -76,25 +79,20 @@ class SqlAlchemyRankingRepository(RankingRepository):
         teams_by_id = self._list_group_teams(group_id=group_id) if group.teams_enabled else {}
         team_by_user_id = self._team_by_user_id(group_id=group_id) if group.teams_enabled else {}
 
-        aggregates_by_user_id = self._season_aggregates_by_user_id(
-            group_id=group_id,
-            season_id=season.id,
-        )
-
         published_events = self._published_events(
             group_id=group_id,
             season_id=season.id,
         )
 
         (
-            event_points_by_context_id,
+            event_points_by_publication_id,
             visible_points_by_user_id,
             visible_meta_by_user_id,
         ) = self._visible_points_from_published_events(events=published_events)
 
         if published_events:
             (
-                _previous_event_points_by_context_id,
+                _previous_event_points_by_publication_id,
                 previous_visible_points_by_user_id,
                 _previous_visible_meta_by_user_id,
             ) = self._visible_points_from_published_events(events=published_events[:-1])
@@ -141,7 +139,7 @@ class SqlAlchemyRankingRepository(RankingRepository):
             users_by_id=users_by_id,
             teams_by_id=teams_by_id,
             team_by_user_id=team_by_user_id,
-            event_points_by_context_id=event_points_by_context_id,
+            event_points_by_publication_id=event_points_by_publication_id,
         )
 
         updated_at = max(
@@ -262,8 +260,6 @@ class SqlAlchemyRankingRepository(RankingRepository):
             .where(
                 BetContext.group_id == group_id,
                 BetContext.season_id == season_id,
-                ResultPublication.event_session_id.is_(None),
-                ResultPublication.testing_event_session_id.is_(None),
             )
         )
 
@@ -273,30 +269,35 @@ class SqlAlchemyRankingRepository(RankingRepository):
             if bet_context.kind == BetContextKind.PRETESTING and testing_event is not None:
                 events.append(
                     _PublishedRankingEvent(
+                        publication_id=publication.id,
                         bet_context_id=bet_context.id,
                         event_type=RankingEventType.TESTING_EVENT,
                         label=bet_context.label,
                         event_order=0,
                         published_at=publication.published_at,
                         testing_event_id=testing_event.id,
+                        testing_event_session_id=publication.testing_event_session_id,
                     )
                 )
 
             elif bet_context.kind == BetContextKind.GP and race_event is not None:
                 events.append(
                     _PublishedRankingEvent(
+                        publication_id=publication.id,
                         bet_context_id=bet_context.id,
                         event_type=RankingEventType.RACE_EVENT,
                         label=bet_context.label,
                         event_order=race_event.round_number,
                         published_at=publication.published_at,
                         race_event_id=race_event.id,
+                        event_session_id=publication.event_session_id,
                     )
                 )
 
             elif bet_context.kind == BetContextKind.SEASON:
                 events.append(
                     _PublishedRankingEvent(
+                        publication_id=publication.id,
                         bet_context_id=bet_context.id,
                         event_type=RankingEventType.SEASON,
                         label=bet_context.label,
@@ -316,13 +317,13 @@ class SqlAlchemyRankingRepository(RankingRepository):
         dict[int, RankingPoints],
         dict[int, _VisibleRankingMeta],
     ]:
-        event_points_by_context_id: dict[int, dict[int, RankingPoints]] = {}
+        event_points_by_publication_id: dict[int, dict[int, RankingPoints]] = {}
         visible_points_by_user_id: dict[int, RankingPoints] = defaultdict(RankingPoints)
         visible_meta_by_user_id: dict[int, _VisibleRankingMeta] = {}
 
         for event in events:
             event_points = self._event_points_breakdown_by_user_id(event)
-            event_points_by_context_id[event.bet_context_id] = event_points
+            event_points_by_publication_id[event.publication_id] = event_points
 
             for user_id, event_points_value in event_points.items():
                 current = visible_points_by_user_id[user_id]
@@ -343,7 +344,7 @@ class SqlAlchemyRankingRepository(RankingRepository):
                 )
 
         return (
-            event_points_by_context_id,
+            event_points_by_publication_id,
             dict(visible_points_by_user_id),
             visible_meta_by_user_id,
         )
@@ -402,6 +403,9 @@ class SqlAlchemyRankingRepository(RankingRepository):
             .options(selectinload(Score.score_components))
         )
 
+        if event.event_session_id is not None or event.testing_event_session_id is not None:
+            return []
+
         return list(self._session.execute(stmt).scalars().unique().all())
 
     def _session_level_scores(
@@ -415,16 +419,24 @@ class SqlAlchemyRankingRepository(RankingRepository):
         )
 
         if event.event_type == RankingEventType.RACE_EVENT:
-            session_ids_stmt = select(EventSession.id).where(
-                EventSession.race_event_id == event.race_event_id
-            )
-            stmt = stmt.where(ScoreSession.event_session_id.in_(session_ids_stmt))
+            if event.event_session_id is not None:
+                stmt = stmt.where(ScoreSession.event_session_id == event.event_session_id)
+            else:
+                session_ids_stmt = select(EventSession.id).where(
+                    EventSession.race_event_id == event.race_event_id
+                )
+                stmt = stmt.where(ScoreSession.event_session_id.in_(session_ids_stmt))
 
         elif event.event_type == RankingEventType.TESTING_EVENT:
-            session_ids_stmt = select(TestingEventSession.id).where(
-                TestingEventSession.testing_event_id == event.testing_event_id
-            )
-            stmt = stmt.where(ScoreSession.testing_event_session_id.in_(session_ids_stmt))
+            if event.testing_event_session_id is not None:
+                stmt = stmt.where(
+                    ScoreSession.testing_event_session_id == event.testing_event_session_id
+                )
+            else:
+                session_ids_stmt = select(TestingEventSession.id).where(
+                    TestingEventSession.testing_event_id == event.testing_event_id
+                )
+                stmt = stmt.where(ScoreSession.testing_event_session_id.in_(session_ids_stmt))
 
         else:
             return []
@@ -556,7 +568,7 @@ class SqlAlchemyRankingRepository(RankingRepository):
         users_by_id: dict[int, RankingUser],
         teams_by_id: dict[int, RankingTeam],
         team_by_user_id: dict[int, int],
-        event_points_by_context_id: dict[int, dict[int, RankingPoints]],
+        event_points_by_publication_id: dict[int, dict[int, RankingPoints]],
     ) -> RankingTimeline:
         cumulative_by_user_id = {
             user_id: 0.0
@@ -579,7 +591,7 @@ class SqlAlchemyRankingRepository(RankingRepository):
         }
 
         for event in events:
-            event_points = event_points_by_context_id.get(event.bet_context_id, {})
+            event_points = event_points_by_publication_id.get(event.publication_id, {})
 
             for user_id in users_by_id:
                 cumulative_by_user_id[user_id] += event_points.get(user_id, RankingPoints()).total

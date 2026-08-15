@@ -124,7 +124,7 @@ def publish_testing_event_results(
     testing_event_public_id: UUID,
     payload: ResultPublicationWriteRequest,
     request: Request,
-    session_id: UUID = Query(...),
+    session_id: UUID | None = Query(default=None),
     x_group_id: UUID | None = Header(default=None, alias="X-Group-Id"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -164,7 +164,7 @@ def publish_testing_event_results(
 def unpublish_testing_event_results(
     testing_event_public_id: UUID,
     request: Request,
-    session_id: UUID = Query(...),
+    session_id: UUID | None = Query(default=None),
     x_group_id: UUID | None = Header(default=None, alias="X-Group-Id"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),

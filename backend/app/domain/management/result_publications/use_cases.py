@@ -95,7 +95,7 @@ class PublishTestingEventResults:
         *,
         group_id: int,
         testing_event_public_id: UUID,
-        testing_event_session_public_id: UUID,
+        testing_event_session_public_id: UUID | None,
         published_by_user_id: int,
         note: str | None,
     ):
@@ -106,12 +106,14 @@ class PublishTestingEventResults:
         if bet_context_id is None:
             raise ResultPublicationBetContextNotFoundError()
 
-        testing_event_session_id = self._repository.get_testing_event_session_id(
-            bet_context_id=bet_context_id,
-            testing_event_session_public_id=testing_event_session_public_id,
-        )
-        if testing_event_session_id is None:
-            raise ResultPublicationTestingEventSessionNotFoundError()
+        testing_event_session_id = None
+        if testing_event_session_public_id is not None:
+            testing_event_session_id = self._repository.get_testing_event_session_id(
+                bet_context_id=bet_context_id,
+                testing_event_session_public_id=testing_event_session_public_id,
+            )
+            if testing_event_session_id is None:
+                raise ResultPublicationTestingEventSessionNotFoundError()
 
         return _publish(
             repository=self._repository,
@@ -132,7 +134,7 @@ class UnpublishTestingEventResults:
         *,
         group_id: int,
         testing_event_public_id: UUID,
-        testing_event_session_public_id: UUID,
+        testing_event_session_public_id: UUID | None,
     ) -> None:
         bet_context_id = self._repository.get_testing_bet_context_id(
             group_id=group_id,
@@ -141,12 +143,14 @@ class UnpublishTestingEventResults:
         if bet_context_id is None:
             raise ResultPublicationBetContextNotFoundError()
 
-        testing_event_session_id = self._repository.get_testing_event_session_id(
-            bet_context_id=bet_context_id,
-            testing_event_session_public_id=testing_event_session_public_id,
-        )
-        if testing_event_session_id is None:
-            raise ResultPublicationTestingEventSessionNotFoundError()
+        testing_event_session_id = None
+        if testing_event_session_public_id is not None:
+            testing_event_session_id = self._repository.get_testing_event_session_id(
+                bet_context_id=bet_context_id,
+                testing_event_session_public_id=testing_event_session_public_id,
+            )
+            if testing_event_session_id is None:
+                raise ResultPublicationTestingEventSessionNotFoundError()
 
         _unpublish(
             repository=self._repository,
