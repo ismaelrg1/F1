@@ -250,6 +250,7 @@ class GetRaceEventBetQuestions:
                             "driver_number": entry.driver_number,
                             "team_code": entry.team_code,
                             "team_name": entry.team_name,
+                            "team_color": entry.team_color,
                         },
                     )
                 )
@@ -266,7 +267,10 @@ class GetRaceEventBetQuestions:
                     BetQuestionOptionResult(
                         value=entry.team_code,
                         label=entry.team_name,
-                        meta={"code": entry.team_code},
+                        meta={
+                            "code": entry.team_code,
+                            "color": entry.team_color,
+                        },
                     )
                 )
             return options
@@ -534,6 +538,7 @@ class GetTestingEventBetQuestions:
                             "driver_number": entry.driver_number,
                             "team_code": entry.team_code,
                             "team_name": entry.team_name,
+                            "team_color": entry.team_color,
                         },
                     )
                 )
@@ -550,7 +555,10 @@ class GetTestingEventBetQuestions:
                     BetQuestionOptionResult(
                         value=entry.team_code,
                         label=entry.team_name,
-                        meta={"code": entry.team_code},
+                        meta={
+                            "code": entry.team_code,
+                            "color": entry.team_color,
+                        },
                     )
                 )
             return options
@@ -773,6 +781,7 @@ class GetSeasonBetQuestions:
                             "driver_number": entry.driver_number,
                             "team_code": entry.team_code,
                             "team_name": entry.team_name,
+                            "team_color": entry.team_color,
                         },
                     )
                 )
@@ -789,7 +798,10 @@ class GetSeasonBetQuestions:
                     BetQuestionOptionResult(
                         value=entry.team_code,
                         label=entry.team_name,
-                        meta={"code": entry.team_code},
+                        meta={
+                            "code": entry.team_code,
+                            "color": entry.team_color,
+                        },
                     )
                 )
             return options

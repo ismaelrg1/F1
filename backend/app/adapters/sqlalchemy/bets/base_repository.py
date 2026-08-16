@@ -286,6 +286,7 @@ class SqlAlchemyBetBaseRepository:
             team_id=entry.team_id,
             team_code=entry.team.code,
             team_name=entry.team.name,
+            team_color=entry.team.color,
             engine_id=entry.engine_id,
             engine_code=entry.engine.code,
             engine_name=entry.engine.name,

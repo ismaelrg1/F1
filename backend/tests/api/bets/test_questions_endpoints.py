@@ -579,13 +579,13 @@ def test_get_race_event_bet_questions_returns_event_and_session_questions(client
     assert fp1_payload["questions"][0]["code"] == "FP1_FASTEST"
     assert fp1_payload["questions"][0]["constraints_json"] == {"allowed": ["NOR"]}
     assert fp1_payload["questions"][0]["options"] == [
-        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16, "team_code": "FER", "team_name": "Ferrari"}},
-        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing"}},
+        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16, "team_code": "FER", "team_name": "Ferrari", "team_color": "#DC0000"}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing", "team_color": "#1E41FF"}},
     ]
     assert fp1_payload["questions"][1]["code"] == "FP1_TOP_TEAM"
     assert fp1_payload["questions"][1]["options"] == [
-        {"value": "FER", "label": "Ferrari", "meta": {"code": "FER"}},
-        {"value": "RBR", "label": "Red Bull Racing", "meta": {"code": "RBR"}},
+        {"value": "FER", "label": "Ferrari", "meta": {"code": "FER", "color": "#DC0000"}},
+        {"value": "RBR", "label": "Red Bull Racing", "meta": {"code": "RBR", "color": "#1E41FF"}},
     ]
 
     race_payload = payload["sessions"][1]
@@ -594,8 +594,8 @@ def test_get_race_event_bet_questions_returns_event_and_session_questions(client
     assert race_payload["questions"][0]["code"] == "RACE_WINNER"
     assert race_payload["questions"][0]["base_points"] == 10.0
     assert race_payload["questions"][0]["options"] == [
-        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4, "team_code": "FER", "team_name": "Ferrari"}},
-        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing"}},
+        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4, "team_code": "FER", "team_name": "Ferrari", "team_color": "#DC0000"}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing", "team_color": "#1E41FF"}},
     ]
     assert race_payload["questions"][1]["code"] == "NOR_FINAL_POSITION"
     assert "options" not in race_payload["questions"][1]
@@ -1149,15 +1149,15 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
     assert payload["event_questions"][0]["code"] == "MOST_KILOMETRAGE_DRIVER"
     assert payload["event_questions"][0]["base_points"] == 7.0
     assert payload["event_questions"][0]["options"] == [
-        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16, "team_code": "FER", "team_name": "Ferrari"}},
-        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4, "team_code": "FER", "team_name": "Ferrari"}},
-        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing"}},
+        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16, "team_code": "FER", "team_name": "Ferrari", "team_color": "#DC0000"}},
+        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4, "team_code": "FER", "team_name": "Ferrari", "team_color": "#DC0000"}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing", "team_color": "#1E41FF"}},
     ]
 
     assert payload["event_questions"][1]["code"] == "TOP_TEAM_TESTING"
     assert payload["event_questions"][1]["options"] == [
-        {"value": "FER", "label": "Ferrari", "meta": {"code": "FER"}},
-        {"value": "RBR", "label": "Red Bull Racing", "meta": {"code": "RBR"}},
+        {"value": "FER", "label": "Ferrari", "meta": {"code": "FER", "color": "#DC0000"}},
+        {"value": "RBR", "label": "Red Bull Racing", "meta": {"code": "RBR", "color": "#1E41FF"}},
     ]
     assert payload["event_questions"][2]["code"] == "DAY_WINNER_DRIVER"
     assert payload["event_questions"][3]["code"] == "ALO_TEST_POSITION"
@@ -1184,9 +1184,9 @@ def test_get_testing_event_bet_questions_returns_event_and_session_questions(cli
     assert day_1["questions"][1]["code"] == "TOP_TEAM_TESTING"
     assert day_1["questions"][2]["code"] == "DAY_WINNER_DRIVER"
     assert day_1["questions"][2]["options"] == [
-        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16, "team_code": "FER", "team_name": "Ferrari"}},
-        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4, "team_code": "FER", "team_name": "Ferrari"}},
-        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing"}},
+        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16, "team_code": "FER", "team_name": "Ferrari", "team_color": "#DC0000"}},
+        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4, "team_code": "FER", "team_name": "Ferrari", "team_color": "#DC0000"}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing", "team_color": "#1E41FF"}},
     ]
 
     assert day_1["questions"][3]["code"] == "ALO_TEST_POSITION"
@@ -1797,8 +1797,8 @@ def test_get_season_bet_questions_filters_duel_driver_options_by_team(client, db
         "options_filter": "team_drivers",
     }
     assert question["options"] == [
-        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing"}},
-        {"value": "PER", "label": "Sergio Perez", "meta": {"code": "PER", "driver_number": 11, "team_code": "RBR", "team_name": "Red Bull Racing"}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing", "team_color": "#1E41FF"}},
+        {"value": "PER", "label": "Sergio Perez", "meta": {"code": "PER", "driver_number": 11, "team_code": "RBR", "team_name": "Red Bull Racing", "team_color": "#1E41FF"}},
     ]
 
 
@@ -2057,14 +2057,14 @@ def test_preview_season_bet_questions_payload_prints_result(client, db_session) 
     assert by_code["WILL_VER_WIN_TITLE"]["base_points"] == 8.0
 
     assert by_code["BEST_DRIVER"]["options"] == [
-        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16}},
-        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4}},
-        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1}},
+        {"value": "LEC", "label": "Charles Leclerc", "meta": {"code": "LEC", "driver_number": 16, "team_code": "FER", "team_name": "Ferrari", "team_color": "#DC0000"}},
+        {"value": "NOR", "label": "Lando Norris", "meta": {"code": "NOR", "driver_number": 4, "team_code": "FER", "team_name": "Ferrari", "team_color": "#DC0000"}},
+        {"value": "VER", "label": "Max Verstappen", "meta": {"code": "VER", "driver_number": 1, "team_code": "RBR", "team_name": "Red Bull Racing", "team_color": "#1E41FF"}},
     ]
 
     assert by_code["BEST_TEAM"]["options"] == [
-        {"value": "FER", "label": "Ferrari", "meta": {"code": "FER"}},
-        {"value": "RBR", "label": "Red Bull Racing", "meta": {"code": "RBR"}},
+        {"value": "FER", "label": "Ferrari", "meta": {"code": "FER", "color": "#DC0000"}},
+        {"value": "RBR", "label": "Red Bull Racing", "meta": {"code": "RBR", "color": "#1E41FF"}},
     ]
 
     assert by_code["BEST_ENGINE"]["options"] == [

@@ -57,6 +57,7 @@ class BetRosterEntry:
     team_id: int
     team_code: str
     team_name: str
+    team_color: str
     engine_id: int
     engine_code: str
     engine_name: str
