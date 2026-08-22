@@ -57,8 +57,9 @@ from app.db.scoring import (
     ScoreSessionComponent,
 )
 from app.db.scoring.official_result import SourceType
-from app.db.social import Group, GroupMembership
+from app.db.social import Group, GroupMembership, GroupSeasonMembership
 from app.db.social.group_membership import GroupRole
+from app.db.social.group_season_membership import GroupSeasonRole
 
 
 def _create_user(
@@ -103,6 +104,26 @@ def _create_group_with_membership(
     db_session.flush()
 
     return group
+
+
+def _add_group_season_membership(
+    db_session,
+    *,
+    group_id: int,
+    season_id: int,
+    user_id: int,
+    is_active: bool = True,
+) -> None:
+    db_session.add(
+        GroupSeasonMembership(
+            group_id=group_id,
+            season_id=season_id,
+            user_id=user_id,
+            role=GroupSeasonRole.MEMBER,
+            is_active=is_active,
+        )
+    )
+    db_session.flush()
 
 
 def _create_powerup_assignment(
@@ -2816,6 +2837,18 @@ def test_get_race_event_powerups_returns_user_target_options_with_penalty_limit(
         db_session,
         user_id=user.id,
         group_id=group.id,
+    )
+    _add_group_season_membership(
+        db_session,
+        group_id=group.id,
+        season_id=data["race_event"].season_id,
+        user_id=available_target.id,
+    )
+    _add_group_season_membership(
+        db_session,
+        group_id=group.id,
+        season_id=data["race_event"].season_id,
+        user_id=blocked_target.id,
     )
     assignment = _create_powerup_assignment(
         db_session,

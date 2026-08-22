@@ -11,7 +11,7 @@ from app.db.betting import BetContext
 from app.db.competition import EventSession, RaceEvent, Season, TestingEvent, TestingEventSession
 from app.db.enums import BetContextKind, RankingEventType, ScoreComponentType
 from app.db.scoring import ResultPublication, Score, ScoreComponent, ScoreSeasonAggregate, ScoreSession, ScoreSessionComponent
-from app.db.social import Group, GroupMembership, Team, TeamMembership
+from app.db.social import Group, GroupSeasonMembership, Team, TeamSeasonMembership
 from app.domain.ranking.models import (
     RankingPoints,
     RankingResult,
@@ -72,12 +72,12 @@ class SqlAlchemyRankingRepository(RankingRepository):
         ranking_mode = "TEAM" if group.teams_enabled else "USER"
 
         users_by_id = (
-            self._list_team_group_users(group_id=group_id)
+            self._list_team_group_users(group_id=group_id, season_id=season.id)
             if group.teams_enabled
-            else self._list_group_users(group_id=group_id)
+            else self._list_group_users(group_id=group_id, season_id=season.id)
         )
-        teams_by_id = self._list_group_teams(group_id=group_id) if group.teams_enabled else {}
-        team_by_user_id = self._team_by_user_id(group_id=group_id) if group.teams_enabled else {}
+        teams_by_id = self._list_group_teams(group_id=group_id, season_id=season.id) if group.teams_enabled else {}
+        team_by_user_id = self._team_by_user_id(group_id=group_id, season_id=season.id) if group.teams_enabled else {}
 
         published_events = self._published_events(
             group_id=group_id,
@@ -160,11 +160,15 @@ class SqlAlchemyRankingRepository(RankingRepository):
             timeline=timeline,
         )
 
-    def _list_group_users(self, *, group_id: int) -> dict[int, RankingUser]:
+    def _list_group_users(self, *, group_id: int, season_id: int) -> dict[int, RankingUser]:
         stmt = (
             select(User)
-            .join(GroupMembership, GroupMembership.user_id == User.id)
-            .where(GroupMembership.group_id == group_id)
+            .join(GroupSeasonMembership, GroupSeasonMembership.user_id == User.id)
+            .where(
+                GroupSeasonMembership.group_id == group_id,
+                GroupSeasonMembership.season_id == season_id,
+                GroupSeasonMembership.is_active.is_(True),
+            )
             .order_by(User.username)
         )
 
@@ -179,12 +183,16 @@ class SqlAlchemyRankingRepository(RankingRepository):
             for user in users
         }
 
-    def _list_team_group_users(self, *, group_id: int) -> dict[int, RankingUser]:
+    def _list_team_group_users(self, *, group_id: int, season_id: int) -> dict[int, RankingUser]:
         stmt = (
             select(User, Team)
-            .join(TeamMembership, TeamMembership.user_id == User.id)
-            .join(Team, Team.id == TeamMembership.team_id)
-            .where(TeamMembership.group_id == group_id)
+            .join(TeamSeasonMembership, TeamSeasonMembership.user_id == User.id)
+            .join(Team, Team.id == TeamSeasonMembership.team_id)
+            .where(
+                TeamSeasonMembership.group_id == group_id,
+                TeamSeasonMembership.season_id == season_id,
+                TeamSeasonMembership.is_active.is_(True),
+            )
             .order_by(User.username)
         )
 
@@ -201,10 +209,16 @@ class SqlAlchemyRankingRepository(RankingRepository):
             for user, team in rows
         }
 
-    def _list_group_teams(self, *, group_id: int) -> dict[int, RankingTeam]:
+    def _list_group_teams(self, *, group_id: int, season_id: int) -> dict[int, RankingTeam]:
         stmt = (
             select(Team)
-            .where(Team.group_id == group_id)
+            .join(TeamSeasonMembership, TeamSeasonMembership.team_id == Team.id)
+            .where(
+                TeamSeasonMembership.group_id == group_id,
+                TeamSeasonMembership.season_id == season_id,
+                TeamSeasonMembership.is_active.is_(True),
+            )
+            .distinct()
             .order_by(Team.name)
         )
 
@@ -218,10 +232,14 @@ class SqlAlchemyRankingRepository(RankingRepository):
             for team in teams
         }
 
-    def _team_by_user_id(self, *, group_id: int) -> dict[int, int]:
+    def _team_by_user_id(self, *, group_id: int, season_id: int) -> dict[int, int]:
         stmt = (
-            select(TeamMembership.user_id, TeamMembership.team_id)
-            .where(TeamMembership.group_id == group_id)
+            select(TeamSeasonMembership.user_id, TeamSeasonMembership.team_id)
+            .where(
+                TeamSeasonMembership.group_id == group_id,
+                TeamSeasonMembership.season_id == season_id,
+                TeamSeasonMembership.is_active.is_(True),
+            )
         )
 
         return {

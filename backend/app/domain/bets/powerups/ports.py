@@ -75,6 +75,7 @@ class BetPowerUpsRepository(Protocol):
         *,
         group_id: int,
         actor_user_id: int,
+        bet_context_id: int,
     ) -> list[BetPowerUpTargetUserDefinition]:
         ...
 

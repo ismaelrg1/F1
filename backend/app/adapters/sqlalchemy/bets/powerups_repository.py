@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.orm import joinedload
 
 from app.adapters.sqlalchemy.bets.base_repository import SqlAlchemyBetBaseRepository
@@ -9,7 +9,7 @@ from app.db.auth import User
 from app.db.competition import EventSession, TestingEventSession
 from app.db.enums import BetContextKind
 from app.db.powerups import PowerUpAssignment, PowerUpRestriction, PowerUpUse, PowerUpUseTarget
-from app.db.social import GroupMembership, Team, TeamMembership
+from app.db.social import GroupSeasonMembership, Team
 from app.domain.bets.powerups.models import BetPowerUpAvailability, BetPowerUpTargetTeamDefinition, BetPowerUpTargetUserDefinition
 from app.domain.bets.powerups.ports import BetPowerUpsRepository
 
@@ -92,16 +92,39 @@ class SqlAlchemyBetPowerUpsRepository(SqlAlchemyBetBaseRepository, BetPowerUpsRe
         event_session_id: int | None,
         testing_event_session_id: int | None,
     ) -> list[BetPowerUpAvailability]:
+        bet_context = self._session.scalar(
+            select(BetContext).where(BetContext.id == bet_context_id)
+        )
+        if bet_context is None:
+            return []
+
         assignments = self._session.scalars(
             select(PowerUpAssignment)
             .where(
                 PowerUpAssignment.group_id == group_id,
                 PowerUpAssignment.user_id == user_id,
-                PowerUpAssignment.bet_context_id == bet_context_id,
                 PowerUpAssignment.is_active.is_(True),
+                or_(
+                    PowerUpAssignment.bet_context_id == bet_context_id,
+                    and_(
+                        PowerUpAssignment.season_id == bet_context.season_id,
+                        PowerUpAssignment.bet_context_id.is_(None),
+                    ),
+                ),
             )
             .options(joinedload(PowerUpAssignment.powerup))
         ).all()
+
+        # Si algún día tienes assignment específico por contexto, tiene prioridad.
+        assignments_by_powerup_id: dict[int, PowerUpAssignment] = {}
+        for assignment in assignments:
+            current = assignments_by_powerup_id.get(assignment.powerup_id)
+            if current is None:
+                assignments_by_powerup_id[assignment.powerup_id] = assignment
+                continue
+
+            if current.bet_context_id is None and assignment.bet_context_id is not None:
+                assignments_by_powerup_id[assignment.powerup_id] = assignment
 
         return [
             BetPowerUpAvailability(
@@ -127,7 +150,7 @@ class SqlAlchemyBetPowerUpsRepository(SqlAlchemyBetBaseRepository, BetPowerUpsRe
                 ),
                 target_options=[],
             )
-            for assignment in assignments
+            for assignment in assignments_by_powerup_id.values()
         ]
 
     def _is_powerup_restricted(
@@ -174,14 +197,24 @@ class SqlAlchemyBetPowerUpsRepository(SqlAlchemyBetBaseRepository, BetPowerUpsRe
         *,
         group_id: int,
         actor_user_id: int,
+        bet_context_id: int,
     ) -> list[BetPowerUpTargetUserDefinition]:
+        bet_context = self._session.scalar(
+            select(BetContext).where(BetContext.id == bet_context_id)
+        )
+        if bet_context is None:
+            return []
+
         rows = self._session.execute(
             select(User.id, User.public_id, User.username)
-            .join(GroupMembership, GroupMembership.user_id == User.id)
+            .join(GroupSeasonMembership, GroupSeasonMembership.user_id == User.id)
             .where(
-                GroupMembership.group_id == group_id,
+                GroupSeasonMembership.group_id == group_id,
+                GroupSeasonMembership.season_id == bet_context.season_id,
+                GroupSeasonMembership.is_active.is_(True),
                 User.id != actor_user_id,
             )
+            .distinct()
             .order_by(User.username.asc(), User.id.asc())
         ).all()
 

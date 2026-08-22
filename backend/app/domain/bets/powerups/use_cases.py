@@ -223,6 +223,7 @@ class BetPowerUpTargetOptionsResolver:
         users = self._repository.list_group_user_targets(
             group_id=group_id,
             actor_user_id=actor_user_id,
+            bet_context_id=bet_context_id,
         )
 
         options: list[BetPowerUpTargetOption] = []

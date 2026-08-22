@@ -7,8 +7,9 @@ from app.db.betting import BetContext
 from app.db.competition import Circuit, Country, EventSession, RaceEvent, Season
 from app.db.enums import BetContextKind, RaceEventStatus, RankingEventType, SessionType, SourceProvider
 from app.db.scoring import ResultPublication, Score, ScoreSeasonAggregate, ScoreSession
-from app.db.social import Group, GroupMembership, Team, TeamMembership
+from app.db.social import Group, GroupMembership, GroupSeasonMembership, Team, TeamMembership, TeamSeasonMembership
 from app.db.social.group_membership import GroupRole
+from app.db.social.group_season_membership import GroupSeasonRole
 from app.db.social.team_membership import TeamRole
 
 
@@ -53,6 +54,27 @@ def _add_group_member(db_session, *, group_id: int, user_id: int) -> None:
             group_id=group_id,
             user_id=user_id,
             role=GroupRole.MEMBER,
+        )
+    )
+    db_session.flush()
+
+
+def _add_group_season_member(
+    db_session,
+    *,
+    group_id: int,
+    season_id: int,
+    user_id: int,
+    role: GroupSeasonRole = GroupSeasonRole.MEMBER,
+    is_active: bool = True,
+) -> None:
+    db_session.add(
+        GroupSeasonMembership(
+            group_id=group_id,
+            season_id=season_id,
+            user_id=user_id,
+            role=role,
+            is_active=is_active,
         )
     )
     db_session.flush()
@@ -173,6 +195,13 @@ def test_get_ranking_returns_user_rows_and_timeline_for_user_group(client, db_se
     season = Season(year=2040, is_active=True)
     db_session.add(season)
     db_session.flush()
+    for user in [viewer, other_user, zero_user]:
+        _add_group_season_member(
+            db_session,
+            group_id=group.id,
+            season_id=season.id,
+            user_id=user.id,
+        )
 
     first_race_event, first_bet_context = _create_published_race_context(
         db_session,
@@ -394,6 +423,12 @@ def test_get_ranking_includes_published_race_session_scores(client, db_session) 
     season = Season(year=2042, is_active=True)
     db_session.add(season)
     db_session.flush()
+    _add_group_season_member(
+        db_session,
+        group_id=group.id,
+        season_id=season.id,
+        user_id=viewer.id,
+    )
 
     country = Country(
         iso2=uuid4().hex[:2].upper(),
@@ -566,6 +601,39 @@ def test_get_ranking_returns_team_rows_when_group_uses_teams(client, db_session)
     season = Season(year=2041, is_active=True)
     db_session.add(season)
     db_session.flush()
+    for user in [viewer, teammate, rival]:
+        _add_group_season_member(
+            db_session,
+            group_id=group.id,
+            season_id=season.id,
+            user_id=user.id,
+        )
+    db_session.add_all(
+        [
+            TeamSeasonMembership(
+                group_id=group.id,
+                season_id=season.id,
+                team_id=red_team.id,
+                user_id=viewer.id,
+                role=TeamRole.CAPTAIN,
+            ),
+            TeamSeasonMembership(
+                group_id=group.id,
+                season_id=season.id,
+                team_id=red_team.id,
+                user_id=teammate.id,
+                role=TeamRole.MEMBER,
+            ),
+            TeamSeasonMembership(
+                group_id=group.id,
+                season_id=season.id,
+                team_id=blue_team.id,
+                user_id=rival.id,
+                role=TeamRole.CAPTAIN,
+            ),
+        ]
+    )
+    db_session.flush()
 
     _, first_bet_context = _create_published_race_context(
         db_session,
@@ -678,9 +746,8 @@ def test_get_ranking_returns_team_rows_when_group_uses_teams(client, db_session)
     assert [row["team"]["name"] for row in payload["teams"]] == [
         "Red Team",
         "Blue Team",
-        "Empty Team",
     ]
-    assert [row["points"]["total"] for row in payload["teams"]] == [20.0, 7.0, 0.0]
+    assert [row["points"]["total"] for row in payload["teams"]] == [20.0, 7.0]
     assert payload["teams"][0]["previous_position"] == 2
     assert payload["teams"][1]["previous_position"] == 1
 
@@ -730,21 +797,5 @@ def test_get_ranking_returns_team_rows_when_group_uses_teams(client, db_session)
             "label": "Bahrain GP",
             "published_at": "2040-03-03T20:00:00Z",
             "points": 7.0,
-        },
-    ]
-    assert team_timelines["Empty Team"] == [
-        {
-            "event_order": 1,
-            "event_type": "RACE_EVENT",
-            "label": "Bahrain GP",
-            "published_at": "2040-03-03T20:00:00Z",
-            "points": 0.0,
-        },
-        {
-            "event_order": 2,
-            "event_type": "RACE_EVENT",
-            "label": "Bahrain GP",
-            "published_at": "2040-03-03T20:00:00Z",
-            "points": 0.0,
         },
     ]

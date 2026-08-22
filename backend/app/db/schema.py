@@ -55,6 +55,8 @@ from app.db.social.group import Group  # noqa: F401
 from app.db.social.group_membership import GroupMembership  # noqa: F401
 from app.db.social.team import Team as SocialTeam  # noqa: F401
 from app.db.social.team_membership import TeamMembership  # noqa: F401
+from app.db.social.group_season_membership import GroupSeasonMembership  # noqa: F401
+from app.db.social.team_season_membership import TeamSeasonMembership  # noqa: F401
 
 # Powerups
 from app.db.powerups.power_up import PowerUp  # noqa: F401

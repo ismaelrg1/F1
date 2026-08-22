@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.orm import joinedload, selectinload
 
 
@@ -10,7 +10,7 @@ from app.db.auth import User
 from app.db.powerups import PowerUp, PowerUpAssignment, PowerUpRestriction, PowerUpUse, PowerUpUseTarget
 from app.db.social import Group, Team
 from app.db.enums import PowerUpTargetMode, PowerUpTargetType
-from app.db.betting import Bet, BetEditPermission, BetPick, BetScore, BetSubmissionRevision
+from app.db.betting import Bet, BetContext, BetEditPermission, BetPick, BetScore, BetSubmissionRevision
 from app.domain.bets.models import (
     BetAnswerInput,
     BetAnswerResult,
@@ -275,21 +275,38 @@ class SqlAlchemyBetAnswersRepository(SqlAlchemyBetBaseRepository, BetAnswersRepo
         bet_context_id: int,
         powerup_code: str,
     ) -> BetPowerUpAssignmentDefinition | None:
-        assignment = self._session.scalar(
+        bet_context = self._session.scalar(
+            select(BetContext).where(BetContext.id == bet_context_id)
+        )
+        if bet_context is None:
+            return None
+
+        assignments = self._session.scalars(
             select(PowerUpAssignment)
             .join(PowerUp, PowerUp.id == PowerUpAssignment.powerup_id)
             .where(
                 PowerUpAssignment.group_id == group_id,
                 PowerUpAssignment.user_id == user_id,
-                PowerUpAssignment.bet_context_id == bet_context_id,
-                PowerUp.code == powerup_code,
                 PowerUpAssignment.is_active.is_(True),
+                PowerUp.code == powerup_code,
+                or_(
+                    PowerUpAssignment.bet_context_id == bet_context_id,
+                    and_(
+                        PowerUpAssignment.season_id == bet_context.season_id,
+                        PowerUpAssignment.bet_context_id.is_(None),
+                    ),
+                ),
             )
             .options(joinedload(PowerUpAssignment.powerup))
-        )
+        ).all()
 
-        if assignment is None:
+        if not assignments:
             return None
+
+        assignment = next(
+            (item for item in assignments if item.bet_context_id == bet_context_id),
+            assignments[0],
+        )
 
         return BetPowerUpAssignmentDefinition(
             powerup_id=assignment.powerup_id,
@@ -422,15 +439,29 @@ class SqlAlchemyBetAnswersRepository(SqlAlchemyBetBaseRepository, BetAnswersRepo
                     )
                 )
 
-            assignment = self._session.scalar(
-                select(PowerUpAssignment).where(
-                    PowerUpAssignment.group_id == group_id,
-                    PowerUpAssignment.user_id == user_id,
-                    PowerUpAssignment.bet_context_id == bet_context_id,
-                    PowerUpAssignment.powerup_id == requested.powerup_id,
-                    PowerUpAssignment.is_active.is_(True),
-                )
+            bet_context = self._session.scalar(
+                select(BetContext).where(BetContext.id == bet_context_id)
             )
+
+            assignment = None
+            if bet_context is not None:
+                assignment = self._session.scalar(
+                    select(PowerUpAssignment)
+                    .where(
+                        PowerUpAssignment.group_id == group_id,
+                        PowerUpAssignment.user_id == user_id,
+                        PowerUpAssignment.powerup_id == requested.powerup_id,
+                        PowerUpAssignment.is_active.is_(True),
+                        or_(
+                            PowerUpAssignment.bet_context_id == bet_context_id,
+                            and_(
+                                PowerUpAssignment.season_id == bet_context.season_id,
+                                PowerUpAssignment.bet_context_id.is_(None),
+                            ),
+                        ),
+                    )
+                    .order_by(PowerUpAssignment.bet_context_id.is_(None).asc())
+                )
 
             if assignment is not None:
                 assignment.quantity -= 1
