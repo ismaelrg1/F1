@@ -15,6 +15,7 @@ from app.db.betting import (
     BetPick,
     BetResultsVisibilityPolicy,
     BetScore,
+    BetScoreRelation,
     BetSubmissionRevision,
     BetTemplate,
     BetTemplateItem,
@@ -36,6 +37,7 @@ from app.db.competition import (
 from app.db.enums import (
     BetContextKind,
     BetResultsVisibilityMode,
+    BetScoreRelationType,
     BetTemplateScope,
     BetValueType,
     PowerUpTargetMode,
@@ -216,6 +218,25 @@ def _add_powerup_restriction(
     db_session.add(restriction)
     db_session.flush()
     return restriction
+
+
+def _add_bet_score_relation(
+    db_session,
+    *,
+    source_score: BetScore,
+    target_score: BetScore,
+    relation_type: BetScoreRelationType,
+    config_json: dict | None = None,
+) -> BetScoreRelation:
+    relation = BetScoreRelation(
+        source_bet_score_id=source_score.id,
+        target_bet_score_id=target_score.id,
+        relation_type=relation_type,
+        config_json=config_json,
+    )
+    db_session.add(relation)
+    db_session.flush()
+    return relation
 
 
 def _create_race_event_roster(db_session, *, season_id: int, race_event: RaceEvent, fp1_session: EventSession) -> None:
@@ -3169,6 +3190,83 @@ def test_patch_race_event_bet_answers_returns_400_when_answer_is_not_in_scope(cl
     assert response.json()["detail"]["error"]["code"] == "bets.answers.question_not_found"
 
 
+def test_patch_race_event_bet_answers_returns_422_when_relation_is_violated(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_patch_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    podium_score = BetScore(
+        code=f"PODIUM_DRIVER_{uuid4().hex[:8].upper()}",
+        label="Podium driver",
+        base_points=4,
+        value_type=BetValueType.DRIVER,
+        constraints_json=None,
+    )
+    db_session.add(podium_score)
+    db_session.flush()
+
+    event_template = db_session.execute(
+        select(BetTemplate).where(
+            BetTemplate.season_id == data["race_event"].season_id,
+            BetTemplate.context_kind == BetContextKind.GP,
+            BetTemplate.scope == BetTemplateScope.EVENT,
+            BetTemplate.session_type.is_(None),
+        )
+    ).scalar_one()
+    db_session.add(
+        BetTemplateItem(
+            template_id=event_template.id,
+            bet_score_id=podium_score.id,
+            required=False,
+            display_order=2,
+        )
+    )
+    _add_bet_score_relation(
+        db_session,
+        source_score=data["pole_score"],
+        target_score=podium_score,
+        relation_type=BetScoreRelationType.DISTINCT,
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.patch(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["pole_score"].code,
+                    "value": "VER",
+                },
+                {
+                    "bet_score_code": podium_score.code,
+                    "value": "VER",
+                },
+            ]
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.relation_violation"
+
+
 def test_patch_race_event_bet_answers_returns_409_when_bet_is_already_submitted(client, db_session) -> None:
     user = _create_user(
         db_session,
@@ -3862,6 +3960,88 @@ def test_submit_race_event_bet_answers_returns_400_when_required_answer_is_missi
 
     assert response.status_code == 422
     assert response.json()["detail"]["error"]["code"] == "bets.answers.required_answer_missing"
+
+
+def test_submit_race_event_bet_answers_returns_422_when_relation_is_violated(client, db_session) -> None:
+    user = _create_user(
+        db_session,
+        username=f"user_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    group = _create_group_with_membership(
+        db_session,
+        user_id=user.id,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    data = _create_submit_race_event_answers_fixture(
+        db_session,
+        user_id=user.id,
+        group_id=group.id,
+    )
+
+    pole_position_score = BetScore(
+        code=f"POLE_POSITION_{uuid4().hex[:8].upper()}",
+        label="Pole position",
+        base_points=4,
+        value_type=BetValueType.POSITION,
+        constraints_json={"driver_code": "VER", "allow_dnf": False},
+    )
+    db_session.add(pole_position_score)
+    db_session.flush()
+
+    event_template = db_session.execute(
+        select(BetTemplate).where(
+            BetTemplate.season_id == data["race_event"].season_id,
+            BetTemplate.context_kind == BetContextKind.GP,
+            BetTemplate.scope == BetTemplateScope.EVENT,
+            BetTemplate.session_type.is_(None),
+        )
+    ).scalar_one()
+    db_session.add(
+        BetTemplateItem(
+            template_id=event_template.id,
+            bet_score_id=pole_position_score.id,
+            required=False,
+            display_order=2,
+        )
+    )
+    _add_bet_score_relation(
+        db_session,
+        source_score=data["pole_score"],
+        target_score=pole_position_score,
+        relation_type=BetScoreRelationType.MATCHES_POSITION,
+        config_json={"driver_code": "VER", "position": 1},
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login/local",
+        json={"username": user.username, "password": "secret123"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        f"/api/v1/bets/race-events/{data['race_event'].public_id}/answers",
+        headers={"X-Group-Id": str(group.public_id)},
+        json={
+            "answers": [
+                {
+                    "bet_score_code": data["safety_car_score"].code,
+                    "value": "true",
+                },
+                {
+                    "bet_score_code": data["pole_score"].code,
+                    "value": "VER",
+                },
+                {
+                    "bet_score_code": pole_position_score.code,
+                    "value": "2",
+                },
+            ]
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"]["code"] == "bets.answers.relation_violation"
 
 
 def test_submit_race_event_bet_answers_allows_modification_with_active_permission(client, db_session) -> None:

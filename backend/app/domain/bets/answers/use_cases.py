@@ -13,7 +13,7 @@ from app.domain.bets.models import (
     BetTestingEvent,
     BetSeason,
     BetEditPermissionDefinition,
-    
+
     # Answers
     RaceEventBetAnswersResult,
     RaceEventBetAnswersSessionResult,
@@ -21,6 +21,7 @@ from app.domain.bets.models import (
     TestingEventBetAnswersResult,
     TestingEventBetAnswersSessionResult,
     BetAnswerInput,
+    BetAnswerResult,
 )
 from app.domain.bets.answers.models import (
     BetPowerUpUseInput,
@@ -29,6 +30,7 @@ from app.domain.bets.answers.models import (
     ResolvedBetPowerUpTarget,
     ResolvedBetPowerUpUse,
 )
+from app.domain.bets.answers.validators import BetAnswerRelationsValidator
 from app.domain.bets.errors import (
     BetContextNotFoundForRaceEventError,
     BetContextNotFoundForSeasonError,
@@ -55,6 +57,23 @@ from app.domain.bets.errors import (
     BetPowerUpTargetRequiredError,
 )
 
+def _validate_answer_relations(
+    *,
+    repository: BetAnswersRepository,
+    allowed_score_codes: set[str],
+    existing_answers: tuple[BetAnswerResult, ...],
+    received_answers: list[BetAnswerInput],
+) -> None:
+    relations = repository.list_bet_score_relations_for_codes(
+        codes=allowed_score_codes,
+    )
+
+    BetAnswerRelationsValidator().validate(
+        allowed_score_codes=allowed_score_codes,
+        existing_answers=existing_answers,
+        received_answers=received_answers,
+        relations=relations,
+    )
 
 class GetRaceEventBetAnswers:
     def __init__(self, repository: BetAnswersRepository):
@@ -113,7 +132,7 @@ class GetRaceEventBetAnswers:
             event_answers=list(event_bet.picks) if event_bet is not None else [],
             sessions=sessions,
         )
-        
+
 
 class GetRaceEventSessionBetAnswers:
     def __init__(self, repository: BetAnswersRepository):
@@ -183,7 +202,7 @@ class GetRaceEventSessionBetAnswers:
                 )
             ],
         )
-    
+
 class GetTestingEventBetAnswers:
     def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
@@ -363,7 +382,7 @@ class GetSeasonBetAnswers:
             locked_at=season_bet.locked_at if season_bet is not None else None,
             answers=list(season_bet.picks) if season_bet is not None else [],
         )
-    
+
 class PatchRaceEventBetAnswers:
     def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
@@ -455,6 +474,13 @@ class PatchRaceEventBetAnswers:
 
         if current_bet is not None and current_bet.submitted_at is not None:
             raise BetAlreadySubmittedError()
+
+        _validate_answer_relations(
+            repository=self._repository,
+            allowed_score_codes=allowed_score_codes,
+            existing_answers=current_bet.picks if current_bet is not None else (),
+            received_answers=answers,
+        )
 
         self._repository.upsert_user_bet_draft(
             user_id=user_id,
@@ -648,6 +674,13 @@ class PatchTestingEventBetAnswers:
         if current_bet is not None and current_bet.submitted_at is not None:
             raise BetAlreadySubmittedError()
 
+        _validate_answer_relations(
+            repository=self._repository,
+            allowed_score_codes=allowed_score_codes,
+            existing_answers=current_bet.picks if current_bet is not None else (),
+            received_answers=answers,
+        )
+
         self._repository.upsert_user_bet_draft(
             user_id=user_id,
             bet_context_id=bet_context.id,
@@ -721,9 +754,9 @@ class PatchTestingEventBetAnswers:
             for code in allowed_codes
             if score_id_by_code[code] not in disabled_score_ids
         }
-    
 
-    
+
+
 class PatchSeasonBetAnswers:
     def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
@@ -799,6 +832,13 @@ class PatchSeasonBetAnswers:
         if current_bet is not None and current_bet.submitted_at is not None:
             raise BetAlreadySubmittedError()
 
+        _validate_answer_relations(
+            repository=self._repository,
+            allowed_score_codes=allowed_score_codes,
+            existing_answers=current_bet.picks if current_bet is not None else (),
+            received_answers=answers,
+        )
+
         self._repository.upsert_user_bet_draft(
             user_id=user_id,
             bet_context_id=bet_context.id,
@@ -852,7 +892,7 @@ class PatchSeasonBetAnswers:
             for code in allowed_codes
             if score_id_by_code[code] not in disabled_score_ids
         }
-    
+
 class SubmitRaceEventBetAnswers:
     def __init__(self, repository: BetAnswersRepository):
         self._repository = repository
@@ -993,7 +1033,14 @@ class SubmitRaceEventBetAnswers:
         )
         if set(score_ids_by_code) != received_codes:
             raise BetAnswerQuestionNotFoundError()
-        
+
+        _validate_answer_relations(
+            repository=self._repository,
+            allowed_score_codes=allowed_score_codes,
+            existing_answers=current_bet.picks if current_bet is not None else (),
+            received_answers=answers,
+        )
+
         resolved_powerups = BetPowerUpSubmissionValidator(self._repository).resolve(
             group_id=group_id,
             user_id=user_id,
@@ -1304,7 +1351,14 @@ class SubmitTestingEventBetAnswers:
         )
         if set(score_ids_by_code) != received_codes:
             raise BetAnswerQuestionNotFoundError()
-        
+
+        _validate_answer_relations(
+            repository=self._repository,
+            allowed_score_codes=allowed_score_codes,
+            existing_answers=current_bet.picks if current_bet is not None else (),
+            received_answers=answers,
+        )
+
         resolved_powerups = BetPowerUpSubmissionValidator(self._repository).resolve(
             group_id=group_id,
             user_id=user_id,
@@ -1574,7 +1628,14 @@ class SubmitSeasonBetAnswers:
         )
         if set(score_ids_by_code) != received_codes:
             raise BetAnswerQuestionNotFoundError()
-        
+
+        _validate_answer_relations(
+            repository=self._repository,
+            allowed_score_codes=allowed_score_codes,
+            existing_answers=current_bet.picks if current_bet is not None else (),
+            received_answers=answers,
+        )
+
         resolved_powerups = BetPowerUpSubmissionValidator(self._repository).resolve(
             group_id=group_id,
             user_id=user_id,

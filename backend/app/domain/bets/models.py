@@ -15,6 +15,7 @@ from app.domain.bets.shared.models import (
     BetTestingEvent,
     BetTestingEventSession,
     UserBetDefinition,
+    BetScoreRelationDefinition,
 )
 from app.domain.bets.questions.models import (
     RaceEventBetQuestionsResult,
@@ -68,6 +69,7 @@ __all__ = [
     "BetTestingEvent",
     "BetTestingEventSession",
     "UserBetDefinition",
+    "BetScoreRelationDefinition",
 
 
     "RaceEventBetQuestionsResult",

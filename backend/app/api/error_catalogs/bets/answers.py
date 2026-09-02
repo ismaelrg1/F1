@@ -11,6 +11,7 @@ from app.domain.bets.errors import (
     SeasonNotFoundForBetAnswersError,
     TestingEventNotFoundForBetAnswersError,
     TestingEventSessionNotFoundForBetAnswersError,
+    BetAnswerRelationViolationError,
 )
 
 
@@ -58,5 +59,9 @@ BET_ANSWERS_ERROR_MAP = {
     BetModificationLimitReachedError: ErrorCatalogEntry(
         status_code=409,
         error_code="bets.answers.modification_limit_reached",
+    ),
+    BetAnswerRelationViolationError: ErrorCatalogEntry(
+        status_code=422,
+        error_code="bets.answers.relation_violation",
     ),
 }

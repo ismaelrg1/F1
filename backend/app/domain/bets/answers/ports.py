@@ -7,6 +7,7 @@ from app.domain.bets.shared.models import (
     BetContextDefinition,
     BetEditPermissionDefinition,
     BetRaceEvent,
+    BetScoreRelationDefinition,
     BetSeason,
     BetTemplateDefinition,
     BetTestingEvent,
@@ -40,6 +41,13 @@ class BetAnswersRepository(Protocol):
         ...
 
     def list_season_templates_for_season(self, *, season_id: int) -> list[BetTemplateDefinition]:
+        ...
+
+    def list_bet_score_relations_for_codes(
+        self,
+        *,
+        codes: set[str],
+    ) -> list[BetScoreRelationDefinition]:
         ...
 
     def list_user_bets_for_context(

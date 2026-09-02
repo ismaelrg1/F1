@@ -11,6 +11,9 @@ MESSAGES_BET_ANSWERS = {
         "bets.answers.question_not_found": "One or more bet questions were not found.",
         "bets.answers.required_answer_missing": "A required answer is missing.",
         "bets.answers.modification_limit_reached": "The modification limit has been reached.",
+        "bets.answers.relation_violation": (
+            "The answer for {source_code} is not compatible with {target_code}."
+        ),
     },
     "es": {
         "bets.answers.race_event_not_found": "No se ha encontrado el evento de carrera.",
@@ -24,5 +27,8 @@ MESSAGES_BET_ANSWERS = {
         "bets.answers.question_not_found": "Una o más preguntas de apuesta no existen.",
         "bets.answers.required_answer_missing": "Falta una respuesta obligatoria.",
         "bets.answers.modification_limit_reached": "Se ha alcanzado el límite de modificaciones.",
+        "bets.answers.relation_violation": (
+            "La respuesta de {source_code} no es compatible con {target_code}."
+        ),
     },
 }

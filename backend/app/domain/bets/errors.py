@@ -141,3 +141,23 @@ class BetPowerUpTargetNotAllowedError(BetsError):
 
 class BetPowerUpPenaltyLimitReachedError(BetsError):
     pass
+
+class BetAnswerRelationViolationError(BetsError):
+    def __init__(
+        self,
+        *,
+        source_code: str,
+        target_code: str,
+        relation_type: str,
+    ) -> None:
+        self.source_code = source_code
+        self.target_code = target_code
+        self.relation_type = relation_type
+
+    @property
+    def public_params(self) -> dict:
+        return {
+            "source_code": self.source_code,
+            "target_code": self.target_code,
+            "relation_type": self.relation_type,
+        }

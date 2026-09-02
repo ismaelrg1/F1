@@ -10,11 +10,12 @@ from app.db.auth import User
 from app.db.powerups import PowerUp, PowerUpAssignment, PowerUpRestriction, PowerUpUse, PowerUpUseTarget
 from app.db.social import Group, Team
 from app.db.enums import PowerUpTargetMode, PowerUpTargetType
-from app.db.betting import Bet, BetContext, BetEditPermission, BetPick, BetScore, BetSubmissionRevision
+from app.db.betting import Bet, BetContext, BetEditPermission, BetPick, BetScore, BetSubmissionRevision, BetScoreRelation
 from app.domain.bets.models import (
     BetAnswerInput,
     BetAnswerResult,
     BetEditPermissionDefinition,
+    BetScoreRelationDefinition,
     UserBetDefinition,
 )
 from app.domain.bets.answers.models import (
@@ -61,6 +62,40 @@ class SqlAlchemyBetAnswersRepository(SqlAlchemyBetBaseRepository, BetAnswersRepo
                 revision_count=len(bet.submission_revisions),
             )
             for bet in bets
+        ]
+
+    def list_bet_score_relations_for_codes(
+        self,
+        *,
+        codes: set[str],
+    ) -> list[BetScoreRelationDefinition]:
+        if not codes:
+            return []
+
+        stmt = (
+            select(BetScoreRelation)
+            .join(
+                BetScore,
+                BetScore.id == BetScoreRelation.source_bet_score_id,
+            )
+            .where(BetScore.code.in_(codes))
+            .options(
+                joinedload(BetScoreRelation.source_bet_score),
+                joinedload(BetScoreRelation.target_bet_score),
+            )
+        )
+
+        relations = self._session.execute(stmt).scalars().unique().all()
+
+        return [
+            BetScoreRelationDefinition(
+                source_bet_score_code=relation.source_bet_score.code,
+                target_bet_score_code=relation.target_bet_score.code,
+                relation_type=relation.relation_type.value,
+                config_json=relation.config_json,
+            )
+            for relation in relations
+            if relation.target_bet_score.code in codes
         ]
 
     def get_bet_score_ids_by_codes(self, *, codes: set[str]) -> dict[str, int]:
@@ -316,7 +351,7 @@ class SqlAlchemyBetAnswersRepository(SqlAlchemyBetBaseRepository, BetAnswersRepo
             target_mode=assignment.powerup.target_mode.value,
             quantity=assignment.quantity,
         )
-    
+
     def user_has_any_submitted_bet_for_context(
         self,
         *,
@@ -330,7 +365,7 @@ class SqlAlchemyBetAnswersRepository(SqlAlchemyBetBaseRepository, BetAnswersRepo
                 Bet.submitted_at.is_not(None),
             )
         ).first() is not None
-    
+
     def powerup_already_used(
         self,
         *,
@@ -351,7 +386,7 @@ class SqlAlchemyBetAnswersRepository(SqlAlchemyBetBaseRepository, BetAnswersRepo
                 PowerUpUse.testing_event_session_id == testing_event_session_id,
             )
         ).first() is not None
-    
+
     def powerup_is_restricted(
         self,
         *,
@@ -369,22 +404,22 @@ class SqlAlchemyBetAnswersRepository(SqlAlchemyBetBaseRepository, BetAnswersRepo
                 PowerUpRestriction.is_disabled.is_(True),
             )
         ).first() is not None
-    
+
     def get_user_id_by_public_id(self, public_id: UUID) -> int | None:
         return self._session.scalar(
             select(User.id).where(User.public_id == public_id)
         )
-    
+
     def get_team_id_by_public_id(self, public_id: UUID) -> int | None:
         return self._session.scalar(
             select(Team.id).where(Team.public_id == public_id)
         )
-    
+
     def get_group_id_by_public_id(self, public_id: UUID) -> int | None:
         return self._session.scalar(
             select(Group.id).where(Group.public_id == public_id)
         )
-    
+
     def count_distinct_contexts_where_user_received_powerup(
         self,
         *,
@@ -403,7 +438,7 @@ class SqlAlchemyBetAnswersRepository(SqlAlchemyBetBaseRepository, BetAnswersRepo
                 PowerUpUse.bet_context_id != excluding_bet_context_id,
             )
         ) or 0
-    
+
     def create_powerup_uses_for_submission(
         self,
         *,

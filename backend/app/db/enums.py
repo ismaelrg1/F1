@@ -63,6 +63,7 @@ class BetValueType(str, enum.Enum):
 class BetScoreRelationType(str, enum.Enum):
     DISTINCT = "DISTINCT"
     IMPLIES_VALUE = "IMPLIES_VALUE"
+    LESS_THAN_OR_EQUAL = "LESS_THAN_OR_EQUAL"
     MATCHES_POSITION = "MATCHES_POSITION"
     MUTUALLY_EXCLUSIVE = "MUTUALLY_EXCLUSIVE"
 
@@ -113,7 +114,7 @@ class BetResultsVisibilityMode(str, enum.Enum):
 
     # ALWAYS_VISIBLE:
     #     ves apuestas enviadas aunque no hayas enviado.
-    # El usuario puede ver apuestas enviadas de otros aunque él no haya enviado. 
+    # El usuario puede ver apuestas enviadas de otros aunque él no haya enviado.
 
     # AFTER_LOCK:
     #     solo ves cuando cierre.

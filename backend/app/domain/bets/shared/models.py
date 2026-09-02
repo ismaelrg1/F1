@@ -171,3 +171,11 @@ class BetEditPermissionDefinition:
     starts_at: datetime
     ends_at: datetime
     max_modifications: int | None
+
+
+@dataclass(frozen=True)
+class BetScoreRelationDefinition:
+    source_bet_score_code: str
+    target_bet_score_code: str
+    relation_type: str
+    config_json: dict[str, Any] | None
