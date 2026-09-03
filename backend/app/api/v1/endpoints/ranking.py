@@ -79,8 +79,7 @@ def _map_points(points) -> RankingPointsRead:
         race=points.race,
         testing=points.testing,
         season=points.season,
-        extra=points.extra,
-        penalty=points.penalty,
+        powerup=points.powerup,
         total=points.total,
     )
 

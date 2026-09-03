@@ -350,8 +350,7 @@ class SqlAlchemyRankingRepository(RankingRepository):
                     race=current.race + event_points_value.race,
                     testing=current.testing + event_points_value.testing,
                     season=current.season + event_points_value.season,
-                    extra=current.extra + event_points_value.extra,
-                    penalty=current.penalty + event_points_value.penalty,
+                    powerup=current.powerup + event_points_value.powerup,
                     total=current.total + event_points_value.total,
                 )
 
@@ -375,7 +374,7 @@ class SqlAlchemyRankingRepository(RankingRepository):
 
         for score in self._event_level_scores(event):
             current = points_by_user_id[score.user_id]
-            bucket_points, extra_points, penalty_points = self._score_component_breakdown(
+            bucket_points, powerup_points = self._score_component_breakdown(
                 components=score.score_components,
                 fallback_base=self._to_float(score.base_points),
                 fallback_total=self._to_float(score.total_points),
@@ -386,14 +385,13 @@ class SqlAlchemyRankingRepository(RankingRepository):
                 race=current.race + bucket_points.race,
                 testing=current.testing + bucket_points.testing,
                 season=current.season + bucket_points.season,
-                extra=current.extra + extra_points,
-                penalty=current.penalty + penalty_points,
-                total=current.total + bucket_points.total + extra_points - penalty_points,
+                powerup=current.powerup + powerup_points,
+                total=current.total + bucket_points.total + powerup_points,
             )
 
         for score_session in self._session_level_scores(event):
             current = points_by_user_id[score_session.user_id]
-            bucket_points, extra_points, penalty_points = self._score_component_breakdown(
+            bucket_points, powerup_points = self._score_component_breakdown(
                 components=score_session.score_session_components,
                 fallback_base=self._to_float(score_session.base_points),
                 fallback_total=self._to_float(score_session.total_points),
@@ -404,9 +402,8 @@ class SqlAlchemyRankingRepository(RankingRepository):
                 race=current.race + bucket_points.race,
                 testing=current.testing + bucket_points.testing,
                 season=current.season + bucket_points.season,
-                extra=current.extra + extra_points,
-                penalty=current.penalty + penalty_points,
-                total=current.total + bucket_points.total + extra_points - penalty_points,
+                powerup=current.powerup + powerup_points,
+                total=current.total + bucket_points.total + powerup_points,
             )
 
         return dict(points_by_user_id)
@@ -468,11 +465,10 @@ class SqlAlchemyRankingRepository(RankingRepository):
         fallback_base: float,
         fallback_total: float,
         event_type: RankingEventType,
-    ) -> tuple[RankingPoints, float, float]:
+    ) -> tuple[RankingPoints, float]:
         base_points = 0.0
         powerup_points = 0.0
         extra_points = 0.0
-        penalty_points = 0.0
 
         for component in components:
             points = self._to_float(component.points)
@@ -484,13 +480,13 @@ class SqlAlchemyRankingRepository(RankingRepository):
             elif component.component_type == ScoreComponentType.EXTRA:
                 extra_points += points
             elif component.component_type == ScoreComponentType.PENALTY:
-                penalty_points += points
+                powerup_points -= points
 
         if not components:
             base_points = fallback_base
             extra_points = max(fallback_total - fallback_base, 0.0)
 
-        bucket_total = base_points + powerup_points
+        bucket_total = base_points + extra_points
 
         if event_type == RankingEventType.RACE_EVENT:
             bucket_points = RankingPoints(race=bucket_total, total=bucket_total)
@@ -499,7 +495,7 @@ class SqlAlchemyRankingRepository(RankingRepository):
         else:
             bucket_points = RankingPoints(season=bucket_total, total=bucket_total)
 
-        return bucket_points, extra_points, penalty_points
+        return bucket_points, powerup_points
 
     def _build_user_rows(
         self,
@@ -554,8 +550,7 @@ class SqlAlchemyRankingRepository(RankingRepository):
                 race=current.race + user_points.race,
                 testing=current.testing + user_points.testing,
                 season=current.season + user_points.season,
-                extra=current.extra + user_points.extra,
-                penalty=current.penalty + user_points.penalty,
+                powerup=current.powerup + user_points.powerup,
                 total=current.total + user_points.total,
             )
 

@@ -5,8 +5,22 @@ from app.adapters.security import PasslibPasswordHasher
 from app.db.auth import User
 from app.db.betting import BetContext
 from app.db.competition import Circuit, Country, EventSession, RaceEvent, Season
-from app.db.enums import BetContextKind, RaceEventStatus, RankingEventType, SessionType, SourceProvider
-from app.db.scoring import ResultPublication, Score, ScoreSeasonAggregate, ScoreSession
+from app.db.enums import (
+    BetContextKind,
+    RaceEventStatus,
+    RankingEventType,
+    ScoreComponentType,
+    SessionType,
+    SourceProvider,
+)
+from app.db.scoring import (
+    ResultPublication,
+    Score,
+    ScoreComponent,
+    ScoreSeasonAggregate,
+    ScoreSession,
+    ScoreSessionComponent,
+)
 from app.db.social import Group, GroupMembership, GroupSeasonMembership, Team, TeamMembership, TeamSeasonMembership
 from app.db.social.group_membership import GroupRole
 from app.db.social.group_season_membership import GroupSeasonRole
@@ -346,8 +360,7 @@ def test_get_ranking_returns_user_rows_and_timeline_for_user_group(client, db_se
         "race": 17.0,
         "testing": 0.0,
         "season": 0.0,
-        "extra": 0.0,
-        "penalty": 0.0,
+        "powerup": 0.0,
         "total": 17.0,
     }
     assert payload["users"][1]["points"]["total"] == 8.0
@@ -524,8 +537,7 @@ def test_get_ranking_includes_published_race_session_scores(client, db_session) 
         "race": 12.0,
         "testing": 0.0,
         "season": 0.0,
-        "extra": 0.0,
-        "penalty": 0.0,
+        "powerup": 0.0,
         "total": 12.0,
     }
     assert payload["timeline"]["users"][0]["points"] == [
@@ -535,6 +547,137 @@ def test_get_ranking_includes_published_race_session_scores(client, db_session) 
             "label": "Session GP",
             "published_at": "2042-03-03T20:00:00Z",
             "points": 12.0,
+        }
+    ]
+
+
+def test_get_ranking_groups_extras_with_event_points_and_powerups_separately(client, db_session) -> None:
+    viewer = _create_user(
+        db_session,
+        username=f"viewer_components_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    group = _create_group(
+        db_session,
+        name=f"group_{uuid4().hex[:8]}",
+    )
+    _add_group_member(db_session, group_id=group.id, user_id=viewer.id)
+
+    season = Season(year=2043, is_active=True)
+    db_session.add(season)
+    db_session.flush()
+    _add_group_season_member(
+        db_session,
+        group_id=group.id,
+        season_id=season.id,
+        user_id=viewer.id,
+    )
+
+    race_event, bet_context = _create_published_race_context(
+        db_session,
+        season=season,
+        group=group,
+        published_by_user_id=viewer.id,
+        round_number=1,
+    )
+    event_session = EventSession(
+        race_event_id=race_event.id,
+        session_type=SessionType.RACE,
+        source_provider=SourceProvider.MANUAL,
+        status=RaceEventStatus.COMPLETED,
+        start_datetime=datetime(2043, 3, 3, 15, 0, tzinfo=timezone.utc),
+        scheduled_start_datetime=datetime(2043, 3, 3, 15, 0, tzinfo=timezone.utc),
+        lock_cutoff=datetime(2043, 3, 3, 15, 0, tzinfo=timezone.utc),
+        scheduled_lock_cutoff=datetime(2043, 3, 3, 15, 0, tzinfo=timezone.utc),
+    )
+    db_session.add(event_session)
+    db_session.flush()
+
+    score = Score(
+        user_id=viewer.id,
+        bet_context_id=bet_context.id,
+        base_points=0,
+        total_points=1,
+        computed_at=datetime(2043, 3, 3, 20, 5, tzinfo=timezone.utc),
+    )
+    score_session = ScoreSession(
+        user_id=viewer.id,
+        bet_context_id=bet_context.id,
+        event_session_id=event_session.id,
+        testing_event_session_id=None,
+        base_points=10,
+        total_points=16,
+        computed_at=datetime(2043, 3, 3, 20, 5, tzinfo=timezone.utc),
+    )
+    db_session.add_all([score, score_session])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            ScoreComponent(
+                score_id=score.id,
+                component_type=ScoreComponentType.EXTRA,
+                code="GP_HITS_BONUS",
+                points=1,
+                details_json={},
+            ),
+            ScoreSessionComponent(
+                score_session_id=score_session.id,
+                component_type=ScoreComponentType.BASE,
+                code="WINNER",
+                points=10,
+                details_json={},
+            ),
+            ScoreSessionComponent(
+                score_session_id=score_session.id,
+                component_type=ScoreComponentType.EXTRA,
+                code="FIRST_SUBMIT",
+                points=2,
+                details_json={},
+            ),
+            ScoreSessionComponent(
+                score_session_id=score_session.id,
+                component_type=ScoreComponentType.POWERUP,
+                code="DOUBLE_POINTS",
+                points=5,
+                details_json={},
+            ),
+            ScoreSessionComponent(
+                score_session_id=score_session.id,
+                component_type=ScoreComponentType.PENALTY,
+                code="HALVE_POINTS",
+                points=1,
+                details_json={},
+            ),
+        ]
+    )
+    db_session.flush()
+
+    _login(client, username=viewer.username)
+
+    response = client.get(
+        "/api/v1/ranking",
+        headers={"X-Group-Id": str(group.public_id)},
+        params={"season_year": season.year},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["users"][0]["points"] == {
+        "race": 13.0,
+        "testing": 0.0,
+        "season": 0.0,
+        "powerup": 4.0,
+        "total": 17.0,
+    }
+    assert payload["timeline"]["users"][0]["points"] == [
+        {
+            "event_order": 1,
+            "event_type": "RACE_EVENT",
+            "label": "Bahrain GP",
+            "published_at": "2040-03-03T20:00:00Z",
+            "points": 17.0,
         }
     ]
 

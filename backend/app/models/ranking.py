@@ -10,8 +10,7 @@ class RankingPointsRead(BaseModel):
     race: float = 0
     testing: float = 0
     season: float = 0
-    extra: float = 0
-    penalty: float = 0
+    powerup: float = 0
     total: float = 0
 
 
