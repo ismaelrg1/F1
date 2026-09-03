@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import replace
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
@@ -29,6 +30,10 @@ from app.domain.management.scoring.models import (
     ScoringScope,
     ScoringBetScoreConfig,
     PowerUpEvaluationContext,
+)
+from app.domain.management.scoring.extra_evaluators import (
+    BaseExtraEvaluator,
+    ExtraEvaluationDataset,
 )
 from app.domain.management.scoring.powerups import BasePowerUpEvaluator
 
@@ -222,10 +227,24 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 scores_by_user[bet.user_id] = score
                 score_components_count += count
 
+        self._session.flush()
+
+        extra_score_count, extra_session_count = self._apply_extra_rules(
+            scope=scope,
+            rules=rules,
+            bets=bets,
+            scores_by_user=scores_by_user,
+            score_sessions_by_key=score_sessions_by_key,
+        )
+        score_components_count += extra_score_count
+        score_session_components_count += extra_session_count
+
         score_components_count += self._apply_context_powerups(
+            scope=scope,
             powerup_uses=powerup_uses,
             powerup_restrictions=powerup_restrictions,
             scores_by_user=scores_by_user,
+            score_sessions_by_key=score_sessions_by_key,
         )
         score_session_components_count += self._apply_session_powerups(
             powerup_uses=powerup_uses,
@@ -291,6 +310,96 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
 
         return configs
 
+    def _apply_extra_rules(
+        self,
+        *,
+        scope: ScoringScope,
+        rules: list[ScoringRule],
+        bets: list[Bet],
+        scores_by_user: dict[int, Score],
+        score_sessions_by_key: dict[tuple[int, int | None, int | None], ScoreSession],
+    ) -> tuple[int, int]:
+        extra_rules = [
+            rule
+            for rule in rules
+            if rule.component_type == ScoreComponentType.EXTRA
+            and BaseExtraEvaluator.supports(rule.evaluator_key)
+            and (
+                rule.scope == ScoringRuleScope.GLOBAL
+                or (
+                    rule.scope == ScoringRuleScope.CONTEXT
+                    and rule.bet_context_id == scope.bet_context_id
+                )
+            )
+        ]
+
+        score_components_count = 0
+        score_session_components_count = 0
+
+        self._session.flush()
+
+        for rule in extra_rules:
+            evaluator = BaseExtraEvaluator.get(rule.evaluator_key)
+            effects = evaluator.evaluate_many(
+                ExtraEvaluationDataset(
+                    scope=scope,
+                    rule=rule,
+                    bets=bets,
+                    scores_by_user=scores_by_user,
+                    score_sessions_by_key=score_sessions_by_key,
+                )
+            )
+
+            for effect in effects:
+                if effect.points <= 0:
+                    continue
+
+                if effect.event_session_id is not None or effect.testing_event_session_id is not None:
+                    score_session = score_sessions_by_key.get(
+                        (effect.user_id, effect.event_session_id, effect.testing_event_session_id)
+                    )
+                    if score_session is None:
+                        continue
+
+                    score_session.total_points += effect.points
+                    self._session.add(
+                        ScoreSessionComponent(
+                            score_session_id=score_session.id,
+                            component_type=ScoreComponentType.EXTRA,
+                            code=effect.code,
+                            points=effect.points,
+                            details_json=effect.details,
+                        )
+                    )
+                    score_session_components_count += 1
+                    continue
+
+                score = scores_by_user.get(effect.user_id)
+                if score is None:
+                    score = Score(
+                        user_id=effect.user_id,
+                        bet_context_id=scope.bet_context_id,
+                        base_points=Decimal("0"),
+                        total_points=Decimal("0"),
+                    )
+                    self._session.add(score)
+                    self._session.flush()
+                    scores_by_user[effect.user_id] = score
+
+                score.total_points += effect.points
+                self._session.add(
+                    ScoreComponent(
+                        score_id=score.id,
+                        component_type=ScoreComponentType.EXTRA,
+                        code=effect.code,
+                        points=effect.points,
+                        details_json=effect.details,
+                    )
+                )
+                score_components_count += 1
+
+        return score_components_count, score_session_components_count
+
     def _calculate_context_bet(
         self,
         *,
@@ -348,6 +457,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                     points=evaluation.points,
                     details_json={
                         **evaluation.details,
+                        "hit": evaluation.hit,
                         "bet_score_id": pick.bet_score_id,
                         "bet_pick_id": pick.id,
                         "official_result_id": official_result.id,
@@ -359,16 +469,6 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
 
         score.base_points = total
         score.total_points = total
-
-        components_count += self._apply_extra_rules_to_score(
-            score=score,
-            rules=rules,
-            bet_context_id=bet.bet_context_id,
-            event_session_id=None,
-            hits_count=hits_count,
-            picks_count=picks_count,
-            hit_by_bet_score_id=hit_by_bet_score_id,
-        )
 
         return score, components_count
 
@@ -431,6 +531,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                     points=evaluation.points,
                     details_json={
                         **evaluation.details,
+                        "hit": evaluation.hit,
                         "bet_score_id": pick.bet_score_id,
                         "bet_pick_id": pick.id,
                         "official_result_id": official_result.id,
@@ -442,16 +543,6 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
 
         score_session.base_points = total
         score_session.total_points = total
-
-        components_count += self._apply_extra_rules_to_score_session(
-            score_session=score_session,
-            rules=rules,
-            bet_context_id=bet.bet_context_id,
-            event_session_id=bet.event_session_id,
-            hits_count=hits_count,
-            picks_count=picks_count,
-            hit_by_bet_score_id=hit_by_bet_score_id,
-        )
 
         return score_session, components_count
 
@@ -530,15 +621,19 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
     def _apply_context_powerups(
         self,
         *,
+        scope: ScoringScope,
         powerup_uses: list[PowerUpUse],
         powerup_restrictions: list[PowerUpRestriction],
         scores_by_user: dict[int, Score],
+        score_sessions_by_key: dict[tuple[int, int | None, int | None], ScoreSession],
     ) -> int:
         count = 0
-        base_points_by_user = {
-            user_id: Decimal(str(score.base_points))
-            for user_id, score in scores_by_user.items()
-        }
+        points_by_user = self._context_powerup_base_points_by_user(
+            scope=scope,
+            powerup_use=None,
+            scores_by_user=scores_by_user,
+            score_sessions_by_key=score_sessions_by_key,
+        )
 
         for powerup_use in powerup_uses:
             if powerup_use.event_session_id is not None:
@@ -552,6 +647,16 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 restrictions=powerup_restrictions,
             ):
                 continue
+            apply_to = self._context_powerup_apply_to(powerup_use)
+            if apply_to == {"context": True, "session_types": None}:
+                applicable_points_by_user = dict(points_by_user)
+            else:
+                applicable_points_by_user = self._context_powerup_base_points_by_user(
+                    scope=scope,
+                    powerup_use=powerup_use,
+                    scores_by_user=scores_by_user,
+                    score_sessions_by_key=score_sessions_by_key,
+                )
 
             context = PowerUpEvaluationContext(
                 powerup_code=powerup_use.powerup.code,
@@ -559,7 +664,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 target_user_ids=self._resolve_powerup_target_user_ids(powerup_use),
                 event_session_id=None,
                 testing_event_session_id=None,
-                base_points_by_user=base_points_by_user,
+                base_points_by_user=applicable_points_by_user,
                 rule_json=powerup_use.rule_json or {},
             )
 
@@ -568,64 +673,113 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
             for effect in evaluator.evaluate(context):
                 score = scores_by_user.get(effect.target_user_id)
                 if score is None:
-                    continue
+                    score = Score(
+                        user_id=effect.target_user_id,
+                        bet_context_id=scope.bet_context_id,
+                        base_points=Decimal("0"),
+                        total_points=Decimal("0"),
+                    )
+                    self._session.add(score)
+                    self._session.flush()
+                    scores_by_user[effect.target_user_id] = score
 
-                self._add_score_powerup_component(
+                component_count = self._add_context_powerup_components(
                     score=score,
                     effect=effect,
                     component_code=f"{effect.code}_{powerup_use.id}",
                     powerup_use_id=powerup_use.id,
+                    powerup_use=powerup_use,
+                    score_sessions_by_key=score_sessions_by_key,
                 )
-                count += 1
+                effect_points = Decimal(str(effect.points))
+                current_points = points_by_user.get(effect.target_user_id, Decimal("0"))
+                if ScoreComponentType(effect.component_type) == ScoreComponentType.POWERUP:
+                    points_by_user[effect.target_user_id] = current_points + effect_points
+                elif ScoreComponentType(effect.component_type) == ScoreComponentType.PENALTY:
+                    points_by_user[effect.target_user_id] = (
+                        current_points - min(effect_points, current_points)
+                    )
+                count += component_count
 
         return count
 
-    def _apply_extra_rules_to_score_session(
+    def _context_powerup_base_points_by_user(
         self,
         *,
-        score_session: ScoreSession,
-        rules: list[ScoringRule],
-        bet_context_id: int,
-        event_session_id: int | None,
-        hits_count: int,
-        picks_count: int,
-        hit_by_bet_score_id: dict[int, bool],
-    ) -> int:
-        count = 0
+        scope: ScoringScope,
+        powerup_use: PowerUpUse | None,
+        scores_by_user: dict[int, Score],
+        score_sessions_by_key: dict[tuple[int, int | None, int | None], ScoreSession],
+    ) -> dict[int, Decimal]:
+        apply_to = (
+            self._context_powerup_apply_to(powerup_use)
+            if powerup_use is not None
+            else {"context": True, "session_types": None}
+        )
+        include_context = apply_to["context"]
+        session_types = apply_to["session_types"]
 
-        for rule in self._matching_extra_rules(
-            rules=rules,
-            bet_context_id=bet_context_id,
-            event_session_id=event_session_id,
-        ):
-            points = self._evaluate_extra_rule(
-                rule=rule,
-                hits_count=hits_count,
-                picks_count=picks_count,
-                hit_by_bet_score_id=hit_by_bet_score_id,
+        base_points_by_user: dict[int, Decimal] = {}
+        if include_context:
+            base_points_by_user.update(
+                {
+                    user_id: Decimal(str(score.base_points))
+                    for user_id, score in scores_by_user.items()
+                }
             )
-            if points <= 0:
-                continue
 
-            score_session.total_points += points
-            self._session.add(
-                ScoreSessionComponent(
-                    score_session_id=score_session.id,
-                    component_type=ScoreComponentType.EXTRA,
-                    code=rule.code,
-                    points=points,
-                    details_json={
-                        "scoring_rule_id": rule.id,
-                        "evaluator_key": rule.evaluator_key,
-                        "hits_count": hits_count,
-                        "picks_count": picks_count,
-                        "params": rule.params_json or {},
-                    },
+        if scope.is_race_event:
+            for (
+                user_id,
+                event_session_id,
+                testing_event_session_id,
+            ), score_session in score_sessions_by_key.items():
+                if event_session_id is None or testing_event_session_id is not None:
+                    continue
+                if isinstance(session_types, set):
+                    if not session_types:
+                        continue
+                    if score_session.event_session is None:
+                        continue
+                    session_type = getattr(
+                        score_session.event_session.session_type,
+                        "value",
+                        score_session.event_session.session_type,
+                    )
+                    session_type = self._normalize_apply_to_session_type(session_type)
+                    if session_type not in session_types:
+                        continue
+
+                base_points_by_user[user_id] = (
+                    base_points_by_user.get(user_id, Decimal("0"))
+                    + Decimal(str(score_session.base_points))
                 )
-            )
-            count += 1
 
-        return count
+        return base_points_by_user
+
+    def _context_powerup_apply_to(self, powerup_use: PowerUpUse) -> dict:
+        rule_json = powerup_use.rule_json or {}
+        apply_to = rule_json.get("apply_to")
+        if not isinstance(apply_to, dict):
+            return {"context": True, "session_types": None}
+
+        context = bool(apply_to.get("context", False))
+        raw_session_types = apply_to.get("session_types")
+
+        if raw_session_types is None:
+            session_types = None
+        elif isinstance(raw_session_types, list):
+            session_types = {
+                self._normalize_apply_to_session_type(session_type)
+                for session_type in raw_session_types
+            }
+        else:
+            session_types = set()
+
+        return {"context": context, "session_types": session_types}
+
+    def _normalize_apply_to_session_type(self, session_type: object) -> str:
+        return str(session_type).strip().upper().replace(" ", "_").replace("-", "_")
 
     def _apply_session_powerups(
         self,
@@ -694,131 +848,6 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
         return count
 
 
-    def _apply_extra_rules_to_score(
-        self,
-        *,
-        score: Score,
-        rules: list[ScoringRule],
-        bet_context_id: int,
-        event_session_id: int | None,
-        hits_count: int,
-        picks_count: int,
-        hit_by_bet_score_id: dict[int, bool],
-    ) -> int:
-        count = 0
-
-        for rule in self._matching_extra_rules(
-            rules=rules,
-            bet_context_id=bet_context_id,
-            event_session_id=event_session_id,
-        ):
-            points = self._evaluate_extra_rule(
-                rule=rule,
-                hits_count=hits_count,
-                picks_count=picks_count,
-                hit_by_bet_score_id=hit_by_bet_score_id,
-            )
-            if points <= 0:
-                continue
-
-            score.total_points += points
-            self._session.add(
-                ScoreComponent(
-                    score_id=score.id,
-                    component_type=ScoreComponentType.EXTRA,
-                    code=rule.code,
-                    points=points,
-                    details_json={
-                        "scoring_rule_id": rule.id,
-                        "evaluator_key": rule.evaluator_key,
-                        "hits_count": hits_count,
-                        "picks_count": picks_count,
-                        "params": rule.params_json or {},
-                    },
-                )
-            )
-            count += 1
-
-        return count
-
-
-    def _matching_extra_rules(
-        self,
-        *,
-        rules: list[ScoringRule],
-        bet_context_id: int,
-        event_session_id: int | None,
-    ) -> list[ScoringRule]:
-        matched: list[ScoringRule] = []
-
-        for rule in rules:
-            if rule.component_type != ScoreComponentType.EXTRA:
-                continue
-
-            if rule.scope == ScoringRuleScope.SESSION:
-                if event_session_id is None:
-                    continue
-                if rule.bet_context_id == bet_context_id and rule.event_session_id == event_session_id:
-                    matched.append(rule)
-
-            elif rule.scope == ScoringRuleScope.CONTEXT:
-                if rule.bet_context_id == bet_context_id:
-                    matched.append(rule)
-
-            elif rule.scope == ScoringRuleScope.GLOBAL:
-                matched.append(rule)
-
-        return matched
-
-    def _evaluate_extra_rule(
-        self,
-        *,
-        rule: ScoringRule,
-        hits_count: int,
-        picks_count: int,
-        hit_by_bet_score_id: dict[int, bool],
-    ) -> Decimal:
-        params = rule.params_json or {}
-
-        if rule.evaluator_key == "bonus_if_at_least_x_hits":
-            min_hits = int(params.get("min_hits", 0))
-            points = Decimal(str(params.get("points", 0)))
-            return points if hits_count >= min_hits else Decimal("0")
-
-        if rule.evaluator_key == "bonus_per_hit_from_x":
-            min_hits = int(params.get("min_hits", 0))
-            points_per_hit = Decimal(str(params.get("points_per_hit", 0)))
-            include_threshold_hit = bool(params.get("include_threshold_hit", True))
-
-            if hits_count < min_hits:
-                return Decimal("0")
-
-            bonus_hits = hits_count - min_hits
-            if include_threshold_hit:
-                bonus_hits += 1
-
-            return Decimal(bonus_hits) * points_per_hit
-
-        if rule.evaluator_key == "bonus_if_all_hits":
-            points = Decimal(str(params.get("points", 0)))
-            return points if picks_count > 0 and hits_count == picks_count else Decimal("0")
-
-        if rule.evaluator_key == "bonus_if_all_bet_scores_hit":
-            bet_score_ids = [int(value) for value in params.get("bet_score_ids", [])]
-            points = Decimal(str(params.get("points", 0)))
-
-            if not bet_score_ids:
-                return Decimal("0")
-
-            all_hit = all(
-                hit_by_bet_score_id.get(bet_score_id) is True
-                for bet_score_id in bet_score_ids
-            )
-            return points if all_hit else Decimal("0")
-
-        return Decimal("0")
-
-
     def _add_score_powerup_component(
         self,
         *,
@@ -848,6 +877,105 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 },
             )
         )
+
+    def _add_context_powerup_components(
+        self,
+        *,
+        score: Score,
+        effect,
+        component_code: str,
+        powerup_use_id: int,
+        powerup_use: PowerUpUse,
+        score_sessions_by_key: dict[tuple[int, int | None, int | None], ScoreSession],
+    ) -> int:
+        component_type = ScoreComponentType(effect.component_type)
+        if component_type != ScoreComponentType.PENALTY:
+            self._add_score_powerup_component(
+                score=score,
+                effect=effect,
+                component_code=component_code,
+                powerup_use_id=powerup_use_id,
+            )
+            return 1
+
+        remaining_points = Decimal(str(effect.points))
+        component_count = 0
+        context_points = min(remaining_points, Decimal(str(score.total_points)))
+
+        if context_points > 0:
+            context_effect = replace(effect, points=context_points)
+            self._add_score_powerup_component(
+                score=score,
+                effect=context_effect,
+                component_code=component_code,
+                powerup_use_id=powerup_use_id,
+            )
+            remaining_points -= context_points
+            component_count += 1
+
+        if remaining_points <= 0:
+            return component_count
+
+        for score_session in self._context_powerup_score_sessions(
+            powerup_use=powerup_use,
+            target_user_id=effect.target_user_id,
+            score_sessions_by_key=score_sessions_by_key,
+        ):
+            session_points = min(remaining_points, Decimal(str(score_session.total_points)))
+            if session_points <= 0:
+                continue
+
+            session_effect = replace(effect, points=session_points)
+            self._add_score_session_powerup_component(
+                score_session=score_session,
+                effect=session_effect,
+                component_code=f"{component_code}_{score_session.id}",
+                powerup_use_id=powerup_use_id,
+            )
+            remaining_points -= session_points
+            component_count += 1
+
+            if remaining_points <= 0:
+                break
+
+        return component_count
+
+    def _context_powerup_score_sessions(
+        self,
+        *,
+        powerup_use: PowerUpUse,
+        target_user_id: int,
+        score_sessions_by_key: dict[tuple[int, int | None, int | None], ScoreSession],
+    ) -> list[ScoreSession]:
+        apply_to = self._context_powerup_apply_to(powerup_use)
+        session_types = apply_to["session_types"]
+        sessions: list[ScoreSession] = []
+
+        if isinstance(session_types, set) and not session_types:
+            return sessions
+
+        for (
+            user_id,
+            event_session_id,
+            testing_event_session_id,
+        ), score_session in score_sessions_by_key.items():
+            if user_id != target_user_id:
+                continue
+            if event_session_id is None or testing_event_session_id is not None:
+                continue
+            if isinstance(session_types, set):
+                if score_session.event_session is None:
+                    continue
+                session_type = getattr(
+                    score_session.event_session.session_type,
+                    "value",
+                    score_session.event_session.session_type,
+                )
+                if self._normalize_apply_to_session_type(session_type) not in session_types:
+                    continue
+            sessions.append(score_session)
+
+        return sessions
 
     def _add_score_session_powerup_component(
         self,
@@ -932,6 +1060,7 @@ class SqlAlchemyManagementScoringRepository(ManagementScoringRepository):
                 joinedload(PowerUpUse.powerup),
                 joinedload(PowerUpUse.targets),
             )
+            .order_by(PowerUpUse.used_at.asc(), PowerUpUse.id.asc())
         ).unique().all()
 
     def _load_powerup_restrictions(self, scope: ScoringScope) -> list[PowerUpRestriction]:

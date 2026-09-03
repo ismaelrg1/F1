@@ -722,7 +722,7 @@ def test_unpublish_race_event_results_deletes_publication(client, db_session) ->
     ).scalar_one_or_none() is None
 
 
-def test_publish_results_returns_conflict_when_official_results_do_not_exist(client, db_session) -> None:
+def test_publish_race_event_results_returns_not_published_when_context_has_no_scores(client, db_session) -> None:
     _create_admin_user(
         db_session,
         username="admin_publish_without_results",
@@ -734,6 +734,38 @@ def test_publish_results_returns_conflict_when_official_results_do_not_exist(cli
     response = client.post(
         f"/api/v1/management/result-publications/race-events/{data['race_event'].public_id}",
         headers={"X-Group-Id": str(data["group"].public_id)},
+        json={},
+    )
+
+    assert response.status_code == 201
+    assert response.json() == {
+        "published": False,
+        "reason": "no_context_scores",
+        "race_event_public_id": str(data["race_event"].public_id),
+    }
+    publication = db_session.execute(
+        select(ResultPublication).where(
+            ResultPublication.bet_context_id == data["bet_context"].id,
+            ResultPublication.event_session_id.is_(None),
+            ResultPublication.testing_event_session_id.is_(None),
+        )
+    ).scalar_one_or_none()
+    assert publication is None
+
+
+def test_publish_race_session_results_returns_conflict_when_official_results_do_not_exist(client, db_session) -> None:
+    _create_admin_user(
+        db_session,
+        username="admin_publish_session_without_results",
+        password="secret123",
+    )
+    data = _create_race_fixture(db_session)
+    _login(client, "admin_publish_session_without_results")
+
+    response = client.post(
+        f"/api/v1/management/result-publications/race-events/{data['race_event'].public_id}",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+        params={"session_id": str(data["session"].public_id)},
         json={},
     )
 

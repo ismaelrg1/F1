@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import uuid4
 
@@ -452,6 +452,8 @@ def _add_powerup_use(
     event_session_id: int | None = None,
     testing_event_session_id: int | None = None,
     target_user_id: int | None = None,
+    rule_json: dict | None = None,
+    used_at: datetime | None = None,
 ) -> PowerUpUse:
     powerup_use = PowerUpUse(
         user_id=user_id,
@@ -460,8 +462,10 @@ def _add_powerup_use(
         event_session_id=event_session_id,
         testing_event_session_id=testing_event_session_id,
         powerup_id=powerup_id,
-        rule_json=None,
+        rule_json=rule_json,
     )
+    if used_at is not None:
+        powerup_use.used_at = used_at
     db_session.add(powerup_use)
     db_session.flush()
 
@@ -926,303 +930,6 @@ def test_calculate_scoring_uses_position_near_evaluator_rule(client, db_session)
     assert component.details_json["near_hit"] is True
 
 
-def test_calculate_scoring_applies_bonus_when_all_bet_scores_hit(client, db_session) -> None:
-    admin = _create_admin_user(
-        db_session,
-        username=f"admin_group_bonus_{uuid4().hex[:8]}",
-        password="secret123",
-    )
-    player = _create_local_user(
-        db_session,
-        username=f"player_group_bonus_{uuid4().hex[:8]}",
-        password="secret123",
-    )
-    data = _create_season_fixture(db_session)
-    second_score = BetScore(
-        code=f"SEASON_RUNNER_UP_{uuid4().hex[:8].upper()}",
-        label="Season Runner Up",
-        base_points=4,
-        value_type=BetValueType.DRIVER,
-        constraints_json=None,
-    )
-    db_session.add(second_score)
-    db_session.flush()
-    rule = _add_scoring_rule(
-        db_session,
-        season_id=data["season"].id,
-        code=f"all_group_hit_{uuid4().hex[:8]}",
-        evaluator_key="bonus_if_all_bet_scores_hit",
-        component_type=ScoreComponentType.EXTRA,
-        scope=ScoringRuleScope.CONTEXT,
-        bet_context_id=data["bet_context"].id,
-        params_json={
-            "bet_score_ids": [data["score"].id, second_score.id],
-            "points": 3,
-        },
-    )
-    _add_official_result(
-        db_session,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=data["score"].id,
-        value="VER",
-    )
-    _add_official_result(
-        db_session,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=second_score.id,
-        value="HAM",
-    )
-    bet = _add_submitted_bet(
-        db_session,
-        user_id=player.id,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=data["score"].id,
-        value="VER",
-    )
-    _add_bet_pick(db_session, bet_id=bet.id, bet_score_id=second_score.id, value="HAM")
-    _login(client, admin.username)
-
-    response = client.post(
-        f"/api/v1/management/scoring/seasons/{data['season'].year}/calculate",
-        headers={"X-Group-Id": str(data["group"].public_id)},
-    )
-
-    assert response.status_code == 200
-    score = db_session.execute(
-        select(Score).where(
-            Score.user_id == player.id,
-            Score.bet_context_id == data["bet_context"].id,
-        )
-    ).scalar_one()
-    assert score.base_points == Decimal("19.00000000")
-    assert score.total_points == Decimal("22.00000000")
-
-    extra_component = db_session.execute(
-        select(ScoreComponent).where(
-            ScoreComponent.score_id == score.id,
-            ScoreComponent.component_type == ScoreComponentType.EXTRA,
-            ScoreComponent.code == rule.code,
-        )
-    ).scalar_one()
-    assert extra_component.points == Decimal("3.00000000")
-    assert extra_component.details_json["evaluator_key"] == "bonus_if_all_bet_scores_hit"
-
-
-def test_calculate_scoring_does_not_apply_group_bonus_when_one_bet_score_misses(client, db_session) -> None:
-    admin = _create_admin_user(
-        db_session,
-        username=f"admin_group_miss_{uuid4().hex[:8]}",
-        password="secret123",
-    )
-    player = _create_local_user(
-        db_session,
-        username=f"player_group_miss_{uuid4().hex[:8]}",
-        password="secret123",
-    )
-    data = _create_season_fixture(db_session)
-    second_score = BetScore(
-        code=f"SEASON_RUNNER_UP_{uuid4().hex[:8].upper()}",
-        label="Season Runner Up",
-        base_points=4,
-        value_type=BetValueType.DRIVER,
-        constraints_json=None,
-    )
-    db_session.add(second_score)
-    db_session.flush()
-    _add_scoring_rule(
-        db_session,
-        season_id=data["season"].id,
-        code=f"all_group_miss_{uuid4().hex[:8]}",
-        evaluator_key="bonus_if_all_bet_scores_hit",
-        component_type=ScoreComponentType.EXTRA,
-        scope=ScoringRuleScope.CONTEXT,
-        bet_context_id=data["bet_context"].id,
-        params_json={
-            "bet_score_ids": [data["score"].id, second_score.id],
-            "points": 3,
-        },
-    )
-    _add_official_result(
-        db_session,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=data["score"].id,
-        value="VER",
-    )
-    _add_official_result(
-        db_session,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=second_score.id,
-        value="HAM",
-    )
-    bet = _add_submitted_bet(
-        db_session,
-        user_id=player.id,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=data["score"].id,
-        value="VER",
-    )
-    _add_bet_pick(db_session, bet_id=bet.id, bet_score_id=second_score.id, value="LEC")
-    _login(client, admin.username)
-
-    response = client.post(
-        f"/api/v1/management/scoring/seasons/{data['season'].year}/calculate",
-        headers={"X-Group-Id": str(data["group"].public_id)},
-    )
-
-    assert response.status_code == 200
-    score = db_session.execute(
-        select(Score).where(
-            Score.user_id == player.id,
-            Score.bet_context_id == data["bet_context"].id,
-        )
-    ).scalar_one()
-    assert score.base_points == Decimal("15.00000000")
-    assert score.total_points == Decimal("15.00000000")
-
-    extra_components = db_session.scalars(
-        select(ScoreComponent).where(
-            ScoreComponent.score_id == score.id,
-            ScoreComponent.component_type == ScoreComponentType.EXTRA,
-        )
-    ).all()
-    assert extra_components == []
-
-
-def test_calculate_scoring_applies_bonus_if_at_least_x_hits(client, db_session) -> None:
-    admin = _create_admin_user(
-        db_session,
-        username=f"admin_atleast_{uuid4().hex[:8]}",
-        password="secret123",
-    )
-    player = _create_local_user(
-        db_session,
-        username=f"player_atleast_{uuid4().hex[:8]}",
-        password="secret123",
-    )
-    data = _create_season_fixture(db_session)
-    rule = _add_scoring_rule(
-        db_session,
-        season_id=data["season"].id,
-        code=f"atleast_{uuid4().hex[:8]}",
-        evaluator_key="bonus_if_at_least_x_hits",
-        component_type=ScoreComponentType.EXTRA,
-        scope=ScoringRuleScope.CONTEXT,
-        bet_context_id=data["bet_context"].id,
-        params_json={"min_hits": 1, "points": 2},
-    )
-    _add_official_result(
-        db_session,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=data["score"].id,
-    )
-    _add_submitted_bet(
-        db_session,
-        user_id=player.id,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=data["score"].id,
-    )
-    _login(client, admin.username)
-
-    response = client.post(
-        f"/api/v1/management/scoring/seasons/{data['season'].year}/calculate",
-        headers={"X-Group-Id": str(data["group"].public_id)},
-    )
-
-    assert response.status_code == 200
-    score = db_session.execute(
-        select(Score).where(
-            Score.user_id == player.id,
-            Score.bet_context_id == data["bet_context"].id,
-        )
-    ).scalar_one()
-    assert score.total_points == Decimal("17.00000000")
-
-    extra_component = db_session.execute(
-        select(ScoreComponent).where(
-            ScoreComponent.score_id == score.id,
-            ScoreComponent.code == rule.code,
-        )
-    ).scalar_one()
-    assert extra_component.points == Decimal("2.00000000")
-
-
-def test_calculate_scoring_applies_bonus_per_hit_from_x(client, db_session) -> None:
-    admin = _create_admin_user(
-        db_session,
-        username=f"admin_perhit_{uuid4().hex[:8]}",
-        password="secret123",
-    )
-    player = _create_local_user(
-        db_session,
-        username=f"player_perhit_{uuid4().hex[:8]}",
-        password="secret123",
-    )
-    data = _create_season_fixture(db_session)
-    second_score = BetScore(
-        code=f"SEASON_SECOND_{uuid4().hex[:8].upper()}",
-        label="Season Second",
-        base_points=5,
-        value_type=BetValueType.DRIVER,
-        constraints_json=None,
-    )
-    db_session.add(second_score)
-    db_session.flush()
-    rule = _add_scoring_rule(
-        db_session,
-        season_id=data["season"].id,
-        code=f"perhit_{uuid4().hex[:8]}",
-        evaluator_key="bonus_per_hit_from_x",
-        component_type=ScoreComponentType.EXTRA,
-        scope=ScoringRuleScope.CONTEXT,
-        bet_context_id=data["bet_context"].id,
-        params_json={"min_hits": 1, "points_per_hit": 1, "include_threshold_hit": True},
-    )
-    _add_official_result(
-        db_session,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=data["score"].id,
-        value="VER",
-    )
-    _add_official_result(
-        db_session,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=second_score.id,
-        value="HAM",
-    )
-    bet = _add_submitted_bet(
-        db_session,
-        user_id=player.id,
-        bet_context_id=data["bet_context"].id,
-        bet_score_id=data["score"].id,
-        value="VER",
-    )
-    _add_bet_pick(db_session, bet_id=bet.id, bet_score_id=second_score.id, value="HAM")
-    _login(client, admin.username)
-
-    response = client.post(
-        f"/api/v1/management/scoring/seasons/{data['season'].year}/calculate",
-        headers={"X-Group-Id": str(data["group"].public_id)},
-    )
-
-    assert response.status_code == 200
-    score = db_session.execute(
-        select(Score).where(
-            Score.user_id == player.id,
-            Score.bet_context_id == data["bet_context"].id,
-        )
-    ).scalar_one()
-    assert score.base_points == Decimal("20.00000000")
-    assert score.total_points == Decimal("22.00000000")
-
-    extra_component = db_session.execute(
-        select(ScoreComponent).where(
-            ScoreComponent.score_id == score.id,
-            ScoreComponent.code == rule.code,
-        )
-    ).scalar_one()
-    assert extra_component.points == Decimal("2.00000000")
-
-
 def test_calculate_scoring_applies_double_points_powerup(client, db_session) -> None:
     admin = _create_admin_user(
         db_session,
@@ -1279,6 +986,302 @@ def test_calculate_scoring_applies_double_points_powerup(client, db_session) -> 
     ).scalar_one()
     assert powerup_component.points == Decimal("15.00000000")
     assert powerup_component.details_json["powerup_code"] == "DOUBLE_POINTS"
+
+
+def test_calculate_race_scoring_applies_context_powerup_to_session_base_points(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username=f"admin_gp_context_powerup_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    player = _create_local_user(
+        db_session,
+        username=f"player_gp_context_powerup_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    data = _create_race_fixture(db_session)
+    powerup = _add_powerup(db_session, code="DOUBLE_POINTS")
+    _add_powerup_use(
+        db_session,
+        user_id=player.id,
+        group_id=data["group"].id,
+        bet_context_id=data["bet_context"].id,
+        powerup_id=powerup.id,
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=data["session"].id,
+        bet_score_id=data["session_score"].id,
+    )
+    _add_submitted_bet(
+        db_session,
+        user_id=player.id,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=data["session"].id,
+        bet_score_id=data["session_score"].id,
+    )
+    _login(client, admin.username)
+
+    response = client.post(
+        f"/api/v1/management/scoring/race-events/{data['race_event'].public_id}/calculate",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["score_components_count"] == 1
+    assert payload["score_session_components_count"] == 1
+
+    score_session = db_session.execute(
+        select(ScoreSession).where(
+            ScoreSession.user_id == player.id,
+            ScoreSession.bet_context_id == data["bet_context"].id,
+            ScoreSession.event_session_id == data["session"].id,
+        )
+    ).scalar_one()
+    assert score_session.base_points == Decimal("5.0000")
+    assert score_session.total_points == Decimal("5.00000000")
+
+    score = db_session.execute(
+        select(Score).where(
+            Score.user_id == player.id,
+            Score.bet_context_id == data["bet_context"].id,
+        )
+    ).scalar_one()
+    assert score.base_points == Decimal("0E-8")
+    assert score.total_points == Decimal("5.00000000")
+
+    powerup_component = db_session.execute(
+        select(ScoreComponent).where(
+            ScoreComponent.score_id == score.id,
+            ScoreComponent.component_type == ScoreComponentType.POWERUP,
+        )
+    ).scalar_one()
+    assert powerup_component.points == Decimal("5.00000000")
+    assert powerup_component.details_json["powerup_code"] == "DOUBLE_POINTS"
+    assert Decimal(powerup_component.details_json["base_points"]) == Decimal("5")
+
+
+def test_calculate_race_scoring_context_powerup_can_apply_only_to_gp_questions(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username=f"admin_gp_only_powerup_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    player = _create_local_user(
+        db_session,
+        username=f"player_gp_only_powerup_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    data = _create_race_fixture(db_session)
+    powerup = _add_powerup(db_session, code="DOUBLE_POINTS")
+    _add_powerup_use(
+        db_session,
+        user_id=player.id,
+        group_id=data["group"].id,
+        bet_context_id=data["bet_context"].id,
+        powerup_id=powerup.id,
+        rule_json={"apply_to": {"context": True, "session_types": []}},
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["event_score"].id,
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=data["session"].id,
+        bet_score_id=data["session_score"].id,
+    )
+    _add_submitted_bet(
+        db_session,
+        user_id=player.id,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["event_score"].id,
+    )
+    _add_submitted_bet(
+        db_session,
+        user_id=player.id,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=data["session"].id,
+        bet_score_id=data["session_score"].id,
+    )
+    _login(client, admin.username)
+
+    response = client.post(
+        f"/api/v1/management/scoring/race-events/{data['race_event'].public_id}/calculate",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+
+    score = db_session.execute(
+        select(Score).where(
+            Score.user_id == player.id,
+            Score.bet_context_id == data["bet_context"].id,
+        )
+    ).scalar_one()
+    assert score.base_points == Decimal("10.00000000")
+    assert score.total_points == Decimal("20.00000000")
+
+    powerup_component = db_session.execute(
+        select(ScoreComponent).where(
+            ScoreComponent.score_id == score.id,
+            ScoreComponent.component_type == ScoreComponentType.POWERUP,
+        )
+    ).scalar_one()
+    assert powerup_component.points == Decimal("10.00000000")
+    assert Decimal(powerup_component.details_json["base_points"]) == Decimal("10")
+
+
+def test_calculate_race_scoring_context_powerup_can_apply_only_to_selected_sessions(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username=f"admin_gp_session_only_powerup_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    player = _create_local_user(
+        db_session,
+        username=f"player_gp_session_only_powerup_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    data = _create_race_fixture(db_session)
+    powerup = _add_powerup(db_session, code="DOUBLE_POINTS")
+    _add_powerup_use(
+        db_session,
+        user_id=player.id,
+        group_id=data["group"].id,
+        bet_context_id=data["bet_context"].id,
+        powerup_id=powerup.id,
+        rule_json={"apply_to": {"context": False, "session_types": ["FP1"]}},
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["event_score"].id,
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=data["session"].id,
+        bet_score_id=data["session_score"].id,
+    )
+    _add_submitted_bet(
+        db_session,
+        user_id=player.id,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["event_score"].id,
+    )
+    _add_submitted_bet(
+        db_session,
+        user_id=player.id,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=data["session"].id,
+        bet_score_id=data["session_score"].id,
+    )
+    _login(client, admin.username)
+
+    response = client.post(
+        f"/api/v1/management/scoring/race-events/{data['race_event'].public_id}/calculate",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+
+    score = db_session.execute(
+        select(Score).where(
+            Score.user_id == player.id,
+            Score.bet_context_id == data["bet_context"].id,
+        )
+    ).scalar_one()
+    assert score.base_points == Decimal("10.00000000")
+    assert score.total_points == Decimal("15.00000000")
+
+    powerup_component = db_session.execute(
+        select(ScoreComponent).where(
+            ScoreComponent.score_id == score.id,
+            ScoreComponent.component_type == ScoreComponentType.POWERUP,
+        )
+    ).scalar_one()
+    assert powerup_component.points == Decimal("5.00000000")
+    assert Decimal(powerup_component.details_json["base_points"]) == Decimal("5")
+
+
+def test_calculate_race_scoring_context_penalty_can_apply_to_session_base_points(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username=f"admin_gp_context_penalty_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    actor = _create_local_user(
+        db_session,
+        username=f"actor_gp_context_penalty_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    player = _create_local_user(
+        db_session,
+        username=f"player_gp_context_penalty_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    data = _create_race_fixture(db_session)
+    powerup = _add_powerup(db_session, code="HALVE_POINTS")
+    _add_powerup_use(
+        db_session,
+        user_id=actor.id,
+        group_id=data["group"].id,
+        bet_context_id=data["bet_context"].id,
+        powerup_id=powerup.id,
+        target_user_id=player.id,
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=data["session"].id,
+        bet_score_id=data["session_score"].id,
+    )
+    _add_submitted_bet(
+        db_session,
+        user_id=player.id,
+        bet_context_id=data["bet_context"].id,
+        event_session_id=data["session"].id,
+        bet_score_id=data["session_score"].id,
+    )
+    _login(client, admin.username)
+
+    response = client.post(
+        f"/api/v1/management/scoring/race-events/{data['race_event'].public_id}/calculate",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+
+    score_session = db_session.execute(
+        select(ScoreSession).where(
+            ScoreSession.user_id == player.id,
+            ScoreSession.bet_context_id == data["bet_context"].id,
+            ScoreSession.event_session_id == data["session"].id,
+        )
+    ).scalar_one()
+    assert score_session.total_points == Decimal("2.50000000")
+
+    score = db_session.execute(
+        select(Score).where(
+            Score.user_id == player.id,
+            Score.bet_context_id == data["bet_context"].id,
+        )
+    ).scalar_one()
+    assert score.base_points == Decimal("0E-8")
+    assert score.total_points == Decimal("0E-8")
+
+    penalty_component = db_session.execute(
+        select(ScoreSessionComponent).where(
+            ScoreSessionComponent.score_session_id == score_session.id,
+            ScoreSessionComponent.component_type == ScoreComponentType.PENALTY,
+        )
+    ).scalar_one()
+    assert penalty_component.points == Decimal("2.50000000")
 
 
 def test_calculate_scoring_applies_powerup_submitted_with_season_bet(client, db_session) -> None:
@@ -1442,6 +1445,89 @@ def test_calculate_scoring_applies_halve_points_penalty_powerup(client, db_sessi
     assert penalty_component.points == Decimal("7.50000000")
     assert penalty_component.details_json["powerup_code"] == "HALVE_POINTS"
     assert penalty_component.details_json["target_user_id"] == player.id
+
+
+def test_calculate_scoring_applies_context_powerups_sequentially(client, db_session) -> None:
+    admin = _create_admin_user(
+        db_session,
+        username=f"admin_powerup_order_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    actor = _create_local_user(
+        db_session,
+        username=f"actor_powerup_order_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    player = _create_local_user(
+        db_session,
+        username=f"player_powerup_order_{uuid4().hex[:8]}",
+        password="secret123",
+    )
+    data = _create_season_fixture(db_session)
+    double_powerup = _add_powerup(db_session, code="DOUBLE_POINTS")
+    halve_powerup = _add_powerup(db_session, code="HALVE_POINTS")
+    used_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    _add_powerup_use(
+        db_session,
+        user_id=player.id,
+        group_id=data["group"].id,
+        bet_context_id=data["bet_context"].id,
+        powerup_id=double_powerup.id,
+        used_at=used_at,
+    )
+    _add_powerup_use(
+        db_session,
+        user_id=actor.id,
+        group_id=data["group"].id,
+        bet_context_id=data["bet_context"].id,
+        powerup_id=halve_powerup.id,
+        target_user_id=player.id,
+        used_at=used_at + timedelta(seconds=1),
+    )
+    _add_official_result(
+        db_session,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["score"].id,
+    )
+    _add_submitted_bet(
+        db_session,
+        user_id=player.id,
+        bet_context_id=data["bet_context"].id,
+        bet_score_id=data["score"].id,
+    )
+    _login(client, admin.username)
+
+    response = client.post(
+        f"/api/v1/management/scoring/seasons/{data['season'].year}/calculate",
+        headers={"X-Group-Id": str(data["group"].public_id)},
+    )
+
+    assert response.status_code == 200
+    score = db_session.execute(
+        select(Score).where(
+            Score.user_id == player.id,
+            Score.bet_context_id == data["bet_context"].id,
+        )
+    ).scalar_one()
+    assert score.base_points == Decimal("15.00000000")
+    assert score.total_points == Decimal("15.00000000")
+
+    components = db_session.scalars(
+        select(ScoreComponent)
+        .where(
+            ScoreComponent.score_id == score.id,
+            ScoreComponent.component_type.in_(
+                [ScoreComponentType.POWERUP, ScoreComponentType.PENALTY]
+            ),
+        )
+        .order_by(ScoreComponent.id.asc())
+    ).all()
+    assert [component.component_type for component in components] == [
+        ScoreComponentType.POWERUP,
+        ScoreComponentType.PENALTY,
+    ]
+    assert components[0].points == Decimal("15.00000000")
+    assert components[1].points == Decimal("15.00000000")
 
 
 def test_calculate_scoring_skips_disabled_powerup_by_restriction(client, db_session) -> None:

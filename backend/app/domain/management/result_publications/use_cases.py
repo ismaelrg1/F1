@@ -9,6 +9,7 @@ from app.domain.management.result_publications.errors import (
     ResultPublicationTestingEventSessionNotFoundError,
     ResultPublicationScoringRequiredError,
 )
+from app.domain.management.result_publications.models import ResultPublicationResult
 from app.domain.management.result_publications.ports import ResultPublicationRepository
 
 
@@ -40,6 +41,30 @@ class PublishRaceEventResults:
             )
             if event_session_id is None:
                 raise ResultPublicationEventSessionNotFoundError()
+
+        if event_session_id is None:
+            has_official_results = self._repository.official_results_exist(
+                bet_context_id=bet_context_id,
+                event_session_id=None,
+                testing_event_session_id=None,
+            )
+            has_calculated_scores = self._repository.has_calculated_scores(
+                bet_context_id=bet_context_id,
+                event_session_id=None,
+                testing_event_session_id=None,
+            )
+            if not has_official_results and not has_calculated_scores:
+                return ResultPublicationResult(
+                    race_event_public_id=race_event_public_id,
+                    event_session_public_id=None,
+                    testing_event_public_id=None,
+                    testing_event_session_public_id=None,
+                    season_year=None,
+                    published_at=None,
+                    note=note,
+                    published=False,
+                    reason="no_context_scores",
+                )
 
         return _publish(
             repository=self._repository,
@@ -223,11 +248,18 @@ def _publish(
     published_by_user_id: int,
     note: str | None,
 ):
-    if not repository.official_results_exist(
+    has_official_results = repository.official_results_exist(
         bet_context_id=bet_context_id,
         event_session_id=event_session_id,
         testing_event_session_id=testing_event_session_id,
-    ):
+    )
+    has_calculated_scores = repository.has_calculated_scores(
+        bet_context_id=bet_context_id,
+        event_session_id=event_session_id,
+        testing_event_session_id=testing_event_session_id,
+    )
+
+    if not has_official_results and not has_calculated_scores:
         raise ResultPublicationOfficialResultsNotFoundError()
 
     if repository.publication_exists(
@@ -237,11 +269,7 @@ def _publish(
     ):
         raise ResultPublicationAlreadyExistsError()
 
-    if not repository.has_calculated_scores(
-        bet_context_id=bet_context_id,
-        event_session_id=event_session_id,
-        testing_event_session_id=testing_event_session_id,
-    ):
+    if not has_calculated_scores:
         raise ResultPublicationScoringRequiredError()
 
     result = repository.create_publication(

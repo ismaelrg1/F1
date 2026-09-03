@@ -274,6 +274,8 @@ def unpublish_season_results(
 
 def _map_response(result) -> ResultPublicationRead:
     return ResultPublicationRead(
+        published=result.published,
+        reason=result.reason,
         race_event_public_id=result.race_event_public_id,
         event_session_public_id=result.event_session_public_id,
         testing_event_public_id=result.testing_event_public_id,
